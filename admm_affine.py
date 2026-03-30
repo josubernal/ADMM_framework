@@ -31,11 +31,11 @@ if __name__ == "__main__":
     if use_double:
         torch.set_default_dtype(torch.float64)
         current_dtype = torch.float64
-        print("Running in DOUBLE (64-bit) precision.")
+        print("Running in DOUBLE (64-bit) precision.\n")
     else:
         torch.set_default_dtype(torch.float32)
         current_dtype = torch.float32
-        print("Running in SINGLE (32-bit) precision.")  
+        print("Running in SINGLE (32-bit) precision.\n")  
 
     model_name=config.get('affine', 'model')
 
@@ -45,7 +45,8 @@ if __name__ == "__main__":
     beta = config.getfloat('affine', 'beta')
     gamma = config.getfloat('affine', 'gamma')
     
-    print(f"Performing training for {batch_size} images...")
+    print(f"Performing training for {batch_size} images, {config.get('affine', 'train_method')}.")
+    print()
     
     
     init=config.get('affine', 'init')
@@ -223,8 +224,6 @@ if __name__ == "__main__":
     metrics["accuracy_list"] = accuracy_list
     metrics["firing_rate"] = firing_rate_list
 
-    print(m.network_size_statistics())
-    
     with open(os.path.join(metrics_path, 'metrics.json'), 'w') as f:
         json.dump(metrics, f, indent=4)
     

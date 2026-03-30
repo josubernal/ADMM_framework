@@ -19,7 +19,7 @@ class ADMM_Initializer(ABC):
         pass
         
     def init_bias(self, bias_shape: tuple) -> nn.Parameter:
-        return nn.Parameter(torch.zeros(*bias_shape))
+        return nn.Parameter(torch.zeros(*bias_shape), requires_grad=False)
 
     def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
         """Warm-starts the auxiliary variables 'z' and 'a'."""
@@ -34,13 +34,25 @@ class ADMM_Initializer(ABC):
 
 class ZerosInitializer(ADMM_Initializer):
     def init_weights(self, weight_shape: tuple) -> nn.Parameter:
-        return nn.Parameter(torch.zeros(*weight_shape))
+        return nn.Parameter(torch.zeros(*weight_shape), requires_grad=False)
+
+class ZerosPassInitializer(ZerosInitializer):
+      def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
+        """Warm-starts the auxiliary variables 'z' and 'a'."""
+        x = inputs.to(device)
+        with torch.no_grad():
+            for layer in layers:
+                z_pred = layer.forward(x)
+                layer.z = torch.rand_like(z_pred)
+                layer.a = layer.h(layer.z)
+                x = layer.a
+
 
 class XavierInitializer(ADMM_Initializer):
     def init_weights(self, weight_shape: tuple) -> nn.Parameter:
         w = torch.empty(*weight_shape)
         nn.init.xavier_uniform_(w)
-        return nn.Parameter(w)
+        return nn.Parameter(w, requires_grad=False)
 
 class ZerosRNGInitializer(ZerosInitializer):
     """Deprecated initialization strategy kept for legacy support."""
@@ -72,6 +84,7 @@ def get_initializer(init_type: str) -> ADMM_Initializer:
     strategies = {
         "zeros": ZerosInitializer(),
         "zeros-rng": ZerosRNGInitializer(),
+        "zeros-pass": ZerosPassInitializer(),
         "xavier": XavierInitializer()
     }
     if init_type not in strategies:

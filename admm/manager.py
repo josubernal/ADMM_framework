@@ -29,7 +29,7 @@ class ADMM(nn.Module):
     """      
     def __init__(self, layers: nn.ModuleList, beta: float = 1.0, gamma: float = 1.0, 
                  init: str = "zeros", bias: bool = False, device=None, 
-                 train_method: str = "unrolled", **kwargs):
+                 train_method: str = "hybrid-random", **kwargs):
         super().__init__()
         
         self.device = device if device is not None else torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -50,7 +50,7 @@ class ADMM(nn.Module):
         for key, val in kwargs.items():
             setattr(self, key, val)
         
-        valid_methods = ["vectorized", "unrolled-random", "unrolled-sequential"]
+        valid_methods = ["vectorized", "unrolled-random", "unrolled-sequential", "hybrid-random", "hybrid-sequential"]
         if self.train_method not in valid_methods:
             raise ValueError(f"Invalid train_method. Please select from: {valid_methods}")
         
@@ -62,9 +62,11 @@ class ADMM(nn.Module):
             )
             self.train_method = "vectorized"
         
-        if self._is_spiking() and self.train_method == "vectorized":
-            raise NotImplementedError("Spiking networks currently require 'unrolled' training methods. Vectorized SNNs coming soon.")
-    
+        # if self._is_spiking() and self.train_method == "vectorized":
+        #     warnings.warn(
+        #         "The 'vectorized' training method is not recommendedfor spiking networks. We recommend using a hybrid or unrolled method instead.",
+        #         UserWarning
+        #     )
 
         config = {'beta': self.beta, 'gamma': self.gamma, 'init': self.init, 'train_method': self.train_method}
         config.update(kwargs)
@@ -145,6 +147,7 @@ class ADMM(nn.Module):
 
         self.lambda_lagrange += self.beta * residual
     
+    @torch.no_grad()
     def fit(self, inputs: torch.Tensor, labels: torch.Tensor, warming: bool = False):
         """Orchestrates the fitting loop."""
         with torch.no_grad():
@@ -153,9 +156,9 @@ class ADMM(nn.Module):
             
             time_steps = None
             if self._is_spiking():
-                if self.train_method == "unrolled-random":
+                if self.train_method.endswith("random"):
                     time_steps = random.sample(range(self.T - 1), self.T - 1)
-                elif self.train_method == "unrolled-sequential":
+                elif self.train_method.endswith("sequential"):
                     time_steps = list(range(self.T - 1))
                     
             random_layers = random.sample(range(self.L - 1), self.L - 1)
@@ -172,8 +175,8 @@ class ADMM(nn.Module):
                     if getattr(layer, 'train_method', '').startswith("unrolled") and getattr(layer, 'spiking', False):
                         layer.update_az_interleaved(next_layer, a_prev, lagrange, time_steps)
                     else:
-                        layer.update_a(next_layer, lagrange)
-                        layer.update_z(a_prev)
+                        layer.update_a(next_layer,a_prev, lagrange)
+                        layer.update_z(a_prev, time_steps)
 
             # Update last layer
             last_layer = self.layers[-1]

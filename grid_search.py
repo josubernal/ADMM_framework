@@ -11,6 +11,7 @@ import os
 import json
 import itertools
 from torchvision import datasets, transforms
+import time
 
 from admm import ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpatialPool, ADMM_SpikingConv2d, ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics
 
@@ -70,6 +71,14 @@ if __name__ == "__main__":
         print(f"\n=======================================================")
         print(f"[{idx+1}/{len(combinations)}] Running Grid Config: {combo}")
         print(f"=======================================================")
+
+        seed = 8281003564
+        random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True 
+        torch.backends.cudnn.benchmark = False
         
         # Merge static params with the current grid combo (combo overwrites static)
         cfg = static_params.copy()
@@ -213,6 +222,7 @@ if __name__ == "__main__":
         # ---------------------------------------------------------
         # 4. TRAINING LOOP
         # ---------------------------------------------------------
+        start_time = time.time()
         for epoch in range(epochs + 1):
             model.fit(data, targets, warming=epoch < warming_iters)             
             if epoch % 1 == 0:
@@ -246,7 +256,9 @@ if __name__ == "__main__":
                     soft_constraints["z"].append(preactivation_constraint_sum)
                     lagrangians.append(lagr)  
                     lambdas.append(primal)
-                    
+         
+        end_time = time.time()    
+        print(f"Model finished in {end_time - start_time:.2f} seconds.")       
         metrics["lagrangians"] = lagrangians
         metrics["lambdas"] = lambdas
         metrics["soft_constraints"] = soft_constraints
@@ -256,5 +268,3 @@ if __name__ == "__main__":
 
         with open(os.path.join(metrics_path, 'metrics.json'), 'w') as f:
             json.dump(metrics, f, indent=4)
-        
-       

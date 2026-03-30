@@ -109,7 +109,7 @@ class ADMM_Layer(nn.Module):
     def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps=None):
         """
         Solves the proximal update for the 'z' variable for the LAST layer.
-        
+       
         z =  beta * (forward(a_prev)) + (labels - (lamb / 2)) / (1 + beta)
         Spiking Case: Incorporates temporal penalties into the numerator and denominator.
         """
@@ -130,9 +130,8 @@ class ADMM_Layer(nn.Module):
         numerator = (self.beta * forward) + num
         denominator = self.beta + den
         
-        self.z.data.copy_(numerator / denominator)       
+        self.z.data.copy_(numerator / denominator)        
 
- 
 ############################################################################################################
 #Affine Layer Manager
 ############################################################################################################           
@@ -226,11 +225,10 @@ class ADMM_AffineLayer(ADMM_Layer):
         self.b.data.copy_(new_bias)
 
     
-    #P
     def update_z(self, a_prev: torch.Tensor, time_steps=None):
         """Applies the z update using the activation function's operator."""
         res = self.spatial_forward(a_prev)
-        new_z = self.h.activation_z_update(a=self.a, res=res, z=self.z)
+        new_z = self.h.activation_z_update(a=self.a, res=res, z=self.z, time_steps=time_steps)
         self.z.data.copy_(new_z)  
       
     def _get_expanded_weights(self, next_layer: nn.Module):
@@ -284,7 +282,8 @@ class ADMM_AffineLayer(ADMM_Layer):
             return torch.cat([a_main, a_last], dim=0)
 
      
-    def update_a(self, next_layer: nn.Module, lambda_lagrange: torch.Tensor = None):
+
+    def update_a(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None):
         """
         Updates the activation 'a'.
         a = gamma * h(z) + beta * adjoint(next_layer.z - next_layer._format_bias() - temporal_penalties + (lambda/2*beta)) / gamma + beta * W^T W
@@ -303,7 +302,12 @@ class ADMM_AffineLayer(ADMM_Layer):
                 lam_sp = next_layer._broadcast_to_match(lambda_lagrange, numerator)
                 numerator = numerator + (lam_sp / (2 * next_layer.beta))
                 
-        new_a = self._compute_exact_a(numerator, next_layer)
+        temp_num, temp_den = 0.0, 0.0
+        if self.spiking:
+            cache = {"FORWARD": self.spatial_forward(a_prev)}
+            temp_num, temp_den = self._get_temporal_a_penalties(cache)
+
+        new_a = self._compute_exact_a(numerator, next_layer, temp_num=temp_num, temp_den=temp_den)
         new_a = torch.clamp(new_a, min=0.0, max=1) if self.spiking else new_a
         self.a.data.copy_(new_a)
 
@@ -449,6 +453,7 @@ class ADMM_Spiking:
         
         new_z_t = self.h.activation_z_unrolled(TERM_1, TERM_2, self.a[t])  
         self.z[t].data.copy_(new_z_t)
+ 
 
     def _update_z_last_unrolled(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list):
         """
@@ -487,11 +492,11 @@ class ADMM_Spiking:
 
     def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps=None):
         """Manager that reroutes the target z_last update depending on the chosen training method."""
-        if getattr(self, 'train_method', 'vectorized').startswith('unrolled'):
+        if getattr(self, 'train_method', 'vectorized')!= 'vectorized':
             self._update_z_last_unrolled(a_prev, labels, lambda_lagrange, time_steps)
         else:
             super().update_z_last(a_prev, labels, lambda_lagrange)
-            
+    
     def update_az_interleaved(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list):
         """Orchestrates the interleaved updates of 'a' and 'z' over time with caching."""
         cache = self._create_cache(next_layer, a_prev, lambda_lagrange)
