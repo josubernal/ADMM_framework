@@ -1,6 +1,4 @@
 import torch
-import configparser
-from config.arguments_parser import parse_args
 import tonic
 from tonic import DiskCachedDataset
 import tonic.transforms as transforms

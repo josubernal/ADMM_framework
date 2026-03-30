@@ -20,6 +20,7 @@ import torch
 import torch.nn as nn
 import random
 import warnings
+from .initializers import get_initializer
 
 class ADMM(nn.Module):
     """
@@ -86,46 +87,19 @@ class ADMM(nn.Module):
     
     def _init_states(self, inputs: torch.Tensor):
         """
-        Warm-starts the ADMM auxiliary variables 'z' (pre-activations) and 'a' (activations) 
-        using a standard forward pass. Initializes the Lagrange multiplier to zero.
+        Warm-starts the ADMM auxiliary variables 'z' and 'a' 
+        using the selected initialization strategy.
         """
-        x = inputs.to(self.device)
         self.initialized = True        
-        
-        with torch.no_grad():
-            if self.init == "zeros-rng":
-                warnings.warn(
-                    "The 'zeros-rng' initialization is deprecated. Use 'zeros' for production.",
-                    UserWarning
-                )
-                z_preds, a_preds = [], []
-                for layer in self.layers:
-                    z_pred = layer.forward(x)
-                    a_pred = layer.h(z_pred)
-                    z_preds.append(z_pred)
-                    a_preds.append(a_pred)
-                    x = a_pred 
-                for i, layer in enumerate(self.layers):
-                    layer.z = torch.rand(z_preds[i].shape).to(self.device)
-                        
-                for i, layer in enumerate(self.layers):
-                    if i < self.L - 1: 
-                        layer.a = torch.rand(a_preds[i].shape).to(self.device)
-                    else:
-                        layer.a = torch.zeros_like(a_preds[i])
+        initializer = get_initializer(self.init)
 
-            else:
-                for layer in self.layers:
-                    z_pred = layer.forward(x)
-                    a_pred = layer.h(z_pred)     
-                    layer.z = torch.rand_like(z_pred)
-                    layer.a = torch.rand_like(a_pred)
-                    x = a_pred 
-                        
-            last_z = self.layers[-1].z
-            target_shape = last_z[-1] if self._is_spiking() else last_z
-            self.lambda_lagrange = torch.zeros_like(target_shape, device=self.device)
-    
+        initializer.init_states(self.layers, inputs, self.device)
+        
+        # Initialize the Lagrange multiplier
+        last_z = self.layers[-1].z
+        target_shape = last_z[-1] if self._is_spiking() else last_z
+        self.lambda_lagrange = torch.zeros_like(target_shape, device=self.device)
+        
     def forward_model(self, inputs: torch.Tensor):
         """
         Standard Feed-Forward pass used strictly for inference/evaluation.

@@ -16,6 +16,9 @@ IMPORTANT:
 import torch
 import torch.nn as nn
 from .activations import ADMM_Identity
+from .initializers import get_initializer 
+
+
 
 ####################################################################################################
 # Base Layer Interface
@@ -145,19 +148,14 @@ class ADMM_AffineLayer(ADMM_Layer):
         self.bias = bias
         self.pinv = None
         self.W = None 
-        self.b = None
-        
+        self.b = None     
+
     def _init_weights_and_bias(self, weight_shape: tuple, bias_shape: tuple):
-        """Initializes weights based on the specified strategy and scales them."""
-        if self.init in ["zeros","zeros-rng"]:
-            self.W = nn.Parameter(torch.zeros(*weight_shape))
-        elif self.init == "xavier":
-            w = torch.empty(*weight_shape)
-            nn.init.xavier_uniform_(w)
-            self.W = nn.Parameter(w)
-        else:
-            raise ValueError('Initialization method not defined.')
-        self.b = nn.Parameter(torch.zeros(*bias_shape)) if self.bias else 0
+        """Initializes weights based on the specified strategy."""
+        initializer = get_initializer(self.init)
+        
+        self.W = initializer.init_weights(weight_shape)
+        self.b = initializer.init_bias(bias_shape) if self.bias else 0
     
     def _format_bias(self):
         """Reshapes the bias vector to match the dimensionality of the layer's output."""
