@@ -9,6 +9,7 @@ dependencies = [
     "snntorch>=0.9.4",
     "tonic>=1.6.0",
     "torch>=2.7.0",
+    "torchvision==0.22.0"
 ]
 
 [[tool.uv.index]]
