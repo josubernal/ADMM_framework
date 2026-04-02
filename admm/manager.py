@@ -2,14 +2,10 @@
 ADMM Universal Manager
 
 This module contains the core orchestrator for the network and ADMM optimizer.
-
-ADMMI breaks the network down into layer-wise sub-problems and updates in a loop:
+ADMM breaks the network down into layer-wise sub-problems and updates in a loop:
 1. Weight Updates 
 2. Activation & Pre-activation Updates 
 3. Dual Variable / Lagrange Multiplier Updates (Gradient Ascent)
-
-INDEX:
-- ADMM (Main Module)
 
 IMPORTANT:
 - Lambda update is beta not 2*beta, to match Cesare's implementation and ensure convergence.
@@ -23,10 +19,11 @@ import warnings
 from .initializers import get_initializer
 
 class ADMM(nn.Module):
-    """
-    Universal Manager.
-    Handles both Static and Spiking ADMM networks automatically.
-    """      
+    """Universal Manager for ADMM networks.
+
+    Handles both Static and Spiking ADMM networks automatically, orchestrating
+    layer-wise optimization loops.
+    """   
     def __init__(self, layers: nn.ModuleList, beta: float = 1.0, gamma: float = 1.0, 
                  init: str = "zeros", bias: bool = False, device=None, 
                  train_method: str = "hybrid-random", **kwargs):
@@ -61,36 +58,63 @@ class ADMM(nn.Module):
                 UserWarning
             )
             self.train_method = "vectorized"
-        
-        # if self._is_spiking() and self.train_method == "vectorized":
-        #     warnings.warn(
-        #         "The 'vectorized' training method is not recommendedfor spiking networks. We recommend using a hybrid or unrolled method instead.",
-        #         UserWarning
-        #     )
-
-        config = {'beta': self.beta, 'gamma': self.gamma, 'init': self.init, 'train_method': self.train_method}
+            
+        config = {'beta': self.beta, 'gamma': self.gamma, 'init': self.init}
         config.update(kwargs)
         self._configure_layers(config)
 
     def _configure_layers(self, config_dict: dict):
-        """Pushes global hyperparameters down to the individual layer setup methods."""
+        """Pushes global hyperparameters down to the individual layer setup methods.
+
+        Args:
+            config_dict (dict): Dictionary containing configuration parameters: beta, gamma and init strategy.
+        """
         for i, layer in enumerate(self.layers):
             layer.to(self.device)
             is_last = (i == self.L - 1)
             layer.setup(config_dict, is_last_layer=is_last)
     
     def _is_spiking(self):
-        """Helper to determine if the network has a temporal dimension (SNN)."""
+        """Helper to determine if the network has a temporal dimension (SNN).
+
+        Returns:
+            bool: True if the network is spiking (has attribute 'T'), False otherwise.
+        """
         return hasattr(self, 'T') and self.T is not None           
     
     def _get_batchsize(self, inputs: torch.Tensor):
-        """Extracts batch size dynamically (dim 1 for Spiking, dim 0 for Static)."""
-        return inputs.shape[1] if self._is_spiking() else inputs.shape[0]                     
+        """Extracts batch size dynamically based on the network type.
+
+        Args:
+            inputs (torch.Tensor): The input tensor.
+
+        Returns:
+            int: The batch size (dim 1 for Spiking, dim 0 for Static).
+        """
+        return inputs.shape[1] if self._is_spiking() else inputs.shape[0]  
+    
+    def _get_time_steps(self):
+        """Helper that returns time-steps depending on the selected training method.
+
+        Returns:
+            list or None: A list of time steps if applicable, otherwise None.
+        """
+        time_steps = None
+        if self._is_spiking():
+            if self.train_method.endswith("random"):
+               time_steps = random.sample(range(self.T - 1), self.T - 1)
+            elif self.train_method.endswith("sequential"):
+                time_steps = list(range(self.T - 1))                   
+
+        return time_steps
     
     def _init_states(self, inputs: torch.Tensor):
-        """
-        Warm-starts the ADMM auxiliary variables 'z' and 'a' 
-        using the selected initialization strategy.
+        """Warm-starts the ADMM auxiliary variables 'z' and 'a'.
+
+        Utilizes the selected initialization strategy and initializes the Lagrange multiplier.
+
+        Args:
+            inputs (torch.Tensor): The initial input tensor.
         """
         self.initialized = True        
         initializer = get_initializer(self.init)
@@ -103,9 +127,15 @@ class ADMM(nn.Module):
         self.lambda_lagrange = torch.zeros_like(target_shape, device=self.device)
         
     def forward_model(self, inputs: torch.Tensor):
-        """
-        Standard Feed-Forward pass used strictly for inference/evaluation.
-        Returns the final network output and the activation firing rates per layer.
+        """Standard Feed-Forward pass used strictly for inference/evaluation.
+
+        Args:
+            inputs (torch.Tensor): The input tensor to the network.
+
+        Returns:
+            tuple:
+                - torch.Tensor: The final network output.
+                - list of float: The activation firing rates per layer.
         """
         x = inputs.to(self.device)
         final_z = None
@@ -132,9 +162,13 @@ class ADMM(nn.Module):
         return final_out, firing_rates
     
     def _lambda_update(self, last_layer, a_prev_L):
-        """
-        Updates the Lagrange multiplier (lambda) based on the final layer constraint.
-        Formula: lambda_new = lambda_old + beta * (z - Wx) 
+        """Updates the Lagrange multiplier (lambda) based on the final layer constraint.
+
+        Formula: lambda_new = lambda_old + beta * (z - forward(a_prev_L))
+
+        Args:
+            last_layer (nn.Module): The final layer of the network.
+            a_prev_L (torch.Tensor): The activations from the penultimate layer or inputs.
         """
         if self._is_spiking():
             z_T = last_layer.z[-1]
@@ -147,45 +181,81 @@ class ADMM(nn.Module):
 
         self.lambda_lagrange += self.beta * residual
     
+    def _optimize_w_and_b(self, layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None, cache_pinv: bool = False):
+        """Unified interface for updating all trainable parameters (W, b).
+
+        Args:
+            layer (nn.Module): The layer to update.
+            a_prev (torch.Tensor): The previous layer's activations.
+            lambda_lagrange (torch.Tensor, optional): The Lagrange multiplier. Defaults to None.
+            cache_pinv (bool, optional): Whether to cache the pseudoinverse. Defaults to False.
+        """
+        layer.update_weights(a_prev, cache_pinv=cache_pinv, lambda_lagrange=lambda_lagrange)
+        if self.bias: layer.update_bias(a_prev, lambda_lagrange)
+
+    def _optimize_a_and_z(self, layer: nn.Module, next_layer: nn.Module, a_prev: torch.Tensor, lagrange: torch.Tensor = None, time_steps=None):
+        """Unified interface for updating activations and pre-activations variables (a, z).
+
+        Args:
+            layer (nn.Module): The current layer being optimized.
+            next_layer (nn.Module): The subsequent layer in the network.
+            a_prev (torch.Tensor): The previous layer's activations.
+            lagrange (torch.Tensor, optional): The Lagrange multiplier. Defaults to None.
+            time_steps (list, optional): Time steps for spiking networks. Defaults to None.
+        """
+        if self.train_method.startswith("unrolled") and getattr(layer, 'spiking', False):
+            layer.update_az_interleaved(next_layer, a_prev, lagrange, time_steps)
+        elif self.train_method.startswith("hybrid") and getattr(layer, 'spiking', False):
+            layer.update_a(next_layer, a_prev, lagrange)
+            layer.update_z_hybrid(a_prev, time_steps)
+        else:
+            layer.update_a(next_layer, a_prev, lagrange)
+            layer.update_z(a_prev)
+
+    def _optimize_z_last(self, layer: nn.Module, a_prev: torch.Tensor, labels: torch.Tensor, time_steps=None):
+        """Default static state optimization for the final layer's pre-activations.
+
+        Args:
+            layer (nn.Module): The final layer of the network.
+            a_prev (torch.Tensor): The previous layer's activations.
+            labels (torch.Tensor): The ground truth labels.
+            time_steps (list, optional): Time steps for spiking networks. Defaults to None.
+        """
+        if self.train_method != 'vectorized':
+            layer.update_z_last_unrolled(a_prev, labels, self.lambda_lagrange, time_steps)
+        else:
+            layer.update_z_last(a_prev, labels, self.lambda_lagrange)
+   
     @torch.no_grad()
     def fit(self, inputs: torch.Tensor, labels: torch.Tensor, warming: bool = False):
-        """Orchestrates the fitting loop."""
+        """Orchestrates the fitting loop for the ADMM optimization process.
+
+        Args:
+            inputs (torch.Tensor): The input data tensor.
+            labels (torch.Tensor): The target labels tensor.
+            warming (bool, optional): If True, bypasses the lambda update. Defaults to False.
+        """
         with torch.no_grad():
             if self.lambda_lagrange is None or self.lambda_lagrange.shape[0] != self._get_batchsize(inputs):
                 self._init_states(inputs)
             
-            time_steps = None
-            if self._is_spiking():
-                if self.train_method.endswith("random"):
-                    time_steps = random.sample(range(self.T - 1), self.T - 1)
-                elif self.train_method.endswith("sequential"):
-                    time_steps = list(range(self.T - 1))
-                    
+            time_steps= self._get_time_steps()
             random_layers = random.sample(range(self.L - 1), self.L - 1)
+            
             for l in random_layers:  
                     layer = self.layers[l]
                     next_layer = self.layers[l+1]
                     a_prev = inputs if l == 0 else self.layers[l - 1].a
-
                     cache_pinv= True if l == 0 else False
-                    layer.update_weights(a_prev, cache_pinv=cache_pinv)
-                    if self.bias: layer.update_bias(a_prev)
-                    
                     lagrange = self.lambda_lagrange if l == self.L - 2 else None
-                    if getattr(layer, 'train_method', '').startswith("unrolled") and getattr(layer, 'spiking', False):
-                        layer.update_az_interleaved(next_layer, a_prev, lagrange, time_steps)
-                    else:
-                        layer.update_a(next_layer,a_prev, lagrange)
-                        layer.update_z(a_prev, time_steps)
-
+                    self._optimize_w_and_b(layer, a_prev, cache_pinv=cache_pinv)
+                    self._optimize_a_and_z(layer, next_layer, a_prev, lagrange, time_steps)
+            
             # Update last layer
             last_layer = self.layers[-1]
             a_prev_L = self.layers[-2].a if len(self.layers) > 1 else inputs
-             
-            last_layer.update_weights(a_prev_L, self.lambda_lagrange)
-            if self.bias: last_layer.update_bias(a_prev_L, self.lambda_lagrange)
-            last_layer.update_z_last(a_prev_L, labels, self.lambda_lagrange, time_steps)
+            self._optimize_w_and_b(last_layer, a_prev_L, self.lambda_lagrange)
+            self._optimize_z_last(last_layer, a_prev_L, labels, time_steps)
 
-            # Lambda update
             if not warming:
                 self._lambda_update(last_layer, a_prev_L)

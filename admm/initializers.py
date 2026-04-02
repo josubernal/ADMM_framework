@@ -11,18 +11,39 @@ import torch
 import torch.nn as nn
 import warnings
 
-
 class ADMM_Initializer(ABC):
     """Abstract Base class for ADMM Initialization Strategies."""
     @abstractmethod
     def init_weights(self, weight_shape: tuple) -> nn.Parameter:
+        """Initializes the weights for a layer.
+
+        Args:
+            weight_shape (tuple): The dimensions of the weight tensor.
+
+        Returns:
+            nn.Parameter: The initialized weight parameter without gradient tracking.
+        """
         pass
         
     def init_bias(self, bias_shape: tuple) -> nn.Parameter:
+        """Initializes the bias for a layer.
+
+        Args:
+            bias_shape (tuple): The dimensions of the bias tensor.
+
+        Returns:
+            nn.Parameter: The initialized bias parameter (zeros) without gradient tracking.
+        """
         return nn.Parameter(torch.zeros(*bias_shape), requires_grad=False)
 
     def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
-        """Warm-starts the auxiliary variables 'z' and 'a'."""
+        """Warm-starts the auxiliary variables 'z' and 'a' with random values.
+
+        Args:
+            layers (nn.ModuleList): The list of layers in the network.
+            inputs (torch.Tensor): The initial input tensor to the network.
+            device (torch.device): The device on which the tensors should be allocated.
+        """
         x = inputs.to(device)
         with torch.no_grad():
             for layer in layers:
@@ -33,22 +54,30 @@ class ADMM_Initializer(ABC):
                 x = a_pred 
 
 class ZerosInitializer(ADMM_Initializer):
+    """Initialization strategy that sets weights to zero."""
     def init_weights(self, weight_shape: tuple) -> nn.Parameter:
         return nn.Parameter(torch.zeros(*weight_shape), requires_grad=False)
 
 class ZerosPassInitializer(ZerosInitializer):
-      def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
-        """Warm-starts the auxiliary variables 'z' and 'a'."""
+    """Initialization strategy that uses a forward pass with zeroed weights."""
+    def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
+        """Warm-starts the auxiliary variables 'z' and 'a'. 'z' with random values and 'a' using a forward pass.
+
+        Args:
+            layers (nn.ModuleList): The list of layers in the network.
+            inputs (torch.Tensor): The initial input tensor to the network.
+            device (torch.device): The device on which the tensors should be allocated.
+        """
         x = inputs.to(device)
         with torch.no_grad():
             for layer in layers:
                 z_pred = layer.forward(x)
-                layer.z = torch.rand_like(z_pred)
+                layer.z = torch.rand_like(z_pred) #CHANGE THIS TO MEAN 1 VAR 0.1
                 layer.a = layer.h(layer.z)
                 x = layer.a
 
-
 class XavierInitializer(ADMM_Initializer):
+    """Initialization strategy that applies Xavier uniform initialization to weights."""
     def init_weights(self, weight_shape: tuple) -> nn.Parameter:
         w = torch.empty(*weight_shape)
         nn.init.xavier_uniform_(w)
@@ -57,6 +86,13 @@ class XavierInitializer(ADMM_Initializer):
 class ZerosRNGInitializer(ZerosInitializer):
     """Deprecated initialization strategy kept for legacy support."""
     def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
+        """Warm-starts the auxiliary variables using random number generation.
+
+        Args:
+            layers (nn.ModuleList): The list of layers in the network.
+            inputs (torch.Tensor): The initial input tensor to the network.
+            device (torch.device): The device on which the tensors should be allocated.
+        """
         warnings.warn("The 'zeros-rng' initialization is deprecated. Use 'zeros' for production.", UserWarning)
         x = inputs.to(device)
         z_preds, a_preds = [], []
@@ -80,7 +116,16 @@ class ZerosRNGInitializer(ZerosInitializer):
                     
 
 def get_initializer(init_type: str) -> ADMM_Initializer:
-    """Factory function to retrieve the correct initializer strategy."""
+    """Factory function to retrieve the correct initializer strategy.
+    Args:
+        init_type (str): The string identifier for the initialization strategy.
+
+    Returns:
+        ADMM_Initializer: An instance of the requested initialization strategy.
+
+    Raises:
+        ValueError: If the provided init_type is not found in the defined strategies.
+    """
     strategies = {
         "zeros": ZerosInitializer(),
         "zeros-rng": ZerosRNGInitializer(),

@@ -21,7 +21,10 @@ This can be done in the future if we need to work on deeper architectures.
 
 import torch
 import torch.nn as nn
-from .base import ADMM_AffineLayer, ADMM_Spiking
+
+from .spiking import ADMM_Spiking
+from .affine import ADMM_AffineLayer
+
 from .pooling import ADMM_Flatten
 
          

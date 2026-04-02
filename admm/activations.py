@@ -163,45 +163,22 @@ class ADMM_Heaviside(ADMMActivationBase):
         - If time_steps is None -> Executes Pure Vectorized (Jacobi) block update.
         - If time_steps is provided -> Executes unrolled update (Hybrid).
         """
-        
-        # ====================================================
-        # 1. PURE VECTORIZED MODE 
-        # ====================================================
-        if time_steps is None:
-            q = res.clone()
-            q[1:] += self.deltas * z[:-1] 
-            q[1:] -= self.thetas * a[:-1] 
 
-            r = z - res
+        q = res.clone()
+        q[1:] += self.deltas * z[:-1] 
+        q[1:] -= self.thetas * a[:-1] 
+
+        r = z - res
             
-            numerator = self.beta * q
-            denominator = self.beta
+        numerator = self.beta * q
+        denominator = self.beta
 
-            temporal_penalty_num = torch.zeros_like(numerator)
-            temporal_penalty_den = torch.zeros_like(numerator)
-            temporal_penalty_num[:-1] = self.deltas * self.beta * (r[1:] + self.thetas * a[:-1]) 
-            temporal_penalty_den[:-1] = (self.deltas**2) * self.beta  
+        temporal_penalty_num = torch.zeros_like(numerator)
+        temporal_penalty_den = torch.zeros_like(numerator)
+        temporal_penalty_num[:-1] = self.deltas * self.beta * (r[1:] + self.thetas * a[:-1]) 
+        temporal_penalty_den[:-1] = (self.deltas**2) * self.beta  
 
-            numerator = numerator + temporal_penalty_num
-            denominator = denominator + temporal_penalty_den
+        numerator = numerator + temporal_penalty_num
+        denominator = denominator + temporal_penalty_den
 
-            return self.check_entries(numerator / denominator,  q, a, r, is_sequence=True)
-
-        # ====================================================
-        # 2. HYBRID / UNROLLED MODE (Causal Sweep)
-        # ====================================================
-        else:
-            T = res.size(0)
-            q = res.clone()
-            z_opt = z.clone() 
-
-            for t in time_steps:
-                TERM_1 = q[t]
-                if t > 0:
-                    TERM_1 = TERM_1 + self.deltas * z_opt[t-1] - self.thetas * a[t-1]
-
-                TERM_2 = z[t+1] - q[t+1] if t < T - 1 else None
-                z_opt[t] = self.activation_z_unrolled(TERM_1, TERM_2, a[t])
-
-            return z_opt
-        
+        return self.check_entries(numerator / denominator,  q, a, r, is_sequence=True)
