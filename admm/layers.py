@@ -13,21 +13,15 @@ INDEX:
 - ADMMConv2d
 - Spiking_ADMMLinear
 - Spiking_ADMMConv2d
-
-IMPORTANT:
--Linear layers are assume to have pooled inputs, convolutional however are not.
-This can be done in the future if we need to work on deeper architectures.
 """
 
 import torch
 import torch.nn as nn
 
-from .spiking import ADMM_Spiking
+from .spiking_mixin import ADMM_Spiking
 from .affine import ADMM_AffineLayer
 
-from .pooling import ADMM_Flatten
-
-         
+from .convolutional_mixin import ADMM_Convolution
 ####################################################################################################
 # LAYERS
 ####################################################################################################
@@ -41,12 +35,12 @@ class ADMM_Linear(ADMM_AffineLayer):
     - Adjoint: Maps the target vector back to the input space using the transpose of the weights.
     """
     def __init__(self, in_f, out_f, h: nn.Module=None, bias: bool=False, init: str="zeros", pool_op=None):
-        super().__init__(h=h, bias=bias) 
+        super().__init__(h=h, bias=bias, pool_op=pool_op) 
         self.init = init
         self.channel_dim = -1 # Targets the [B, C] dimension
         self.in_f = in_f
         self.out_f = out_f
-        self.pool_op = pool_op if pool_op is not None else ADMM_Flatten()
+
         
     def setup(self, config: dict, is_last_layer: bool = False):
         super().setup(config, is_last_layer)
@@ -66,7 +60,7 @@ class ADMM_Linear(ADMM_AffineLayer):
     def _get_bias_reduction_dims(self): 
         return 0
 
-class ADMM_Conv2d(ADMM_AffineLayer):
+class ADMM_Conv2d( ADMM_Convolution, ADMM_AffineLayer):
     """
     Standard 2D Convolutional Layer for ADMM.
     
@@ -78,8 +72,8 @@ class ADMM_Conv2d(ADMM_AffineLayer):
     - Compute P: Uses `unfold` (im2col) to extract sliding local blocks from the image 
       into a flat patch matrix for the weight update step.
     """
-    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, bias: bool=False, init: str="zeros"):
-        super().__init__(h=h, bias=bias)
+    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, bias: bool=False, init: str="zeros",  pool_op=None):
+        super().__init__(h=h, bias=bias,  pool_op=pool_op)
         self.init = init
         self.p = p
         self.s = s
@@ -87,7 +81,7 @@ class ADMM_Conv2d(ADMM_AffineLayer):
         self.out_c = out_c
         self.k = k
         self.channel_dim = -3 # Targets the [B, C, H, W] dimension
-        
+
     def setup(self, config: dict, is_last_layer: bool = False):
         super().setup(config, is_last_layer)
         self._init_weights_and_bias((self.out_c, self.in_c, self.k, self.k), (self.out_c,))
@@ -111,7 +105,14 @@ class ADMM_Conv2d(ADMM_AffineLayer):
         )
     
     def _compute_P(self, a_prev):
-        """Extracts image patches using unfold (im2col) for the localized weight update."""
+        """Extracts image patches using unfold (im2col) for localized weight updates.
+
+        Args:
+            a_prev (torch.Tensor): The previous layer's activations.
+
+        Returns:
+            torch.Tensor: The flattened patch matrix $P$.
+        """
         patches = torch.nn.functional.unfold(a_prev, kernel_size=self.k, padding=self.p, stride=self.s)
         return patches.transpose(1, 2).reshape(-1, self.in_c * self.k * self.k)
     
@@ -128,7 +129,7 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
       a standard 2D matrix operation, then unfolds it back to the temporal sequence.
     """
     def __init__(self, in_f, out_f, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="spiking-aware", pool_op=None):
-        super().__init__(h=h, bias=bias)
+        super().__init__(h=h, bias=bias, pool_op=pool_op)
         self.init = init
         self.T = None
         self.spiking = True
@@ -136,7 +137,7 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
         self.in_f = in_f
         self.out_f = out_f
         self.channel_dim = -1 
-        self.pool_op = pool_op if pool_op is not None else ADMM_Flatten()
+
      
     def setup(self, config: dict, is_last_layer: bool = False):
         super().setup(config, is_last_layer)
@@ -165,7 +166,7 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
     def _get_bias_reduction_dims(self):
         return (0, 1)
 
-class ADMM_SpikingConv2d(ADMM_Spiking, ADMM_AffineLayer):
+class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
     """
     Spiking 2D Convolutional Layer.
     
@@ -175,8 +176,8 @@ class ADMM_SpikingConv2d(ADMM_Spiking, ADMM_AffineLayer):
     - Includes a chunked covariance computation to prevent Out-Of-Memory (OOM) errors 
       during the ADMM weight update step.
     """
-    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="spiking-aware"):
-        super().__init__(h=h, bias=bias) 
+    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="spiking-aware", pool_op=None):
+        super().__init__(h=h, bias=bias, pool_op=pool_op) 
         self.init = init
         self.T = None
         self.spiking = True
@@ -219,9 +220,23 @@ class ADMM_SpikingConv2d(ADMM_Spiking, ADMM_AffineLayer):
         return (0, 1, 3, 4)
 
     def _compute_covariances(self, Y, a_prev):
-        """Overrides the base method to compute covariances in chunks to prevent OOM errors."""
-        T, B = a_prev.shape[:2]
-        C_in_kk = self.in_c * self.k * self.k
+        """Computes covariances in chunks to prevent Out Of Memory errors.
+
+        Overrides the base method to handle the heavy memory footprint of 5D 
+        spatiotemporal tensors during the weight update step.
+
+        Args:
+            Y (torch.Tensor): The target tensor.
+            a_prev (torch.Tensor): The previous layer's activations.
+
+        Returns:
+            tuple:
+                - torch.Tensor: The Y^T @ P numerator matrix.
+                - torch.Tensor: The P^T @ P denominator matrix.
+                - None: Placeholder for the P matrix (not retained in memory).
+        """
+        T, _ = a_prev.shape[:2]
+        C_in_kk= self.in_c * self.k * self.k
         C_out = self.W.shape[0]
         
         PtP = torch.zeros((C_in_kk, C_in_kk), device=a_prev.device, dtype=a_prev.dtype)

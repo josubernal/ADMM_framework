@@ -42,8 +42,8 @@ if __name__ == "__main__":
     epochs = config.getint('affine', 'epochs')
     warming_iters = config.getint('affine', 'warming_iters')
     batch_size = config.getint('affine', 'batch_size')
+    rho = config.getfloat('affine', 'rho')
     beta = config.getfloat('affine', 'beta')
-    gamma = config.getfloat('affine', 'gamma')
     
     print(f"Performing training for {batch_size} images, {config.get('affine', 'train_method')}.")
     print()
@@ -136,7 +136,7 @@ if __name__ == "__main__":
         
         targets = torch.nn.functional.one_hot(targets.to(torch.long), num_classes=10).to(current_dtype)
 
-        model = ADMM(layers, T=n_timesteps,  beta= beta, thetas=thetas, deltas=deltas, gamma=gamma, init=init, bias=bias, train_method=train_method).to(device)
+        model = ADMM(layers, T=n_timesteps,  rho= rho, thetas=thetas, deltas=deltas, beta=beta, init=init, bias=bias, train_method=train_method).to(device)
     else: 
         image_transform = transforms.Compose([
             transforms.ToTensor(),
@@ -152,7 +152,7 @@ if __name__ == "__main__":
         data_flat =  data.view(data.size(0), -1).to(current_dtype)
         targets = torch.nn.functional.one_hot(targets, num_classes=10).to(current_dtype)
         
-        model = ADMM(layers, beta= beta, gamma=gamma, init=init, bias=bias, train_method=train_method).to(device)
+        model = ADMM(layers, rho= rho, beta=beta, init=init, bias=bias, train_method=train_method).to(device)
     
     
     m=ADMM_Metrics(model)
@@ -193,7 +193,6 @@ if __name__ == "__main__":
                 primal = current_metrics["primal_residual"]
                 preactivation_constraint_sum = current_metrics["preactivation_constraint_sum"]
                 activation_constraint_sum = current_metrics["activation_constraint_sum"]
-                old_lagr = current_metrics["lagrangian_cost_original"] if "lagrangian_cost_original" in current_metrics else 0
                 lam_norm = model.lambda_lagrange.norm().item()
                 lam_elements = model.lambda_lagrange.numel()
                 lam_sum_metric = lam_norm / lam_elements
@@ -204,7 +203,6 @@ if __name__ == "__main__":
                       f"| Firing rate: {[f'{v:.4f}' for v in firing_rates]} "
                       f"| Lambda sum: {lam_sum_metric:.4f} "
                       f"| Lagr: {lagr:10.2f} "
-                      f"| Old lagr: {old_lagr:10.2f} "
                       f"| Lamb: {primal:10.2f} "
                       f"| Pre: {[f'{v:.4f}' for v in preactivation_constraint_sum]} "
                       f"| Act: {[f'{v:.4f}' for v in activation_constraint_sum]}") 

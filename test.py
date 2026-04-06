@@ -39,8 +39,8 @@ if __name__ == "__main__":
     epochs = config.getint('affine', 'epochs')
     warming_iters = config.getint('affine', 'warming_iters')
     batch_size = config.getint('affine', 'batch_size')
+    rho = config.getfloat('affine', 'rho')
     beta = config.getfloat('affine', 'beta')
-    gamma = config.getfloat('affine', 'gamma')
     
     print(f"Performing training for {batch_size} images...")
     
@@ -65,7 +65,7 @@ if __name__ == "__main__":
                               collate_fn=tonic.collation.PadTensors(), shuffle=True, drop_last=True, 
                               generator=torch.Generator().manual_seed(seed))
     
-    model = ADMM(layers, T=n_timesteps, beta=beta, thetas=thetas, deltas=deltas, gamma=gamma, 
+    model = ADMM(layers, T=n_timesteps, rho=rho, thetas=thetas, deltas=deltas, beta=beta, 
                  init="zeros-rng", bias=False, train_method="unrolled-random").to(device)
     
     metrics=ADMM_Metrics(model)
@@ -113,7 +113,7 @@ if __name__ == "__main__":
             'lam': model.lambda_lagrange.detach().clone(),
             'acc': acc, 
             'mse': current_metrics['mse'], 
-            'lagr': current_metrics['lagrangian_cost_original'], 
+            'lagr': current_metrics['lagrangian_cost'], 
             'primal': current_metrics['primal_residual'],
             'pre': current_metrics['preactivation_constraint_sum'], 
             'act': current_metrics['activation_constraint_sum'], 
@@ -131,8 +131,8 @@ if __name__ == "__main__":
     print("\n=== RUNNING LEGACY MODEL ===")
     reset_seed(seed) 
     
-    # Note: Legacy script maps rho->beta (preact penalty) and beta->gamma (act penalty)
-    model_real = ADMM_SNN(batch_size, n_timesteps, 34*34*2, [hidden_dims], 10, beta, deltas, thetas, gamma)
+    # Note: Legacy script maps rho->rho (preact penalty) and rho->beta (act penalty)
+    model_real = ADMM_SNN(batch_size, n_timesteps, 34*34*2, [hidden_dims], 10, rho, deltas, thetas, beta)
     data_leg = base_data + 0.01 * torch.randn_like(base_data) 
     leg = {}
     

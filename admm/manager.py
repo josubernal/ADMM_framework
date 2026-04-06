@@ -5,10 +5,10 @@ This module contains the core orchestrator for the network and ADMM optimizer.
 ADMM breaks the network down into layer-wise sub-problems and updates in a loop:
 1. Weight Updates 
 2. Activation & Pre-activation Updates 
-3. Dual Variable / Lagrange Multiplier Updates (Gradient Ascent)
+3. Dual Variable / Lagrange Multiplier Updates
 
 IMPORTANT:
-- Lambda update is beta not 2*beta, to match Cesare's implementation and ensure convergence.
+- Lambda update is rho not 2*rho, to match Cesare's implementation and ensure convergence.
 This should be discussed in the future as it differs from the standard ADMM formulation.
 """
 
@@ -24,9 +24,9 @@ class ADMM(nn.Module):
     Handles both Static and Spiking ADMM networks automatically, orchestrating
     layer-wise optimization loops.
     """   
-    def __init__(self, layers: nn.ModuleList, beta: float = 1.0, gamma: float = 1.0, 
+    def __init__(self, layers: nn.ModuleList, rho: float = 1.0, beta: float = 1.0, 
                  init: str = "zeros", bias: bool = False, device=None, 
-                 train_method: str = "hybrid-random", **kwargs):
+                 train_method: str = "decoupled-random", **kwargs):
         super().__init__()
         
         self.device = device if device is not None else torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -37,8 +37,8 @@ class ADMM(nn.Module):
         self.lambda_lagrange = None
         self.init = init
         self.train_method = train_method
+        self.rho = rho
         self.beta = beta
-        self.gamma = gamma
         self.bias = bias
 
         if self.bias:
@@ -47,7 +47,7 @@ class ADMM(nn.Module):
         for key, val in kwargs.items():
             setattr(self, key, val)
         
-        valid_methods = ["vectorized", "unrolled-random", "unrolled-sequential", "hybrid-random", "hybrid-sequential"]
+        valid_methods = ["vectorized", "unrolled-random", "unrolled-sequential", "decoupled-random", "decoupled-sequential"]
         if self.train_method not in valid_methods:
             raise ValueError(f"Invalid train_method. Please select from: {valid_methods}")
         
@@ -59,7 +59,7 @@ class ADMM(nn.Module):
             )
             self.train_method = "vectorized"
             
-        config = {'beta': self.beta, 'gamma': self.gamma, 'init': self.init}
+        config = {'rho': self.rho, 'beta': self.beta, 'init': self.init}
         config.update(kwargs)
         self._configure_layers(config)
 
@@ -67,7 +67,7 @@ class ADMM(nn.Module):
         """Pushes global hyperparameters down to the individual layer setup methods.
 
         Args:
-            config_dict (dict): Dictionary containing configuration parameters: beta, gamma and init strategy.
+            config_dict (dict): Dictionary containing configuration parameters: rho, beta and init strategy.
         """
         for i, layer in enumerate(self.layers):
             layer.to(self.device)
@@ -148,7 +148,7 @@ class ADMM(nn.Module):
                 
                 if i < len(self.layers) - 1:
                     # Sum of all spikes divided by the total number of elements
-                    layer_firing_rate = x.sum().item() / x.numel()
+                    layer_firing_rate = x.sum().item() / x.numel() if self._is_spiking() else float("NaN")
                     firing_rates.append(layer_firing_rate)
                     
                 final_z = z_pred
@@ -164,7 +164,7 @@ class ADMM(nn.Module):
     def _lambda_update(self, last_layer, a_prev_L):
         """Updates the Lagrange multiplier (lambda) based on the final layer constraint.
 
-        Formula: lambda_new = lambda_old + beta * (z - forward(a_prev_L))
+        Formula: lambda_new = lambda_old + rho * (z - forward(a_prev_L))
 
         Args:
             last_layer (nn.Module): The final layer of the network.
@@ -179,7 +179,7 @@ class ADMM(nn.Module):
             spatial_out = last_layer.spatial_forward(a_prev_L)
             residual = last_layer.z - spatial_out
 
-        self.lambda_lagrange += self.beta * residual
+        self.lambda_lagrange += self.rho * residual
     
     def _optimize_w_and_b(self, layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None, cache_pinv: bool = False):
         """Unified interface for updating all trainable parameters (W, b).
@@ -205,9 +205,9 @@ class ADMM(nn.Module):
         """
         if self.train_method.startswith("unrolled") and getattr(layer, 'spiking', False):
             layer.update_az_interleaved(next_layer, a_prev, lagrange, time_steps)
-        elif self.train_method.startswith("hybrid") and getattr(layer, 'spiking', False):
+        elif self.train_method.startswith("decoupled") and getattr(layer, 'spiking', False):
             layer.update_a(next_layer, a_prev, lagrange)
-            layer.update_z_hybrid(a_prev, time_steps)
+            layer.update_z_decoupled(a_prev, time_steps)
         else:
             layer.update_a(next_layer, a_prev, lagrange)
             layer.update_z(a_prev)

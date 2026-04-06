@@ -12,6 +12,8 @@ from .core import ADMM_Layer
 from .initializers import get_initializer
 from .solvers import solve_least_squares_weights, solve_linear_system
 
+from .pooling import ADMM_Flatten
+
 ############################################################################################################
 #Affine Layer Manager
 ############################################################################################################           
@@ -22,12 +24,13 @@ class ADMM_AffineLayer(ADMM_Layer):
     Handles the initialization of weights and biases and contains the optimization 
     solvers to update them using ADMM principles.
     """
-    def __init__(self, h: nn.Module = None, bias: bool = False):
+    def __init__(self, h: nn.Module = None, bias: bool = False, pool_op= None):
         super().__init__(h)
         self.bias = bias
         self.pinv = None
         self.W = None 
-        self.b = None     
+        self.b = None  
+        self.pool_op = pool_op if pool_op is not None else ADMM_Flatten()   
 
     def _init_weights_and_bias(self, weight_shape: tuple, bias_shape: tuple):
         """Initializes weights and biases based on the specified strategy.
@@ -98,7 +101,7 @@ class ADMM_AffineLayer(ADMM_Layer):
         """
         lamb = self._broadcast_to_match(lambda_lagrange, self.z)
         lamb = lamb.movedim(self.channel_dim, -1).reshape(-1, self.W.shape[0])
-        return (lamb.t() / self.beta) @ P
+        return (lamb.t() / self.rho) @ P
 
     def _apply_lagrange_to_Y(self, Y: torch.Tensor, lambda_lagrange: torch.Tensor) -> torch.Tensor:
         """Applies the Lagrange multiplier to the activation or bias target.
@@ -111,9 +114,9 @@ class ADMM_AffineLayer(ADMM_Layer):
             torch.Tensor: The penalized target tensor.
         """
         lam_spatial = self._broadcast_to_match(lambda_lagrange, Y)
-        return Y + (lam_spatial / self.beta)
+        return Y + (lam_spatial / self.rho)
     
-    def _get_expanded_weights(self, next_layer: nn.Module):
+    def _get_expanded_weights(self, a_shape):
         """Delegates weight expansion to the next layer's pooling operator.
 
         If no spatial pooling is used, it simply flattens the weights.
@@ -124,11 +127,42 @@ class ADMM_AffineLayer(ADMM_Layer):
         Returns:
             torch.Tensor: The expanded or flattened weight matrix.
         """
-        if hasattr(next_layer, 'pool_op') and self.a.dim() > 3:
-            return next_layer.pool_op.expand_weights(next_layer.W, original_a_shape=self.a.shape)
+        if self.pool_op and len(a_shape) > 3:
+            return self.pool_op.expand_weights(self.W, original_a_shape=a_shape)
             
-        return next_layer.W.view(next_layer.W.size(0), -1)  
+        return self.W.view(self.W.size(0), -1)
+    
+        
+    def _get_a_denominator(self, beta_current, a_shape, temp_den=0.0, unrolled=False):
+        """Computes the denominator matrix for the activation (a) update step.
 
+        Formula:
+        denomitator = beta I + rho W^TW
+        Args:
+            beta_current (float): The penalty parameter beta for the activation update.
+            a_shape (tuple): The a shape of the activation tensor, 
+                used to determine how weights should be expanded or flattened.
+            temp_den (float or torch.Tensor, optional): Temporal penalty term 
+                used in Spiking Neural Networks to account for leakage/reset 
+                dependencies. Defaults to 0.0.
+            unrolled (bool, optional): If True, indicates the call is from an 
+                unrolled temporal solver. In the base implementation, this is 
+                a placeholder; spiking overrides use this to return inverted 
+                matrices. Defaults to False.
+
+        Returns:
+            tuple:
+                - torch.Tensor: The computed denominator matrix (LHS of the system).
+                - int: The number of input features (dimensionality of the expanded 
+                  weight space).
+        """
+        W = self._get_expanded_weights(a_shape=a_shape)   
+        in_features = W.size(1)
+        I = torch.eye(in_features, device=self.W.device, dtype=W.dtype)
+        WtW = torch.matmul(W.t(), W) 
+        denominator =  beta_current * I + self.rho * WtW
+        return  denominator, in_features
+    
     def update_weights(self, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None, cache_pinv: bool = False):
         """Solves the regularized least-squares problem for the Weight matrix W.
 
@@ -164,8 +198,8 @@ class ADMM_AffineLayer(ADMM_Layer):
         
         if lambda_lagrange is not None:
             lam_spatial = self._broadcast_to_match(lambda_lagrange, self.z)
-            #target = target + (lam_spatial / (2 * self.beta))
-            target = target + (lam_spatial / (self.beta))
+            #target = target + (lam_spatial / (2 * self.rho))
+            target = target + (lam_spatial / (self.rho))
                 
         new_bias = torch.mean(target, dim=self._get_bias_reduction_dims())
         self.b.data.copy_(new_bias)
@@ -183,12 +217,12 @@ class ADMM_AffineLayer(ADMM_Layer):
         self.z.data.copy_(new_z)  
 
     def update_a(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None):
-        """Universal Exact Solver for the a update.
+        """Universal Solver for the a update. 
 
         Solves the linear system: 
         denominator * a = numerator, where
-        numerator = gamma * h(z) + beta * adjoint(Y)
-        denominator = gamma * I + beta * W^T * W
+        numerator = beta * h(z) + rho * adjoint(Y)
+        denominator = beta * I + rho * W^T * W
 
         Args:
             target (torch.Tensor): The target tensor from the next layer.
@@ -199,21 +233,39 @@ class ADMM_AffineLayer(ADMM_Layer):
         Returns:
             torch.Tensor: The exact updated activations.
         """
-        inside_adjoint= next_layer._get_Y()
+        inside_adjoint = next_layer._get_Y()
         if lambda_lagrange is not None:
-             inside_adjoint = next_layer._apply_lagrange_to_Y(inside_adjoint, lambda_lagrange / 2.0)
+            inside_adjoint = next_layer._apply_lagrange_to_Y(inside_adjoint, lambda_lagrange / 2.0)
+        
         h_z = self.h(self.z)
         adjoint = next_layer.adjoint_operator(inside_adjoint, original_input_shape=self.a.shape)
-        numerator = self.gamma * h_z + next_layer.beta * adjoint 
+        numerator = self.beta * h_z + next_layer.rho * adjoint 
         
-        W = self._get_expanded_weights(next_layer)  
-        I = torch.eye(W.size(1), device=next_layer.W.device, dtype=W.dtype)
-        WtW = torch.matmul(W.t(), W) 
-        denominator = self.gamma * I + next_layer.beta * WtW
+        new_a = next_layer.solve_activation_system(
+            numerator=numerator,
+            a_shape=self.a.shape,
+            beta_current=self.beta
+        )
         
-        new_a = solve_linear_system(denominator, numerator, self.a.shape, W.size(1))
         self.a.data.copy_(new_a)
+        
+    def solve_activation_system(self, numerator: torch.Tensor, a_shape: tuple, beta_current: float, temp_den=0.0) -> torch.Tensor:
+        """Universal Solver for the a update.
 
+        Solves the linear system: 
+        denominator * a = numerator, where
+        numerator = beta * h(z) + rho * adjoint(Y)
+        denominator = beta * I + rho * W^T * W
 
+        Args:
+            target (torch.Tensor): The target tensor from the next layer.
+            next_layer (nn.Module): The subsequent layer in the network.
+            temp_num (float or torch.Tensor, optional): Temporal penalty for the numerator. Defaults to 0.0.
+            temp_den (float or torch.Tensor, optional): Temporal penalty for the denominator. Defaults to 0.0.
 
-         
+        Returns:
+            torch.Tensor: The exact updated activations.
+        """
+        denominator , in_features = self._get_a_denominator( beta_current, a_shape)
+        return solve_linear_system(denominator, numerator, a_shape, in_features)
+    

@@ -26,40 +26,54 @@ import torch
 
 
 class ADMMPoolingBase(ABC):
-    """
-    Abstract Base Class for ADMM Pooling/Flattening operators.
+    """Abstract Base Class for ADMM Pooling/Flattening operators.
+
     Enforces that all pooling methods implement a forward pass and an explicit adjoint.
     """
     
     @abstractmethod
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        """Applies the forward pooling or flattening operation."""
+        """Applies the forward pooling or flattening operation.
+
+        Args:
+            x (torch.Tensor): The input tensor.
+
+        Returns:
+            torch.Tensor: The pooled or flattened output tensor.
+        """
         pass
 
     @abstractmethod
     def adjoint(self, output: torch.Tensor, original_input_shape=None, tb_shape=None) -> torch.Tensor:
-        """
-        Applies the adjoint (transpose) operation to map variables back to the input space.
+        """Applies the adjoint (transpose) operation to map variables back to the input space.
 
         Args:
-            output: The tensor to be mapped back.
-            original_input_shape: The full target shape (e.g., [B, C, H, W] or [T, B, C, H, W]).
-                                  Used to restore the exact spatial grid.
-            tb_shape: A tuple (Time, Batch) used specifically to split a collapsed 
-                      first dimension back into separate Time and Batch dimensions.
+            output (torch.Tensor): The tensor to be mapped back.
+            original_input_shape (tuple, optional): The full target shape (e.g., [B, C, H, W] 
+                or [T, B, C, H, W]). Used to restore the exact spatial grid. Defaults to None.
+            tb_shape (tuple, optional): A tuple (Time, Batch) used specifically to split a 
+                collapsed first dimension back into separate Time and Batch dimensions. 
+                Defaults to None.
+
+        Returns:
+            torch.Tensor: The mapped tensor in its original spatial dimensions.
         """
         pass
     
     @abstractmethod
     def expand_weights(self, W: torch.Tensor, original_a_shape=None) -> torch.Tensor:
-        """
-        Expands the weights of the next layer to match the spatial dimensions of the current layer's auxiliary variable 'a'.
-        This is necessary for computing the linear system in ADMM when spatial pooling is involved.
+        """Expands the weights of the next layer to match the spatial dimensions of a.
+
+        This is necessary for computing the linear system in ADMM when spatial pooling 
+        is involved.
 
         Args:
-            W: The weight matrix of the next layer (shape [Out, In]).
-            original_a_shape: The original shape of 'a' before pooling (e.g., [B, C, H, W]) used to determine how to expand W.
+            W (torch.Tensor): The weight matrix of the next layer (shape [Out, In]).
+            original_a_shape (tuple, optional): The original shape of a before pooling 
+                (e.g., [B, C, H, W]) used to determine how to expand W. Defaults to None.
 
+        Returns:
+            torch.Tensor: The expanded weight tensor.
         """
         pass
 
@@ -88,7 +102,17 @@ class ADMM_Flatten(ADMMPoolingBase):
         return output
     
     def expand_weights(self, W: torch.Tensor, original_a_shape: tuple):
-        """Flatten does not alter spatial weight structures."""
+        """Expands weights for flattening operations.
+
+        Flattening does not alter spatial weight structures, so this simply flattens W.
+
+        Args:
+            W (torch.Tensor): The weight matrix.
+            original_a_shape (tuple): The original shape of $a$.
+
+        Returns:
+            torch.Tensor: The flattened weight matrix.
+        """
         return W.view(W.size(0), -1)
 
 
@@ -123,9 +147,16 @@ class ADMM_GAP(ADMMPoolingBase):
         return output
     
     def expand_weights(self, W: torch.Tensor, original_a_shape: tuple):
-        """
-        Upsamples the weights from the pooled spatial grid back to the 
-        original image grid, scaling them by the pooling factor.
+        """Upsamples the weights from the pooled spatial grid back to the original image grid.
+
+        Scales them by the pooling factor to maintain mathematical consistency.
+
+        Args:
+            W (torch.Tensor): The weight matrix.
+            original_a_shape (tuple): The original shape of $a$.
+
+        Returns:
+            torch.Tensor: The expanded and scaled weight matrix.
         """
         h, w = original_a_shape[-2:]
         in_c = original_a_shape[-3]
@@ -175,9 +206,16 @@ class ADMM_SpatialPool(ADMMPoolingBase):
         return output
 
     def expand_weights(self, W: torch.Tensor, original_a_shape: tuple):
-        """
-        Upsamples the weights from the pooled spatial grid back to the 
-        original image grid, scaling them by the pooling factor.
+        """Upsamples the weights from the pooled spatial grid back to the original image grid.
+
+        Scales them by the pooling factor to maintain mathematical consistency.
+
+        Args:
+            W (torch.Tensor): The weight matrix.
+            original_a_shape (tuple): The original shape of a.
+
+        Returns:
+            torch.Tensor: The expanded and scaled weight matrix.
         """
         h, w = original_a_shape[-2:]
         in_c = original_a_shape[-3]

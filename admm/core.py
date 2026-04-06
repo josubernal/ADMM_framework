@@ -24,8 +24,8 @@ class ADMM_Layer(nn.Module):
     def __init__(self, h: nn.Module = None):
         super().__init__()
         self.device = None
+        self.rho = None
         self.beta = None
-        self.gamma = None
         self.deltas = None
         self.thetas = None
         
@@ -38,7 +38,7 @@ class ADMM_Layer(nn.Module):
         """Receives global ADMM hyperparameters from the manager and cascades them.
 
         Args:
-            config (dict): Dictionary containing global hyperparameters (e.g., beta, gamma).
+            config (dict): Dictionary containing global hyperparameters (e.g., rho, beta).
             is_last_layer (bool, optional): Flag indicating if this is the final layer. Defaults to False.
         """
         for key, val in config.items():
@@ -101,8 +101,8 @@ class ADMM_Layer(nn.Module):
 
         Mathematical formulation:
         z_last=numerator / denominator, where
-        numerator = beta * forward(a_prev) + (labels - (lambda / 2))
-        denominator = 1 + beta
+        numerator = rho * forward(a_prev) + (labels - (lambda / 2))
+        denominator = 1 + rho
 
         For spiking networks, this also incorporates temporal penalties into the 
         numerator and denominator.
@@ -118,8 +118,8 @@ class ADMM_Layer(nn.Module):
         labels = self._broadcast_to_match(labels, forward)
         lamb = self._broadcast_to_match(lambda_lagrange, forward)
 
-        numerator = (self.beta * forward) + (labels - (lamb / 2.0))
-        denominator = 1 + self.beta 
+        numerator = (self.rho * forward) + (labels - (lamb / 2.0))
+        denominator = 1 + self.rho 
         
         self.z.data.copy_(numerator / denominator)        
         

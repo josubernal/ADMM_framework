@@ -93,11 +93,13 @@ if __name__ == "__main__":
         init = cfg.get('init', 'zeros')
         bias = cfg.get('bias', False)
         train_method = cfg.get('train_method', 'unrolled-sequential')
-        beta = cfg.get('beta', 1.0)
-        gamma = cfg.get('gamma', 0.1)
+        rho = cfg.get('rho', 1.0)
+        beta = cfg.get('beta', 0.1)
         thetas = cfg.get('thetas', 0.3)
         deltas = cfg.get('deltas', 0.95)
         n_timesteps = cfg.get('n_timesteps', 150)
+        num_layers = cfg.get('layers', 2)
+
 
         if use_double:
             torch.set_default_dtype(torch.float64)
@@ -142,7 +144,10 @@ if __name__ == "__main__":
       
             data, targets_orig = next(iter(train_loader))
             data, targets_orig = data.to(device), targets_orig.to(device)
-            data = data.view(data.size(0), -1).to(current_dtype)
+            if "conv" in model_name:
+                data = data.to(current_dtype) 
+            else:
+                data = data.view(data.size(0), -1).to(current_dtype)
             targets = torch.nn.functional.one_hot(targets_orig, num_classes=10).to(current_dtype)
 
         # Add minor noise
@@ -151,56 +156,92 @@ if __name__ == "__main__":
         # ---------------------------------------------------------
         # 2. INITIALIZE ARCHITECTURE
         # ---------------------------------------------------------
+        hidden_dims = int(cfg.get('hidden_dims', 100))
+        hidden_channels = int(cfg.get('hidden_channels', 4))
+        num_layers = int(cfg.get('layers', 2))
         match model_name:
             case "spiking-linear":
-                hidden_dims = cfg.get('hidden_dims', 100)
-                layers = nn.ModuleList([
-                    ADMM_SpikingLinear(in_f=34*34*2, out_f=hidden_dims, h=ADMM_Heaviside(thetas=thetas), init=init),
-                    ADMM_SpikingLinear(in_f=hidden_dims, out_f=10, h=None, init=init)
-                ])
+                if num_layers == 2:
+                    layers = nn.ModuleList([
+                        ADMM_SpikingLinear(in_f=34*34*2, out_f=hidden_dims, h=ADMM_Heaviside(thetas=thetas), init=init),
+                        ADMM_SpikingLinear(in_f=hidden_dims, out_f=10, h=None, init=init)
+                    ])
+                elif num_layers == 3:
+                    mid_dims = hidden_dims // 2
+                    layers = nn.ModuleList([
+                        ADMM_SpikingLinear(in_f=34*34*2, out_f=hidden_dims, h=ADMM_Heaviside(thetas=thetas), init=init),
+                        ADMM_SpikingLinear(in_f=hidden_dims, out_f=mid_dims, h=ADMM_Heaviside(thetas=thetas), init=init),
+                        ADMM_SpikingLinear(in_f=mid_dims, out_f=10, h=None, init=init)
+                    ])
 
             case "spiking-conv":
-                hidden_channels = cfg.get('hidden_channels', 4)
                 k = cfg.get('kernel_size', 5)
                 p = cfg.get('padding', 2)
-                s = cfg.get('stride', 2)
+                s = cfg.get('stride', 1)
                 pool_h, pool_w = 4, 4 
-                linear_in_features = hidden_channels * pool_h * pool_w
                 
-                layers = nn.ModuleList([
-                    ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init),
-                    ADMM_SpikingLinear(in_f=linear_in_features, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)))
-                ])
+                if num_layers == 2:
+                    # Layer 2 needs FULL hidden_channels because layer 1 outputs all of them
+                    lin_in = hidden_channels * pool_h * pool_w
+                    layers = nn.ModuleList([
+                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init),
+                        ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)))
+                    ])
+                elif num_layers == 3:
+                    mid_p = k // 2 
+                    mid_c = hidden_channels // 2
+                    # Layer 3 needs HALVED channels because layer 2 reduced them
+                    lin_in = mid_c * pool_h * pool_w
+                    layers = nn.ModuleList([
+                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init),
+                        ADMM_SpikingConv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=mid_p, s=1, h=ADMM_Heaviside(thetas=thetas), init=init),
+                        ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)))
+                    ])
 
             case "linear":  
-                hidden_dims = cfg.get('hidden_dims', 100)
-                layers = nn.ModuleList([
+                if num_layers == 2:
+                    layers = nn.ModuleList([
                         ADMM_Linear(in_f=28*28, out_f=hidden_dims, h=ADMM_ReLU(), init=init),
                         ADMM_Linear(in_f=hidden_dims, out_f=10, h=ADMM_ReLU(), init=init)
                     ])
+                elif num_layers == 3:
+                    mid_dims = hidden_dims // 2
+                    layers = nn.ModuleList([
+                        ADMM_Linear(in_f=28*28, out_f=hidden_dims, h=ADMM_ReLU(), init=init),
+                        ADMM_Linear(in_f=hidden_dims, out_f=mid_dims, h=ADMM_ReLU(), init=init),
+                        ADMM_Linear(in_f=mid_dims, out_f=10, h=ADMM_ReLU(), init=init)
+                    ])
                     
             case "conv":
-                hidden_channels = cfg.get('hidden_channels', 4)
                 k = cfg.get('kernel_size', 5)
                 p = cfg.get('padding', 2)
-                s = cfg.get('stride', 2)
-                spatial_out = calc_spatial_out(28, k, p, s)
-                linear_in_features = hidden_channels * spatial_out * spatial_out
-                layers = nn.ModuleList([
-                    ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init),       
-                    ADMM_Linear(in_f=linear_in_features, out_f=10, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten())
-                ])
+                s = cfg.get('stride', 1)
                 
-            case _:
-                raise ValueError(f'Model {model_name} not defined')
-
+                if num_layers == 2:
+                    spatial_out = int(calc_spatial_out(28, k, p, s))
+                    lin_in = hidden_channels * spatial_out * spatial_out
+                    layers = nn.ModuleList([
+                        ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init),       
+                        ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten())
+                    ])
+                elif num_layers == 3:
+                    spatial_out_1 = int(calc_spatial_out(28, k, p, s))
+                    spatial_out_2 = int(calc_spatial_out(spatial_out_1, k, p, s))
+                    mid_c = hidden_channels // 2
+                    lin_in = mid_c * spatial_out_2 * spatial_out_2
+                    
+                    layers = nn.ModuleList([
+                        ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init), 
+                        ADMM_Conv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=p, s=s, h=ADMM_ReLU(), init=init),
+                        ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten())
+                    ])
         # ---------------------------------------------------------
         # 3. INITIALIZE MODEL & METRICS
         # ---------------------------------------------------------
         if model_name.split('-')[0] == "spiking":
-            model = ADMM(layers, T=n_timesteps, beta=beta, thetas=thetas, deltas=deltas, gamma=gamma, init=init, bias=bias, train_method=train_method).to(device)
+            model = ADMM(layers, T=n_timesteps, rho=rho, thetas=thetas, deltas=deltas, beta=beta, init=init, bias=bias, train_method=train_method).to(device)
         else: 
-            model = ADMM(layers, beta=beta, gamma=gamma, init=init, bias=bias, train_method=train_method).to(device)
+            model = ADMM(layers, rho=rho, beta=beta, init=init, bias=bias, train_method=train_method).to(device)
         
         m = ADMM_Metrics(model)
         model._init_states(data)
@@ -240,7 +281,6 @@ if __name__ == "__main__":
                     primal = current_metrics["primal_residual"]
                     preactivation_constraint_sum = current_metrics["preactivation_constraint_sum"]
                     activation_constraint_sum = current_metrics["activation_constraint_sum"]
-                    old_lagr = current_metrics.get("lagrangian_cost_original", 0)
 
                     print(f"Epoch [{epoch:3d}/{epochs}] "
                           f"| MSE: {mse:.4f} "
