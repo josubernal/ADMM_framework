@@ -10,10 +10,13 @@ import matplotlib.pyplot as plt
 import os
 import json
 import itertools
-from torchvision import datasets, transforms
 import time
+from torchvision import datasets, transforms
 
-from admm import ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpatialPool, ADMM_SpikingConv2d, ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics
+from admm import (
+    ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpatialPool, ADMM_SpikingConv2d, 
+    ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics
+)
 
 def parse_value(v):
     """Smartly parse strings from the INI file into their correct Python types."""
@@ -24,54 +27,53 @@ def parse_value(v):
     except ValueError: pass
     try: return float(v)
     except ValueError: pass
-    return v  # Returns as string if it's neither bool, int, nor float
+    return v  
+
+def calc_spatial_out(size_in, k, p, s):
+    return ((size_in + 2 * p - k) // s) + 1
 
 if __name__ == "__main__":
-    seed = 8281003564
-    random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.benchmark = False
-    torch.cuda.manual_seed_all(seed)
+    # --- Base Setup ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     config = configparser.ConfigParser()
-    config.read('config/config_grid.ini')
+    config.read('config/config.ini')
     
-    # --- Parse Static Params ---
-    static_params = {}
-    if config.has_section('static'):
-        for key, val in config.items('static'):
-            static_params[key] = parse_value(val)
-
-    # --- Parse Grid Params ---
+    # --- Smart Config Parsing ---
     grid_params = {}
-    if config.has_section('grid'):
-        for key, val in config.items('grid'):
+    if config.has_section('config'):
+        for key, val in config.items('config'):
+            # Split by comma to support both static (length 1) and grid (length > 1)
             grid_params[key] = [parse_value(v) for v in val.split(',')]
+    else:
+        raise ValueError("Config file must contain a [config] section.")
             
     # Generate all combinations
     keys = list(grid_params.keys())
     values = list(grid_params.values())
     combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
     
-    if not combinations:
-        combinations = [{}] # Run once if no grid params provided
-
-    def calc_spatial_out(size_in, k, p, s):
-        return ((size_in + 2 * p - k) // s) + 1
-
-    print(f"Total grid search configurations to evaluate: {len(combinations)}")
-    print(f"Combinations: {combinations}")
+    is_static_run = (len(combinations) == 1)
     
+    print(f"Total configurations to evaluate: {len(combinations)}")
+    if not is_static_run:
+        print(f"Grid Parameters detected.")
+    
+    # To store metrics for plotting if it's a static run
+    final_metrics = {}
+
     # ==========================================
-    # GRID SEARCH LOOP
+    # EXECUTION LOOP
     # ==========================================
-    for idx, combo in enumerate(combinations):
+    for idx, cfg in enumerate(combinations):
         print(f"\n=======================================================")
-        print(f"[{idx+1}/{len(combinations)}] Running Grid Config: {combo}")
+        if is_static_run:
+            print(f"Running Static Config: {cfg['model']} | Train Method: {cfg['train_method']}")
+        else:
+            print(f"[{idx+1}/{len(combinations)}] Running Grid Config: {cfg}")
         print(f"=======================================================")
 
+        # Ensure perfect reproducibility for each run
         seed = 8281003564
         random.seed(seed)
         torch.manual_seed(seed)
@@ -80,11 +82,7 @@ if __name__ == "__main__":
         torch.backends.cudnn.deterministic = True 
         torch.backends.cudnn.benchmark = False
         
-        # Merge static params with the current grid combo (combo overwrites static)
-        cfg = static_params.copy()
-        cfg.update(combo)
-
-        # Extract variables from the merged config
+        # Extract variables
         use_double = cfg.get('use_double', False)
         model_name = cfg.get('model', 'linear')
         epochs = cfg.get('epochs', 20)
@@ -100,7 +98,6 @@ if __name__ == "__main__":
         n_timesteps = cfg.get('n_timesteps', 150)
         num_layers = cfg.get('layers', 2)
 
-
         if use_double:
             torch.set_default_dtype(torch.float64)
             current_dtype = torch.float64
@@ -109,7 +106,7 @@ if __name__ == "__main__":
             current_dtype = torch.float32
 
         # ---------------------------------------------------------
-        # 1. LOAD DATASET (Inside loop because batch_size/model can change)
+        # 1. LOAD DATASET
         # ---------------------------------------------------------
         if model_name.split('-')[0] == "spiking":
             sensor_size = tonic.datasets.NMNIST.sensor_size
@@ -120,7 +117,7 @@ if __name__ == "__main__":
             trainset = tonic.datasets.NMNIST(save_to='./data', transform=frame_transform, train=True)
             cached_trainset = DiskCachedDataset(trainset, cache_path='./cache/nmnist/train')
             train_loader = DataLoader(cached_trainset, batch_size=batch_size,
-                                        collate_fn=tonic.collation.PadTensors(), shuffle=True, drop_last=True, generator = torch.Generator().manual_seed(seed))
+                                        collate_fn=tonic.collation.PadTensors(), shuffle=True, drop_last=True, generator=torch.Generator().manual_seed(seed))
             
             data, targets_orig = next(iter(train_loader))
             data, targets_orig = data.to(device), targets_orig.to(device)
@@ -130,8 +127,7 @@ if __name__ == "__main__":
                 data = data[:, :n_timesteps, :]
 
             if "linear" in model_name:
-                data = data.view(data.size(0), data.size(1), -1)
-                data = data.permute(1, 0, 2).to(current_dtype)
+                data = data.view(data.size(0), data.size(1), -1).permute(1, 0, 2).to(current_dtype)
             else:
                 data = data.permute(1, 0, 2, 3, 4).to(current_dtype)
         else: 
@@ -144,13 +140,14 @@ if __name__ == "__main__":
       
             data, targets_orig = next(iter(train_loader))
             data, targets_orig = data.to(device), targets_orig.to(device)
+            
             if "conv" in model_name:
                 data = data.to(current_dtype) 
             else:
                 data = data.view(data.size(0), -1).to(current_dtype)
             targets = torch.nn.functional.one_hot(targets_orig, num_classes=10).to(current_dtype)
 
-        # Add minor noise
+        # Add minor noise to break symmetry
         data += 0.01 * torch.randn_like(data) 
 
         # ---------------------------------------------------------
@@ -158,58 +155,56 @@ if __name__ == "__main__":
         # ---------------------------------------------------------
         hidden_dims = int(cfg.get('hidden_dims', 100))
         hidden_channels = int(cfg.get('hidden_channels', 4))
-        num_layers = int(cfg.get('layers', 2))
+        
         match model_name:
             case "spiking-linear":
                 if num_layers == 2:
                     layers = nn.ModuleList([
-                        ADMM_SpikingLinear(in_f=34*34*2, out_f=hidden_dims, h=ADMM_Heaviside(thetas=thetas), init=init),
-                        ADMM_SpikingLinear(in_f=hidden_dims, out_f=10, h=None, init=init)
+                        ADMM_SpikingLinear(in_f=34*34*2, out_f=hidden_dims, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias),
+                        ADMM_SpikingLinear(in_f=hidden_dims, out_f=10, h=None, init=init, bias=bias)
                     ])
                 elif num_layers == 3:
                     mid_dims = hidden_dims // 2
                     layers = nn.ModuleList([
-                        ADMM_SpikingLinear(in_f=34*34*2, out_f=hidden_dims, h=ADMM_Heaviside(thetas=thetas), init=init),
-                        ADMM_SpikingLinear(in_f=hidden_dims, out_f=mid_dims, h=ADMM_Heaviside(thetas=thetas), init=init),
-                        ADMM_SpikingLinear(in_f=mid_dims, out_f=10, h=None, init=init)
+                        ADMM_SpikingLinear(in_f=34*34*2, out_f=hidden_dims, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias),
+                        ADMM_SpikingLinear(in_f=hidden_dims, out_f=mid_dims, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias),
+                        ADMM_SpikingLinear(in_f=mid_dims, out_f=10, h=None, init=init, bias=bias)
                     ])
 
             case "spiking-conv":
                 k = cfg.get('kernel_size', 5)
                 p = cfg.get('padding', 2)
-                s = cfg.get('stride', 1)
+                s = cfg.get('stride', 1) # FFTs require stride=1
                 pool_h, pool_w = 4, 4 
                 
                 if num_layers == 2:
-                    # Layer 2 needs FULL hidden_channels because layer 1 outputs all of them
                     lin_in = hidden_channels * pool_h * pool_w
                     layers = nn.ModuleList([
-                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init),
-                        ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)))
+                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias),
+                        ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)), bias=bias)
                     ])
                 elif num_layers == 3:
                     mid_p = k // 2 
                     mid_c = hidden_channels // 2
-                    # Layer 3 needs HALVED channels because layer 2 reduced them
                     lin_in = mid_c * pool_h * pool_w
                     layers = nn.ModuleList([
-                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init),
-                        ADMM_SpikingConv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=mid_p, s=1, h=ADMM_Heaviside(thetas=thetas), init=init),
-                        ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)))
+                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias),
+                        ADMM_SpikingConv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=mid_p, s=1, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias),
+                        ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)), bias=bias)
                     ])
 
             case "linear":  
                 if num_layers == 2:
                     layers = nn.ModuleList([
-                        ADMM_Linear(in_f=28*28, out_f=hidden_dims, h=ADMM_ReLU(), init=init),
-                        ADMM_Linear(in_f=hidden_dims, out_f=10, h=ADMM_ReLU(), init=init)
+                        ADMM_Linear(in_f=28*28, out_f=hidden_dims, h=ADMM_ReLU(), init=init, bias=bias),
+                        ADMM_Linear(in_f=hidden_dims, out_f=10, h=ADMM_ReLU(), init=init, bias=bias)
                     ])
                 elif num_layers == 3:
                     mid_dims = hidden_dims // 2
                     layers = nn.ModuleList([
-                        ADMM_Linear(in_f=28*28, out_f=hidden_dims, h=ADMM_ReLU(), init=init),
-                        ADMM_Linear(in_f=hidden_dims, out_f=mid_dims, h=ADMM_ReLU(), init=init),
-                        ADMM_Linear(in_f=mid_dims, out_f=10, h=ADMM_ReLU(), init=init)
+                        ADMM_Linear(in_f=28*28, out_f=hidden_dims, h=ADMM_ReLU(), init=init, bias=bias),
+                        ADMM_Linear(in_f=hidden_dims, out_f=mid_dims, h=ADMM_ReLU(), init=init, bias=bias),
+                        ADMM_Linear(in_f=mid_dims, out_f=10, h=ADMM_ReLU(), init=init, bias=bias)
                     ])
                     
             case "conv":
@@ -221,8 +216,8 @@ if __name__ == "__main__":
                     spatial_out = int(calc_spatial_out(28, k, p, s))
                     lin_in = hidden_channels * spatial_out * spatial_out
                     layers = nn.ModuleList([
-                        ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init),       
-                        ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten())
+                        ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias),       
+                        ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten(), bias=bias)
                     ])
                 elif num_layers == 3:
                     spatial_out_1 = int(calc_spatial_out(28, k, p, s))
@@ -231,10 +226,11 @@ if __name__ == "__main__":
                     lin_in = mid_c * spatial_out_2 * spatial_out_2
                     
                     layers = nn.ModuleList([
-                        ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init), 
-                        ADMM_Conv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=p, s=s, h=ADMM_ReLU(), init=init),
-                        ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten())
+                        ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias), 
+                        ADMM_Conv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias),
+                        ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten(), bias=bias)
                     ])
+
         # ---------------------------------------------------------
         # 3. INITIALIZE MODEL & METRICS
         # ---------------------------------------------------------
@@ -245,13 +241,23 @@ if __name__ == "__main__":
         
         m = ADMM_Metrics(model)
         model._init_states(data)
+        
+        if is_static_run:
+            print(json.dumps(m.network_size_statistics(), indent=4))
 
         # Setup paths
-        combo_str = "_".join([f"{k}-{v}" for k, v in combo.items()]) if combo else "baseline"
+        # FIX: Only include parameters that are varying in the grid to avoid Windows 260-char path limit
+        dynamic_keys = [k for k, v in grid_params.items() if len(v) > 1]
+        
+        if is_static_run or not dynamic_keys:
+            combo_str = "baseline"
+        else:
+            combo_str = "_".join([f"{k}-{cfg[k]}" for k in dynamic_keys])
+            
         metrics_path = f'metrics_test/{model_name}/{batch_size}/{combo_str}'
         os.makedirs(metrics_path, exist_ok=True)
 
-        print(f"Training model {model_name}...")
+        print(f"Training...")
 
         metrics = {}
         lagrangians, lambdas = [], []
@@ -299,12 +305,39 @@ if __name__ == "__main__":
          
         end_time = time.time()    
         print(f"Model finished in {end_time - start_time:.2f} seconds.")       
+        
         metrics["lagrangians"] = lagrangians
         metrics["lambdas"] = lambdas
         metrics["soft_constraints"] = soft_constraints
         metrics["losses"] = losses
         metrics["accuracy_list"] = accuracy_list
         metrics["firing_rate"] = firing_rate_list
+        
+        # Store for plotting if static
+        if is_static_run:
+            final_metrics = metrics
 
         with open(os.path.join(metrics_path, 'metrics.json'), 'w') as f:
             json.dump(metrics, f, indent=4)
+
+    # ==========================================
+    # VISUALIZATION (Static Run Only)
+    # ==========================================
+    if is_static_run:
+        print("\nRendering training plots for static run...")
+        fig, ax = plt.subplots(2, 3, figsize=(30, 5))
+        ax[0, 0].semilogy(final_metrics["lagrangians"])
+        ax[0, 0].set_title("Lagrangian")
+        ax[0, 1].semilogy(final_metrics["lambdas"])
+        ax[0, 1].set_title("Primal Residual Norm")
+        ax[0, 2].semilogy(final_metrics["soft_constraints"]["a"])
+        ax[0, 2].set_title("Activation Constraint (||a - h(z)||)")
+        ax[1, 0].semilogy(final_metrics["soft_constraints"]["z"])
+        ax[1, 0].set_title("Preactivation Constraint") 
+        ax[1, 1].semilogy(final_metrics["losses"])
+        ax[1, 1].set_title("Loss")
+        ax[1, 2].plot(final_metrics["accuracy_list"])
+        ax[1, 2].set_title("Train Accuracy")
+        
+        plt.tight_layout()
+        plt.show()

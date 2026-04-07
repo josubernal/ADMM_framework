@@ -142,49 +142,56 @@ class ADMM_Heaviside(ADMMActivationBase):
     def forward(self, x):
         return (x > self.thetas).to(x.dtype)
     
-    def check_entries(self, z: torch.Tensor, q: torch.Tensor, a: torch.Tensor, r_next: torch.Tensor = None, is_sequence: bool = False):
-        """Universal zero-allocation boolean masking for ADMM energy penalties.
+    def check_entries(self, z: torch.Tensor, temporal_forward: torch.Tensor, a: torch.Tensor,  z_minus_forward: torch.Tensor = None, is_vectorized: bool = False):
+        """Universal boolean masking for ADMM discrete energy evaluation.
 
-        Handles both single-timestep (unrolled) and full-sequence (vectorized) updates.
+        Enforces the non-convex Heaviside domain constraints by explicitly evaluating 
+        the discrete Lagrangian energy difference between the spiking and resting states. 
+
+        Mathematical Formulation:
+      
+        delta_1 = beta * (1 - 2a)
+        delta_2 = rho * ((z - temporal_forward)^2 - (theta - temporal_forward)^2)
+        delta_3 = rho ((z - forward - delta * z + theta * a)^2 - ( z - forward - delta * theta + theta * a)^2)
+
+        z = theta if z > theta and delta_1 + delta_2 + delta_3 > 0
+        z = theta + epsilon if z < theta and delta_2 + delta_3 - delta_1 > 0
 
         Args:
-            z (torch.Tensor): The current z tensor.
-            q (torch.Tensor): The residual target tensor.
-            a (torch.Tensor): The pre-activation tensor.
-            r_next (torch.Tensor, optional): The next time step's residual. Defaults to None.
-            is_sequence (bool, optional): Flag indicating if this is a vectorized sequence update. Defaults to False.
+            z (torch.Tensor): The unconstrained pre-activation minimizer (z^*).
+            temporal_forward (torch.Tensor): The forward pass target.
+            a (torch.Tensor): The current activation state.
+            z_minus_forward (torch.Tensor, optional): The residual of the next timestep 
+                (z_{t+1} - F_{t+1}), used for calculating delta_3. Defaults to None.
+            is_vectorized (bool, optional): Flag indicating if this is a sequence update 
+                (applies the indicator function to zero out delta_3 at t=T). Defaults to False.
 
         Returns:
-            torch.Tensor: The updated z tensor after evaluating energy penalties.
+            torch.Tensor: The projected and bounded $z$ tensor.
         """
         delta1 = self.beta * (1.0 - 2.0 * a)
-        delta2 = self.rho * ((z - q) ** 2 - self.rho * (self.thetas - q) ** 2) #BUG
-        #delta2 = self.rho * ((z - q)**2 - (self.thetas - q)**2) #BUG
-
-        if r_next is not None:
-            temp_penalty = self.rho * ((r_next - self.deltas * z + self.thetas * a)**2 - 
-                                        (r_next - self.deltas * self.thetas + self.thetas * a)**2)
-            
-            if is_sequence:
-                temp_penalty[-1] = 0.0
+        delta2 = self.rho * ((z - temporal_forward)**2 - (self.thetas - temporal_forward)**2) 
+        delta3= 0
+        if  z_minus_forward is not None:
+           delta3 = self.rho * ((z_minus_forward - self.deltas * z + self.thetas * a)**2 - ( z_minus_forward - self.deltas * self.thetas + self.thetas * a)**2)
+           if is_vectorized:
+                delta3[-1] = 0.0
                 
-            delta2 += temp_penalty
-
         mask_z_greater = z > self.thetas
-        mask_deltas1 = (delta1 + delta2) > 0
-        mask_deltas2 = (delta2 - delta1) > 0  
+        mask_deltas1 = (delta1 + delta2 + delta3) > 0
+        mask_deltas2 = (delta2 + delta3 - delta1) > 0  
             
         z[mask_z_greater & mask_deltas1] = self.thetas
         z[(~mask_z_greater) & mask_deltas2] = self.thetas + 1e-5
         
         return z
 
-    def activation_z_unrolled(self, forward, r_ltnext, a_t):
+    def activation_z_unrolled(self, temporal_forward, z_minus_forward, a_t):
         """Unrolled version of the update, handling specific time-step logic.
 
         Formula: 
-        z = (forward + deltas * (r_ltnext + thetas * a_t)) / (1.0 + deltas^2) if t<T
-        z = forward if t=T
+        z = (temporal_forward + deltas * (z - forward + thetas * a_t)) / (1.0 + deltas^2) if t<T
+        z = temporal_forward if t=T
         
         Args:
             q (torch.Tensor): The residual target tensor.
@@ -194,11 +201,11 @@ class ADMM_Heaviside(ADMMActivationBase):
         Returns:
             torch.Tensor: The updated z tensor for the current timestep.
         """
-        if r_ltnext is not None:
-            z_res = (forward + self.deltas * (r_ltnext + self.thetas * a_t)) / (1.0 + self.deltas ** 2)
+        if z_minus_forward is not None:
+            z_res = (temporal_forward + self.deltas * (z_minus_forward + self.thetas * a_t)) / (1.0 + self.deltas ** 2)
         else:
-            z_res = forward.clone() 
-        return self.check_entries(z_res, forward, a_t, r_ltnext, is_sequence=False)
+            z_res = temporal_forward.clone()
+        return self.check_entries(z=z_res, temporal_forward=temporal_forward, a= a_t,  z_minus_forward= z_minus_forward, is_vectorized=False)
     
     def activation_z_update(self, res, z, a, **kwargs):
         """Executes a Pure Vectorized (Jacobi) block of the z-update.
@@ -230,4 +237,4 @@ class ADMM_Heaviside(ADMMActivationBase):
         numerator = numerator + temporal_penalty_num
         denominator = denominator + temporal_penalty_den
 
-        return self.check_entries(numerator / denominator,  q, a, r, is_sequence=True)
+        return self.check_entries(numerator / denominator,  q, a, r, is_vectorized=True)

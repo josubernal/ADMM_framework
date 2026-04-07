@@ -17,9 +17,9 @@ class TemporalCache:
     forward_pass: torch.Tensor
     denominator_main: torch.Tensor
     denominator_last: torch.Tensor
-    term2: torch.Tensor
+    numerator_without_h: torch.Tensor
     @classmethod
-    def build(cls, layer, next_layer, a_prev, lambda_lagrange):
+    def build(cls, layer, next_layer, a_prev, lambda_lagrange:torch.Tensor=None):
         """Precomputes and distributes operations to accelerate the unrolled loop.
         
             This factory method calculates the static portions of the ADMM activation 
@@ -28,7 +28,7 @@ class TemporalCache:
             Precomputes:
             1- Forward pass
             2- a update denominator (for both t<T and t=T)
-            3- Term2 = next_layer(rho * W^T * adjoint(Y + lambda_penalty) + temporal penalties) 
+            3- a update numerator without the h term 
 
             Args:
                 layer (nn.Module): The current layer.
@@ -43,34 +43,23 @@ class TemporalCache:
         forward_pass = layer.spatial_forward(a_prev)
         
         #2- Denominator      
-        temp_num, temp_den= layer._get_temporal_a_penalties(forward_pass)
         denominator_main, denominator_last, _= next_layer._get_a_denominator(
             beta_current=layer.beta,
+            rho_current = layer.rho,
+            thetas_current  = layer.thetas,
             a_shape=layer.a.shape,
-            temp_den=temp_den,
             unrolled=True
         )
 
         #3- Term 2
-        target_z = next_layer._get_Y(include_reset=False)
-            
-        if lambda_lagrange is not None:
-            target_z = next_layer._apply_lagrange_to_Y(target_z, lambda_lagrange)
-                
-        projected_target = next_layer.adjoint_operator(target_z, original_input_shape=layer.a.shape)
-        base_RHS = next_layer.rho * projected_target
-        TERM2 = base_RHS + temp_num if getattr(layer, 'use_reset', False) and isinstance(temp_num, torch.Tensor) else base_RHS          
+        numerator_without_h = layer._get_a_numerator_without_h(next_layer=next_layer, lambda_lagrange=lambda_lagrange, forward_pass=forward_pass)     
 
-        term2 = TERM2
-         
         return cls(
                 forward_pass=forward_pass,
                 denominator_main=denominator_main,
                 denominator_last=denominator_last,
-                term2=term2
-        )
-
-
+                numerator_without_h=numerator_without_h
+        )            
 
 def fold_time(x: torch.Tensor):
     """Folds the Time and Batch dimensions together for spatial operations.
@@ -119,65 +108,75 @@ def compute_temporal_dependencies(z: torch.Tensor, a: torch.Tensor, deltas: floa
         
     return out  
 
-
-def get_temporal_a_penalties(z: torch.Tensor, forward_pass: torch.Tensor, deltas: float, 
-                             thetas: float, rho: float, use_reset: bool = True):
-    """Calculates the temporal penalties for the $a$ update.
-
-        Mathematical formulation:
-        - Numerator (main timesteps): -  theta * rho * (z - delta * z_t-1 - forward)$
-        - Numerator (last timestep): 0
-        - Denominator (main timesteps): rho * theta^2
-        - Denominator (last timestep): 0
+def get_spiking_v(z, bias, temporal_dependencies, rho, lambda_lagrange=None, broadcast_func=None) -> torch.Tensor:
+    """Returns the spiking target, including temporal leakage and reset penalties.
 
         Args:
-            forward_pass (torch.Tensor): The computed spatial forward pass.
+            include_reset (bool, optional): Whether to include the spike reset penalty. Defaults to True.
 
         Returns:
-            tuple:
-                - torch.Tensor: The numerator penalty tensor.
-                - torch.Tensor: The denominator penalty tensor.
+            torch.Tensor: The calculated spiking target tensor.
     """
-    if not use_reset: 
-        return 0.0, 0.0
+    v = z - bias - temporal_dependencies
+    if lambda_lagrange is not None and broadcast_func is not None:
+        lam_sp = broadcast_func(lambda_lagrange, z[-1])
+        v[-1] = v[-1] + (lam_sp / rho)
+    return v
     
-    num = torch.zeros_like(z)
-    den = torch.zeros_like(z)        
-    
-    num[:-1] = -thetas * rho * (z[1:] - deltas * z[:-1] - forward_pass[1:])
-    den[:-1] = rho * (thetas ** 2)
-    
-    return num, den
+def get_spiking_a_denominator(W, beta_current, rho_next, temporal_penalty, unrolled=False):
+    """
+    Computes the denominator matrix for the activation (a) update step.
 
-def get_temporal_z_penalties(z: torch.Tensor, forward_pass: torch.Tensor, labels: torch.Tensor, 
-                             lamb: torch.Tensor, deltas: float, rho: float):
-    """Calculates the temporal penalties for the z update.
+        Formula:
+        result= beta*I + rho*W^TW + rho*theta^2*I if t<T
+        result= beta*I + rho*W^TW if t=T
 
-        Mathematical formulation:
-        - Numerator (main timesteps): rho * delta * (z - forward)_t+1
-        - Numerator (second last timestep): adds (lambda * delta) / 2
-        - Numerator (last timestep): adds labels - (lambda / 2)
-        - Denominator (main timesteps): rho * delta^2
-        - Denominator (last timestep): adds 1.0
+    
+    Args:
+        W: The expanded/flattened weights of the NEXT layer.
+        beta_current: Beta of the current layer.
+        rho_next: Rho of the NEXT layer (for spatial term).
+        temporal_penalty: Precomputed rho_curr * theta_curr^2 (for temporal term).
+    
+    Returns:
+        tuple:
+            - torch.Tensor: The computed denominator_main matrix (for t < T).
+            - torch.Tensor: The computed denominator_last matrix (for t = T).
+            - int: The number of input features.
+    """
+    in_features = W.size(1)
+    I = torch.eye(in_features, device=W.device, dtype=W.dtype)
+    WtW = torch.matmul(W.t(), W) 
+
+    denominator_last = beta_current * I + rho_next * WtW
+    denominator_main = denominator_last + (temporal_penalty * I)
+    
+    if unrolled:
+        denominator_main = torch.linalg.inv(denominator_main).t()          
+        denominator_last = torch.linalg.inv(denominator_last).t()
+            
+    return denominator_main, denominator_last, in_features
+
+
+def get_spiking_a_numerator_without_h(layer, next_layer, lambda_lagrange, forward_pass):
+    """
+        Computes the linear components of the ADMM numerator for activation updates.
+
+        Formula:
+        result= rho * adjoint(v_{l+1}) if t=T
+        result= rho * adjoint(v_{l+1}) - thetas * rho * (z_t+1 - delta * z_t - forward ) otherwise
 
         Args:
-            a_prev (torch.Tensor): The previous layer's activations.
-            labels (torch.Tensor): The ground truth labels.
-            lamb (torch.Tensor): The Lagrange multiplier.
+            layer (ADMM_Layer): The current layer being updated.
+            next_layer (ADMM_Layer): The subsequent layer in the network.
+            lambda_lagrange (torch.Tensor): The Lagrange multiplier.
+            forward_pass (torch.Tensor): The pre-computed spatial forward pass.
 
         Returns:
-            tuple:
-                - torch.Tensor: The numerator penalty tensor.
-                - torch.Tensor: The denominator penalty tensor.
+            torch.Tensor: A tensor shaped like `layer.z`.
     """
-    num = torch.zeros_like(z)
-    den = torch.zeros_like(z)
-    
-    num[:-1] = rho * deltas * (z - forward_pass)[1:]
-    den[:-1] = rho * (deltas ** 2) 
-    
-    num[-2] += (lamb * deltas) / 2
-    num[-1] += labels - (lamb / 2)
-    den[-1] += 1.0
-    
-    return num, den
+    v = next_layer._get_v(include_reset=False, lambda_lagrange=lambda_lagrange)     
+    adjoint = next_layer.adjoint_operator(v, original_input_shape=layer.a.shape)
+    temporal_penalty = torch.zeros_like(layer.z)
+    temporal_penalty[:-1] = -layer.thetas * layer.rho * (layer.z[1:] - layer.deltas * layer.z[:-1] - forward_pass[1:])
+    return  next_layer.rho * adjoint + temporal_penalty     

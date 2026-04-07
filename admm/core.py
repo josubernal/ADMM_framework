@@ -80,29 +80,25 @@ class ADMM_Layer(nn.Module):
         """
         y = self.spatial_forward(x)             
         return y
-   
-    def vectorized_forward(self, a_prev: torch.Tensor) -> torch.Tensor:
-        """Decoupled ADMM pass for optimization and constraint evaluation.
-
-        Evaluates the linear constraint across all dimensions simultaneously. 
-        In SNNs, this natively includes the temporal leakage and reset dependencies.
+    def vectorized_forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Vectorized ADMM pass for optimization and constraint evaluation.
 
         Args:
             a_prev (torch.Tensor): The previous layer's activations.
 
         Returns:
-            torch.Tensor: The evaluated constraints.
+            torch.Tensor: The evaluated constraints including temporal dependencies.
         """
-        z = self.spatial_forward(a_prev) 
-        return z
-    
+        y = self.spatial_forward(x)             
+        return y
+   
     def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps=None):
         """Solves the proximal update for the 'z' variable for the last layer.
 
-        Mathematical formulation:
-        z_last=numerator / denominator, where
-        numerator = rho * forward(a_prev) + (labels - (lambda / 2))
-        denominator = 1 + rho
+        Formula:
+        z_last= numerator / denominator, where
+        numerator = rho * forward(a_prev) + (2*labels - lambda)
+        denominator = 2 + rho
 
         For spiking networks, this also incorporates temporal penalties into the 
         numerator and denominator.
@@ -114,12 +110,11 @@ class ADMM_Layer(nn.Module):
             time_steps (list, optional): Time steps for spiking networks. Defaults to None.
         """
         forward = self.vectorized_forward(a_prev) 
-
         labels = self._broadcast_to_match(labels, forward)
-        lamb = self._broadcast_to_match(lambda_lagrange, forward)
+        lambda_lagrange = self._broadcast_to_match(lambda_lagrange, forward)
 
-        numerator = (self.rho * forward) + (labels - (lamb / 2.0))
-        denominator = 1 + self.rho 
+        numerator = (self.rho * forward) + (2* labels - lambda_lagrange)
+        denominator = 2 + self.rho 
         
         self.z.data.copy_(numerator / denominator)        
         

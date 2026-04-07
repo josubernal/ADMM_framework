@@ -40,9 +40,6 @@ class ADMM(nn.Module):
         self.rho = rho
         self.beta = beta
         self.bias = bias
-
-        if self.bias:
-            raise NotImplementedError("Bias usage is not available for now. It will be added in future versions.")
         
         for key, val in kwargs.items():
             setattr(self, key, val)
@@ -51,7 +48,7 @@ class ADMM(nn.Module):
         if self.train_method not in valid_methods:
             raise ValueError(f"Invalid train_method. Please select from: {valid_methods}")
         
-        if not self._is_spiking() and self.train_method.startswith("unrolled"):
+        if not self._is_spiking() and self.train_method!="vectorized":
             warnings.warn(
                 "Non-spiking networks can only be trained using the 'vectorized' method. "
                 "Automatically switching train_method to 'vectorized'.", 

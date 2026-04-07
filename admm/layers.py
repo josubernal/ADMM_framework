@@ -218,37 +218,3 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
     
     def _get_bias_reduction_dims(self): 
         return (0, 1, 3, 4)
-
-    def _compute_covariances(self, Y, a_prev):
-        """Computes covariances in chunks to prevent Out Of Memory errors.
-
-        Overrides the base method to handle the heavy memory footprint of 5D 
-        spatiotemporal tensors during the weight update step.
-
-        Args:
-            Y (torch.Tensor): The target tensor.
-            a_prev (torch.Tensor): The previous layer's activations.
-
-        Returns:
-            tuple:
-                - torch.Tensor: The Y^T @ P numerator matrix.
-                - torch.Tensor: The P^T @ P denominator matrix.
-                - None: Placeholder for the P matrix (not retained in memory).
-        """
-        T, _ = a_prev.shape[:2]
-        C_in_kk= self.in_c * self.k * self.k
-        C_out = self.W.shape[0]
-        
-        PtP = torch.zeros((C_in_kk, C_in_kk), device=a_prev.device, dtype=a_prev.dtype)
-        YtP = torch.zeros((C_out, C_in_kk), device=Y.device, dtype=Y.dtype)
-        
-        for t in range(T):
-            P_t = torch.nn.functional.unfold(a_prev[t], kernel_size=self.k, padding=self.p, stride=self.s)
-            P_t = P_t.transpose(1, 2).reshape(-1, C_in_kk) 
-            
-            Y_t_flat = Y[t].movedim(self.channel_dim, -1).reshape(-1, C_out) 
-            
-            PtP += P_t.t() @ P_t
-            YtP += Y_t_flat.t() @ P_t
-            
-        return YtP, PtP, None  

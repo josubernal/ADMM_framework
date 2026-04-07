@@ -79,3 +79,4 @@ def solve_spiking_system(A_main: torch.Tensor, A_last: torch.Tensor,
         a_main = torch.empty((0, *out_shape[1:]), device=B.device)
         
     return torch.cat([a_main, a_last], dim=0)
+
