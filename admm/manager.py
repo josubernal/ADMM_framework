@@ -44,11 +44,14 @@ class ADMM(nn.Module):
         for key, val in kwargs.items():
             setattr(self, key, val)
         
+        self.T = kwargs.get('T', getattr(self, 'T', None))
+        self.is_spiking = self.T is not None
+        
         valid_methods = ["vectorized", "unrolled-random", "unrolled-sequential", "decoupled-random", "decoupled-sequential"]
         if self.train_method not in valid_methods:
             raise ValueError(f"Invalid train_method. Please select from: {valid_methods}")
         
-        if not self._is_spiking() and self.train_method!="vectorized":
+        if not self.is_spiking and self.train_method!="vectorized":
             warnings.warn(
                 "Non-spiking networks can only be trained using the 'vectorized' method. "
                 "Automatically switching train_method to 'vectorized'.", 
@@ -70,14 +73,7 @@ class ADMM(nn.Module):
             layer.to(self.device)
             is_last = (i == self.L - 1)
             layer.setup(config_dict, is_last_layer=is_last)
-    
-    def _is_spiking(self):
-        """Helper to determine if the network has a temporal dimension (SNN).
-
-        Returns:
-            bool: True if the network is spiking (has attribute 'T'), False otherwise.
-        """
-        return hasattr(self, 'T') and self.T is not None           
+          
     
     def _get_batchsize(self, inputs: torch.Tensor):
         """Extracts batch size dynamically based on the network type.
@@ -88,7 +84,7 @@ class ADMM(nn.Module):
         Returns:
             int: The batch size (dim 1 for Spiking, dim 0 for Static).
         """
-        return inputs.shape[1] if self._is_spiking() else inputs.shape[0]  
+        return inputs.shape[1] if self.is_spiking else inputs.shape[0]  
     
     def _get_time_steps(self):
         """Helper that returns time-steps depending on the selected training method.
@@ -97,7 +93,7 @@ class ADMM(nn.Module):
             list or None: A list of time steps if applicable, otherwise None.
         """
         time_steps = None
-        if self._is_spiking():
+        if self.is_spiking:
             if self.train_method.endswith("random"):
                time_steps = random.sample(range(self.T - 1), self.T - 1)
             elif self.train_method.endswith("sequential"):
@@ -120,7 +116,7 @@ class ADMM(nn.Module):
         
         # Initialize the Lagrange multiplier
         last_z = self.layers[-1].z
-        target_shape = last_z[-1] if self._is_spiking() else last_z
+        target_shape = last_z[-1] if self.is_spiking else last_z
         self.lambda_lagrange = torch.zeros_like(target_shape, device=self.device)
         
     def forward_model(self, inputs: torch.Tensor):
@@ -145,13 +141,13 @@ class ADMM(nn.Module):
                 
                 if i < len(self.layers) - 1:
                     # Sum of all spikes divided by the total number of elements
-                    layer_firing_rate = x.sum().item() / x.numel() if self._is_spiking() else float("NaN")
+                    layer_firing_rate = x.sum().item() / x.numel() if self.is_spiking else float("NaN")
                     firing_rates.append(layer_firing_rate)
                     
                 final_z = z_pred
                 
-        final_out = final_z[-1] if self._is_spiking() else final_z
-        batch_size = inputs.size(1) if self._is_spiking() else inputs.size(0)
+        final_out = final_z[-1] if self.is_spiking else final_z
+        batch_size = inputs.size(1) if self.is_spiking else inputs.size(0)
             
         if final_out.dim() > 2:
             final_out = final_out.view(batch_size, -1)
@@ -167,7 +163,7 @@ class ADMM(nn.Module):
             last_layer (nn.Module): The final layer of the network.
             a_prev_L (torch.Tensor): The activations from the penultimate layer or inputs.
         """
-        if self._is_spiking():
+        if self.is_spiking:
             z_T = last_layer.z[-1]
             z_T_minus_1 = last_layer.z[-2]
             F_a_T = last_layer.spatial_forward(a_prev_L[-1].unsqueeze(0)).squeeze(0)

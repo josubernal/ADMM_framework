@@ -22,7 +22,7 @@ class ADMM_Metrics:
         self.model = model
 
     def mse(self, labels: torch.Tensor):
-        final_out = self.model.layers[-1].z[-1] if self.model._is_spiking() else self.model.layers[-1].z
+        final_out = self.model.layers[-1].z[-1] if self.model.is_spiking else self.model.layers[-1].z
         return torch.norm(final_out - labels).item() ** 2
     
     def lagrangian_cost(self, inputs: torch.Tensor, labels: torch.Tensor):
@@ -39,14 +39,14 @@ class ADMM_Metrics:
         batch_size = self.model._get_batchsize(inputs)
         last_layer = self.model.layers[-1]
         
-        z_last_flat = last_layer.z[-1].view(batch_size, -1) if self.model._is_spiking() else last_layer.z.view(batch_size, -1)
+        z_last_flat = last_layer.z[-1].view(batch_size, -1) if self.model.is_spiking else last_layer.z.view(batch_size, -1)
         cost += torch.norm(z_last_flat - labels)**2 
         
         a_prev_L = self.model.layers[-2].a if self.model.L > 1 else inputs
         last_out = last_layer.vectorized_forward(a_prev_L)
         last_layer_cost = last_layer.z - last_out
         
-        lambda_term = last_layer_cost[-1] if self.model._is_spiking() else last_layer_cost
+        lambda_term = last_layer_cost[-1] if self.model.is_spiking else last_layer_cost
 
         cost += torch.sum(self.model.lambda_lagrange * lambda_term)
         cost += (self.model.rho / 2.0) * torch.norm(last_layer_cost)**2
@@ -74,7 +74,7 @@ class ADMM_Metrics:
         a_prev_L = self.model.layers[-2].a if self.model.L > 1 else inputs
         last_out = last_layer.vectorized_forward(a_prev_L)
         residual = last_layer.z - last_out
-        r = residual[-1] if self.model._is_spiking() else residual
+        r = residual[-1] if self.model.is_spiking else residual
         norm_factor = r.numel() ** 0.5
         
         return (torch.norm(r) / norm_factor).item()

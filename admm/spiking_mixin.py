@@ -146,7 +146,7 @@ class ADMM_Spiking:
         )           
         
         new_a = torch.clamp(new_a, min=0.0, max=1.0)
-        self.a.data.copy_(new_a)   
+        self.a.copy_(new_a)   
 
     def solve_activation_system(self, numerator: torch.Tensor,  denominator_main:torch.Tensor, denominator_last:torch.Tensor,a_shape: tuple, in_features:int) -> torch.Tensor:
         return solve_spiking_system(
@@ -174,7 +174,7 @@ class ADMM_Spiking:
             in_mean[-1] = in_mean[-1] + (lambda_lagrange / (self.rho))
           
         new_bias = torch.mean(in_mean, dim=self._get_bias_reduction_dims())
-        self.b.data.copy_(new_bias)
+        self.b.copy_(new_bias)
 
     def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor):
         """Solves the proximal update for the $z$ variable for the final layer, incorporating 
@@ -212,7 +212,7 @@ class ADMM_Spiking:
         denominator[-1] += 2.0
                 
             
-        self.z.data.copy_(numerator / denominator)     
+        self.z.copy_(numerator / denominator)     
 
     def update_az_interleaved(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list):
         """Orchestrates the interleaved updates of a and z over time using caching.
@@ -255,7 +255,7 @@ class ADMM_Spiking:
         denominator = cache.denominator_last if is_last else cache.denominator_main 
         new_a_t = next_layer.solve_activation_system_unrolled(numerator=numerator, denominator=denominator)
      
-        self.a[t].data.copy_(torch.clamp(new_a_t, min=0.0, max=1.0))
+        self.a[t].copy_(torch.clamp(new_a_t, min=0.0, max=1.0))
 
     def solve_activation_system_unrolled(self, numerator: torch.Tensor, denominator: torch.Tensor) -> torch.Tensor:
         """
@@ -289,7 +289,7 @@ class ADMM_Spiking:
         
         z_minus_forward= self.z[t+1] - cache.forward_pass[t+1] if t < T - 1 else None
         new_z_t = self.h.activation_z_unrolled(temporal_forward=temporal_forward, z_minus_forward=z_minus_forward,a_t=self.a[t])  
-        self.z[t].data.copy_(new_z_t)
+        self.z[t].copy_(new_z_t)
 
     def update_z_last_unrolled(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list):
         """
@@ -320,7 +320,7 @@ class ADMM_Spiking:
 
             term_lambda = lambda_lagrange * self.deltas if t == T - 2 else torch.zeros_like(lambda_lagrange)
             z_t = (temporal_forward + self.deltas * (self.z[t+1] - forward[t+1]) + term_lambda) / denominator_main
-            self.z[t].data.copy_(z_t)
+            self.z[t].copy_(z_t)
 
         t = T - 1
         temporal_forward_T = forward[t]
@@ -328,7 +328,7 @@ class ADMM_Spiking:
             temporal_forward_T = temporal_forward_T + self.deltas * self.z[t-1]
     
         z_T = (self.rho * temporal_forward_T + (2 * labels - lambda_lagrange)) / (2 + self.rho)
-        self.z[t].data.copy_(z_T)
+        self.z[t].copy_(z_T)
     
     def update_z_decoupled(self, a_prev: torch.Tensor, time_steps: list):
         """Decoupled causal sweep for the z update.
@@ -344,6 +344,8 @@ class ADMM_Spiking:
         mock_cache = SimpleNamespace(forward_pass=forward_pass)
         for t in time_steps:
             self.update_z_unrolled(t, mock_cache)
+        t_final = self.z.size(0) - 1
+        self.update_z_unrolled(t_final, mock_cache)
         
 
 

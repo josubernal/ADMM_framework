@@ -42,8 +42,8 @@ class ADMM_AffineLayer(ADMM_Layer):
         """
         initializer = get_initializer(self.init)
         
-        self.W = initializer.init_weights(weight_shape)
-        self.b = initializer.init_bias(bias_shape) if self.bias else 0
+        self.W = initializer.init_weights(weight_shape, device=self.device)
+        self.b = initializer.init_bias(bias_shape, device=self.device) if self.bias else 0
     
     def _format_bias(self):
         """Reshapes the bias vector to match the dimensionality of the layer's output.
@@ -173,7 +173,7 @@ class ADMM_AffineLayer(ADMM_Layer):
             denominator, 
             cached_pinv=self.pinv if cache_pinv else None
         )
-        self.W.data.copy_(new_W.reshape(self.W.shape))
+        self.W.copy_(new_W.reshape(self.W.shape))
           
     def update_bias(self, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None):
         """Averages the residual errors to update the bias vector.
@@ -192,7 +192,7 @@ class ADMM_AffineLayer(ADMM_Layer):
             in_mean = in_mean + (lam_spatial / (self.rho))
                 
         new_bias = torch.mean(in_mean, dim=self._get_bias_reduction_dims())
-        self.b.data.copy_(new_bias)
+        self.b.copy_(new_bias)
 
     
     def update_z(self, a_prev: torch.Tensor, time_steps=None):
@@ -224,7 +224,7 @@ class ADMM_AffineLayer(ADMM_Layer):
             in_features=in_features
         )
         
-        self.a.data.copy_(new_a)
+        self.a.copy_(new_a)
         
     def solve_activation_system(self, numerator: torch.Tensor, denominator_main:torch.Tensor, denominator_last:torch.Tensor, a_shape: tuple, in_features:int) -> torch.Tensor:
         """Universal Solver for the a update.

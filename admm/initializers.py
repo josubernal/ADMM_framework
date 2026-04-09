@@ -14,27 +14,27 @@ import warnings
 class ADMM_Initializer(ABC):
     """Abstract Base class for ADMM Initialization Strategies."""
     @abstractmethod
-    def init_weights(self, weight_shape: tuple) -> nn.Parameter:
+    def init_weights(self, weight_shape: tuple, device:torch.device) -> torch.Tensor:
         """Initializes the weights for a layer.
 
         Args:
             weight_shape (tuple): The dimensions of the weight tensor.
 
         Returns:
-            nn.Parameter: The initialized weight parameter without gradient tracking.
+            torch.Tensor: The initialized weight parameter without gradient tracking.
         """
         pass
         
-    def init_bias(self, bias_shape: tuple) -> nn.Parameter:
+    def init_bias(self, bias_shape: tuple,  device:torch.device) -> torch.Tensor:
         """Initializes the bias for a layer.
 
         Args:
             bias_shape (tuple): The dimensions of the bias tensor.
 
         Returns:
-            nn.Parameter: The initialized bias parameter (zeros) without gradient tracking.
+            torch.Tensor: The initialized bias parameter (zeros) without gradient tracking.
         """
-        return nn.Parameter(torch.zeros(*bias_shape), requires_grad=False)
+        return torch.zeros(*bias_shape, device=device)
 
     def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
         """Warm-starts the auxiliary variables 'z' and 'a' with random values.
@@ -55,8 +55,8 @@ class ADMM_Initializer(ABC):
 
 class ZerosInitializer(ADMM_Initializer):
     """Initialization strategy that sets weights to zero."""
-    def init_weights(self, weight_shape: tuple) -> nn.Parameter:
-        return nn.Parameter(torch.zeros(*weight_shape), requires_grad=False)
+    def init_weights(self, weight_shape: tuple,  device:torch.device=None) -> torch.Tensor:
+        return torch.zeros(*weight_shape,  device=device)
 
 class ZerosPassInitializer(ZerosInitializer):
     """Initialization strategy that uses a forward pass with zeroed weights."""
@@ -78,10 +78,10 @@ class ZerosPassInitializer(ZerosInitializer):
 
 class XavierInitializer(ADMM_Initializer):
     """Initialization strategy that applies Xavier uniform initialization to weights."""
-    def init_weights(self, weight_shape: tuple) -> nn.Parameter:
-        w = torch.empty(*weight_shape)
+    def init_weights(self, weight_shape: tuple,  device:torch.device=None) -> torch.Tensor:
+        w = torch.empty(*weight_shape,  device=device)
         nn.init.xavier_uniform_(w)
-        return nn.Parameter(w, requires_grad=False)
+        return w
 
 class ZerosRNGInitializer(ZerosInitializer):
     """Deprecated initialization strategy kept for legacy support."""

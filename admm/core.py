@@ -116,7 +116,7 @@ class ADMM_Layer(nn.Module):
         numerator = (self.rho * forward) + (2* labels - lambda_lagrange)
         denominator = 2 + self.rho 
         
-        self.z.data.copy_(numerator / denominator)        
+        self.z.copy_(numerator / denominator)        
         
 
     

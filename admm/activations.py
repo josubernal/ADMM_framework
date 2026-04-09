@@ -176,13 +176,11 @@ class ADMM_Heaviside(ADMMActivationBase):
            delta3 = self.rho * ((z_minus_forward - self.deltas * z + self.thetas * a)**2 - ( z_minus_forward - self.deltas * self.thetas + self.thetas * a)**2)
            if is_vectorized:
                 delta3[-1] = 0.0
-                
-        mask_z_greater = z > self.thetas
-        mask_deltas1 = (delta1 + delta2 + delta3) > 0
-        mask_deltas2 = (delta2 + delta3 - delta1) > 0  
-            
-        z[mask_z_greater & mask_deltas1] = self.thetas
-        z[(~mask_z_greater) & mask_deltas2] = self.thetas + 1e-5
+        
+        total_delta = delta1 + delta2 + delta3
+
+        z = torch.where((z > self.thetas) & (total_delta > 0), self.thetas, z)
+        z = torch.where((z <= self.thetas) & ((delta2 + delta3 - delta1) > 0), self.thetas + 1e-5, z)
         
         return z
 
