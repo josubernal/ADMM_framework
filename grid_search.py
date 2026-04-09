@@ -61,7 +61,7 @@ if __name__ == "__main__":
     
     # To store metrics for plotting if it's a static run
     final_metrics = {}
-
+    dynamic_keys = [k for k, v in grid_params.items() if len(v) > 1]
     # ==========================================
     # EXECUTION LOOP
     # ==========================================
@@ -70,7 +70,7 @@ if __name__ == "__main__":
         if is_static_run:
             print(f"Running Static Config: {cfg['model']} | Train Method: {cfg['train_method']}")
         else:
-            print(f"[{idx+1}/{len(combinations)}] Running Grid Config: {cfg}")
+            print(f"[{idx+1}/{len(combinations)}] Running Grid Config: {[f"{k}:{cfg[k]}" for k in dynamic_keys]}")
         print(f"=======================================================")
 
         # Ensure perfect reproducibility for each run
@@ -97,6 +97,8 @@ if __name__ == "__main__":
         deltas = cfg.get('deltas', 0.95)
         n_timesteps = cfg.get('n_timesteps', 150)
         num_layers = cfg.get('layers', 2)
+        use_fft = cfg.get('use_fft', True)
+        padding_mode = cfg.get('padding_mode', 'circular')
 
         if use_double:
             torch.set_default_dtype(torch.float64)
@@ -180,7 +182,7 @@ if __name__ == "__main__":
                 if num_layers == 2:
                     lin_in = hidden_channels * pool_h * pool_w
                     layers = nn.ModuleList([
-                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias),
+                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=use_fft,  padding_mode= padding_mode),
                         ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)), bias=bias)
                     ])
                 elif num_layers == 3:
@@ -188,8 +190,8 @@ if __name__ == "__main__":
                     mid_c = hidden_channels // 2
                     lin_in = mid_c * pool_h * pool_w
                     layers = nn.ModuleList([
-                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias),
-                        ADMM_SpikingConv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=mid_p, s=1, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias),
+                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=use_fft,  padding_mode=padding_mode),
+                        ADMM_SpikingConv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=mid_p, s=1, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode),
                         ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)), bias=bias)
                     ])
 
@@ -216,7 +218,7 @@ if __name__ == "__main__":
                     spatial_out = int(calc_spatial_out(28, k, p, s))
                     lin_in = hidden_channels * spatial_out * spatial_out
                     layers = nn.ModuleList([
-                        ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias),       
+                        ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode),       
                         ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten(), bias=bias)
                     ])
                 elif num_layers == 3:
@@ -226,8 +228,8 @@ if __name__ == "__main__":
                     lin_in = mid_c * spatial_out_2 * spatial_out_2
                     
                     layers = nn.ModuleList([
-                        ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias), 
-                        ADMM_Conv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias),
+                        ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode), 
+                        ADMM_Conv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode),
                         ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten(), bias=bias)
                     ])
 
@@ -245,9 +247,7 @@ if __name__ == "__main__":
         if is_static_run:
             print(json.dumps(m.network_size_statistics(), indent=4))
 
-        # Setup paths
-        # FIX: Only include parameters that are varying in the grid to avoid Windows 260-char path limit
-        dynamic_keys = [k for k, v in grid_params.items() if len(v) > 1]
+
         
         if is_static_run or not dynamic_keys:
             combo_str = "baseline"

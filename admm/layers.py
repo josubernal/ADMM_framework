@@ -15,6 +15,7 @@ INDEX:
 - Spiking_ADMMConv2d
 """
 
+import warnings
 import torch
 import torch.nn as nn
 
@@ -72,30 +73,34 @@ class ADMM_Conv2d( ADMM_Convolution, ADMM_AffineLayer):
     - Compute P: Uses `unfold` (im2col) to extract sliding local blocks from the image 
       into a flat patch matrix for the weight update step.
     """
-    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, bias: bool=False, init: str="zeros",  pool_op=None):
-        super().__init__(h=h, bias=bias,  pool_op=pool_op)
+    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, bias: bool=False, init: str="zeros",  pool_op=None, use_fft=True, padding_mode="circular"):
+        super().__init__(h=h, bias=bias,  pool_op=pool_op, use_fft=use_fft, padding_mode=padding_mode)
         self.init = init
         self.p = p
         self.s = s
         self.in_c = in_c
         self.out_c = out_c
         self.k = k
-        self.channel_dim = -3 # Targets the [B, C, H, W] dimension
+        self.channel_dim = -3 # Targets the [B, C, H, W] dimension       
 
     def setup(self, config: dict, is_last_layer: bool = False):
         super().setup(config, is_last_layer)
         self._init_weights_and_bias((self.out_c, self.in_c, self.k, self.k), (self.out_c,))
 
     def spatial_forward(self, x, use_bias=True):
+        if self.padding_mode == 'circular':
+            return self._circular_forward(x, use_bias)
         b = self.b if (isinstance(use_bias, bool) and use_bias and self.bias) else None
         return torch.nn.functional.conv2d(x, self.W, bias=b, padding=self.p, stride=self.s)
 
     def adjoint_operator(self, target, original_input_shape=None):
+        if self.padding_mode == 'circular':
+            return self._circular_adjoint(target)
+      
         out_pad = (0, 0)
         if original_input_shape is not None:
             H_in, W_in = original_input_shape[-2:]
             H_dim, W_dim = target.shape[-2:]
-            
             H_calc = (H_dim - 1) * self.s - 2 * self.p + self.k
             W_calc = (W_dim - 1) * self.s - 2 * self.p + self.k
             out_pad = (max(0, H_in - H_calc), max(0, W_in - W_calc))
@@ -103,7 +108,6 @@ class ADMM_Conv2d( ADMM_Convolution, ADMM_AffineLayer):
         return torch.nn.functional.conv_transpose2d(
             target, self.W, padding=self.p, stride=self.s, output_padding=out_pad
         )
-    
     def _compute_P(self, a_prev):
         """Extracts image patches using unfold (im2col) for localized weight updates.
 
@@ -113,6 +117,8 @@ class ADMM_Conv2d( ADMM_Convolution, ADMM_AffineLayer):
         Returns:
             torch.Tensor: The flattened patch matrix $P$.
         """
+        if self.padding_mode == 'circular':
+            return self._circular_compute_P(a_prev)
         patches = torch.nn.functional.unfold(a_prev, kernel_size=self.k, padding=self.p, stride=self.s)
         return patches.transpose(1, 2).reshape(-1, self.in_c * self.k * self.k)
     
@@ -128,7 +134,7 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
     - Folds the Time and Batch dimensions together to process the entire sequence as 
       a standard 2D matrix operation, then unfolds it back to the temporal sequence.
     """
-    def __init__(self, in_f, out_f, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="spiking-aware", pool_op=None):
+    def __init__(self, in_f, out_f, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="zeros", pool_op=None):
         super().__init__(h=h, bias=bias, pool_op=pool_op)
         self.init = init
         self.T = None
@@ -176,8 +182,8 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
     - Includes a chunked covariance computation to prevent Out-Of-Memory (OOM) errors 
       during the ADMM weight update step.
     """
-    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="spiking-aware", pool_op=None):
-        super().__init__(h=h, bias=bias, pool_op=pool_op) 
+    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="zeros", pool_op=None, use_fft=True, padding_mode="circular"):
+        super().__init__(h=h, bias=bias, pool_op=pool_op, use_fft=use_fft, padding_mode=padding_mode) 
         self.init = init
         self.T = None
         self.spiking = True
@@ -187,22 +193,25 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
         self.k = k
         self.p = p
         self.s = s
-        self.channel_dim = -3 
+        self.channel_dim = -3         
     
     def setup(self, config: dict, is_last_layer: bool = False):
         super().setup(config, is_last_layer)
         self._init_weights_and_bias((self.out_c, self.in_c, self.k, self.k), (self.out_c,))
         
     def spatial_forward(self, x, use_bias=True):
+        if self.padding_mode == 'circular':
+            return self._circular_forward(x, use_bias)
         b = self.b if (isinstance(use_bias, bool) and use_bias and self.bias) else None
         x_flat, tb_shape = self._fold_time(x)
         out_flat = torch.nn.functional.conv2d(x_flat, self.W, bias=b, padding=self.p, stride=self.s)
         return self._unfold_time(out_flat, tb_shape)
 
     def adjoint_operator(self, target, original_input_shape=None):
+        if self.padding_mode == 'circular':
+            return self._circular_adjoint(target)
         target_flat, tb_shape = self._fold_time(target)
         out_pad = (0, 0)
-        
         if original_input_shape is not None:
             H_in, W_in = original_input_shape[-2:]
             H_dim, W_dim = target_flat.shape[-2:]
@@ -213,7 +222,10 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
         return self._unfold_time(out_flat, tb_shape)
     
     def _compute_P(self, a_prev):
-        patches = torch.nn.functional.unfold(self._fold_time(a_prev)[0], kernel_size=self.k, padding=self.p, stride=self.s)
+        if self.padding_mode == 'circular':
+            return self._circular_compute_P(a_prev)
+        a_flat, _ = self._fold_time(a_prev)
+        patches = torch.nn.functional.unfold(a_flat, kernel_size=self.k, padding=self.p, stride=self.s)
         return patches.transpose(1, 2).reshape(-1, self.in_c * self.k * self.k)
     
     def _get_bias_reduction_dims(self): 

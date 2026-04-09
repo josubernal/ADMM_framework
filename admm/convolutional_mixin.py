@@ -1,33 +1,87 @@
 import torch
 import torch.fft
 import torch.nn.functional as F
+import warnings
 
 class ADMM_Convolution:
-    """A unified Mixin to handle FFT-based activation solvers for both 
-    standard 2D (4D tensors) and Spiking (5D tensors) convolutions.
+    """A unified Mixin to handle FFTs and performance enhancing functions designed for convolution.
     
     Leverages the Convolution Theorem to perform heavy matrix inversions 
     in the frequency domain as element-wise operations.
     """
+    def __init__(self, *args, use_fft=True, padding_mode="circular", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.use_fft = use_fft
+        self.padding_mode = padding_mode
+    
+        if self.padding_mode == 'circular' and not self.use_fft:
+            warnings.warn(
+                "Using circular padding without FFTs (use_fft=False) is highly inefficient. "
+                "The spatial solver must construct a massive dense Gram matrix to compute the adjoint. "
+                "Consider setting use_fft=True."
+            )
 
-    def _get_fft_matrices(self, target_shape: tuple):
-        """Pads weights, transforms them to the frequency domain, and computes W^H W.
+    def setup(self, config: dict, is_last_layer: bool = False):
+        if getattr(self, 'padding_mode', 'zeros') == 'circular' and getattr(self, 's', 1) != 1:
+            warnings.warn(f"Circular padding requires stride=1 for the ADMM solver. "
+                          f"Changing stride from {self.s} to 1.")
+            self.s = 1
+        super().setup(config, is_last_layer)
         
-        Formula:
-            W_padded = pad(W) shifted to origin
-            W_fft = FFT(W_padded)
-            WtW_fft = W_fft^H @ W_fft
+    def _circular_forward(self, x, use_bias=True):
+        b = getattr(self, 'b', None) if (isinstance(use_bias, bool) and use_bias and getattr(self, 'bias', False)) else None
+        is_spiking = x.dim() == 5
+        x_flat, tb_shape = self._fold_time(x) if is_spiking else (x, None)
+        
+        x_padded = F.pad(x_flat, (self.p, self.p, self.p, self.p), mode='circular')
+        out_flat = F.conv2d(x_padded, self.W, bias=b, padding=0, stride=self.s)
+        
+        return self._unfold_time(out_flat, tb_shape) if is_spiking else out_flat
+
+    def _circular_adjoint(self, target):
+        is_spiking = target.dim() == 5
+        target_flat, tb_shape = self._fold_time(target) if is_spiking else (target, None)
+        
+        H, W_dim = target_flat.shape[-2:]
+        pad_h = H - self.k
+        pad_w = W_dim - self.k
+        padded_W = F.pad(self.W, (0, pad_w, 0, pad_h))
+        padded_W = torch.roll(padded_W, shifts=(-(self.k//2), -(self.k//2)), dims=(-2, -1))
+        
+        W_fft = torch.fft.fft2(padded_W)
+        target_fft = torch.fft.fft2(target_flat)
+        
+        out_fft = torch.einsum('bohw,oihw->bihw', target_fft, W_fft)
+        out_flat = torch.fft.ifft2(out_fft).real
+        
+        return self._unfold_time(out_flat, tb_shape) if is_spiking else out_flat
+
+    def _circular_compute_P(self, a_prev):
+        is_spiking = a_prev.dim() == 5
+        a_flat = self._fold_time(a_prev)[0] if is_spiking else a_prev
+        
+        a_padded = F.pad(a_flat, (self.p, self.p, self.p, self.p), mode='circular')
+        patches = F.unfold(a_padded, kernel_size=self.k, padding=0, stride=self.s)
+        
+        return patches.transpose(1, 2).reshape(-1, self.in_c * self.k * self.k)
+        
+    def _get_WtW(self, a_shape: tuple):
+        """Pads weights, transforms them to the frequency domain, and computes W^H W."""
+        
+        if getattr(self, 'use_fft', True) == False:
+            C, H, W_dim = a_shape[-3:]
+            CHW = C * H * W_dim
+            I = torch.eye(CHW, device=self.W.device, dtype=self.W.dtype)
+            I_images = I.view(CHW, C, H, W_dim)
             
-        Args:
-            target_shape (tuple): The spatial shape (H, W) of the target activations.
+            A_I = self.spatial_forward(I_images, use_bias=False)
+            WtW_images = self.adjoint_operator(A_I, original_input_shape=I_images.shape)
             
-        Returns:
-            tuple:
-                - torch.Tensor: The frequency-domain covariance matrix (WtW_fft).
-                - int: The number of input channels.
-        """
-        height, width = target_shape[-2:]
-        out_channels, in_channels, kernel_h, kernel_w = self.W.shape
+            WtW_dense = WtW_images.view(CHW, CHW)
+            return WtW_dense, CHW
+
+        height, width = a_shape[-2:]
+        _, in_channels, kernel_h, kernel_w = self.W.shape
         
         pad_h = height - kernel_h
         pad_w = width - kernel_w
@@ -38,50 +92,10 @@ class ADMM_Convolution:
         padded_W = torch.roll(padded_W, shifts=(shift_h, shift_w), dims=(-2, -1))
         
         W_fft = torch.fft.fft2(padded_W)
-        
         W_fft = W_fft.permute(2, 3, 0, 1)
-        
-        WtW_fft = torch.matmul(W_fft.conj().transpose(-2, -1), W_fft)
+        WtW_fft = torch.matmul(W_fft.transpose(-2, -1), W_fft.conj())
         
         return WtW_fft, in_channels
-
-    def _get_a_denominator(self, beta_current: float, a_shape: tuple, temp_den=0.0, rho_current=None, thetas_current=None, unrolled=False, **kwargs):
-        """Computes the denominator matrix for the activation (a) update step in the frequency domain.
-        
-        Formula:
-            denominator = beta * I + rho * W^H W
-            
-        Args:
-            beta_current (float): The penalty parameter beta.
-            a_shape (tuple): The shape of the activation tensor.
-            temp_den (float or torch.Tensor, optional): Explicit temporal penalty. Defaults to 0.0.
-            rho_current (float, optional): Spiking layer rho penalty.
-            thetas_current (float, optional): Spiking layer theta penalty.
-            unrolled (bool, optional): Whether to explicitly invert the matrix for unrolled loops.
-            **kwargs: Absorbs any extra Spiking variables safely via duck-typing.
-            
-        Returns:
-            tuple:
-                - torch.Tensor: The computed denominator_main matrix.
-                - torch.Tensor: The computed denominator_last matrix.
-                - int: The number of input channels.
-        """
-        WtW_fft, in_channels = self._get_fft_matrices(a_shape)
-        I = torch.eye(in_channels, device=self.W.device, dtype=WtW_fft.dtype)
-        
-        if rho_current is not None and thetas_current is not None:
-            temp_den = rho_current * (thetas_current ** 2)
-            
-        temporal_penalty_scalar = temp_den[0].view(-1)[0].item() if isinstance(temp_den, torch.Tensor) else temp_den
-        
-        denominator_last = beta_current * I + self.rho * WtW_fft
-        denominator_main = denominator_last + (temporal_penalty_scalar * I)
-        
-        if unrolled:
-            denominator_main = torch.linalg.inv(denominator_main)
-            denominator_last = torch.linalg.inv(denominator_last)
-            
-        return denominator_main, denominator_last, in_channels
     
     def solve_activation_system(self, numerator: torch.Tensor, denominator_main: torch.Tensor, denominator_last: torch.Tensor, a_shape: tuple, in_features: int) -> torch.Tensor:
         """Universal Solver for the a update in the frequency domain.
@@ -99,34 +113,26 @@ class ADMM_Convolution:
         Returns:
             torch.Tensor: The exact updated activations in the spatial domain.
         """
-        is_spiking = (numerator.dim() == 5)
+        if not self.use_fft:
+            return super().solve_activation_system(numerator, denominator_main, denominator_last, a_shape, in_features)
+        
+        original_dim = numerator.dim()
+        if original_dim == 4:
+            numerator = numerator.unsqueeze(0)    
+        _, batch_size = numerator.shape[:2]
+        numerator_fft = torch.fft.fft2(numerator).permute(0, 1, 3, 4, 2).unsqueeze(-1)
+        
+        A_main = denominator_main.unsqueeze(0).expand(batch_size, -1, -1, -1, -1)
+        A_last = denominator_last.unsqueeze(0).expand(batch_size, -1, -1, -1, -1)
+        
+        a_fft_main = torch.linalg.solve(A_main, numerator_fft[:-1])
+        a_fft_last = torch.linalg.solve(A_last, numerator_fft[-1:])
 
-        if not is_spiking:
-            # 4D STANDARD SPATIAL SOLVE
-            batch_size = a_shape[0]
-            numerator_fft = torch.fft.fft2(numerator).permute(0, 2, 3, 1).unsqueeze(-1)
-            
-            # Use denominator_last directly
-            denominator_expanded = denominator_last.unsqueeze(0).expand(batch_size, -1, -1, -1, -1)
-            a_fft = torch.linalg.solve(denominator_expanded, numerator_fft)
-            
-            a_fft = a_fft.squeeze(-1).permute(0, 3, 1, 2)
-            return torch.fft.ifft2(a_fft).real
-
-        else:
-            # 5D SPIKING TEMPORAL SOLVE
-            T, batch_size = a_shape[:2]
-            numerator_fft = torch.fft.fft2(numerator).permute(0, 1, 3, 4, 2).unsqueeze(-1)
-            
-            denominator_main_expanded = denominator_main.unsqueeze(0).expand(batch_size, -1, -1, -1, -1)
-            denominator_last_expanded = denominator_last.unsqueeze(0).expand(batch_size, -1, -1, -1, -1)
-            
-            a_fft_main = torch.linalg.solve(denominator_main_expanded, numerator_fft[:-1])
-            a_fft_last = torch.linalg.solve(denominator_last_expanded, numerator_fft[-1:])
-            
-            a_fft = torch.cat([a_fft_main, a_fft_last], dim=0)
-            a_fft = a_fft.squeeze(-1).permute(0, 1, 4, 2, 3)
-            return torch.fft.ifft2(a_fft).real
+        a_fft = torch.cat([a_fft_main, a_fft_last], dim=0)
+        a_fft = a_fft.squeeze(-1).permute(0, 1, 4, 2, 3)
+        a_spatial = torch.fft.ifft2(a_fft).real
+        
+        return a_spatial.squeeze(0) if original_dim == 4 else a_spatial
 
     def solve_activation_system_unrolled(self, numerator: torch.Tensor, denominator: torch.Tensor) -> torch.Tensor:
         """FFT-based unrolled step solver for convolutions.
@@ -140,22 +146,14 @@ class ADMM_Convolution:
         Returns:
             torch.Tensor: The updated activation tensor for the current timestep in the spatial domain.
         """
-        # 1. numerator to frequency domain (operates on spatial H, W dims)
+        if not self.use_fft:
+            return super().solve_activation_system_unrolled(numerator, denominator)
+        
         numerator_fft = torch.fft.fft2(numerator)
-        
-        # 2. Permute numerator_fft to (H, W, Batch, in_channels, 1) for batched multiplication
-        numerator_fft = numerator_fft.permute(2, 3, 0, 1).unsqueeze(-1)
-        
-        # 3. Expand the inverted denominator to broadcast over Batch
-        denominator_expanded = denominator.unsqueeze(2)
-        
-        # 4. Multiply: Denominator @ Numerator
+        numerator_fft = numerator_fft.permute(2, 3, 0, 1).unsqueeze(-1) #[Batch, C, H, W] -> [H, W, Batch, C, 1]
+        denominator_expanded = denominator.unsqueeze(2) #[H, W, C, C] -> [H, W, 1, C, C]
         a_t_fft = torch.matmul(denominator_expanded, numerator_fft)
-        
-        # 5. Permute back to standard spatial shape (Batch, in_channels, H, W)
-        a_t_fft = a_t_fft.squeeze(-1).permute(2, 3, 0, 1)
-        
-        # 6. Inverse FFT back to the spatial domain and extract real parts
+        a_t_fft = a_t_fft.squeeze(-1).permute(2, 3, 0, 1) #[H, W, Batch, C, 1] -> [Batch, C, H, W]
         return torch.fft.ifft2(a_t_fft).real
          
     def _compute_covariances(self, Y: torch.Tensor, a_prev: torch.Tensor):
@@ -172,7 +170,7 @@ class ADMM_Convolution:
             tuple:
                 - torch.Tensor: The computed numerator matrix (Y^T @ P).
                 - torch.Tensor: The computed denominator matrix (P^T @ P).
-        """        
+        """      
         if a_prev.dim() == 4:
             a_prev = a_prev.unsqueeze(0) # [1, Batch, C, H, W]
             Y = Y.unsqueeze(0)           # [1, Batch, C_out, H, W]
@@ -185,11 +183,13 @@ class ADMM_Convolution:
         numerator = torch.zeros((out_channels, patch_dim), device=Y.device, dtype=Y.dtype)
         
         for t in range(T):
-            P_t = torch.nn.functional.unfold(a_prev[t], kernel_size=self.k, padding=self.p, stride=self.s)
+            if getattr(self, 'padding_mode', 'zeros') == 'circular':
+                a_padded = torch.nn.functional.pad(a_prev[t], (self.p, self.p, self.p, self.p), mode='circular')
+                P_t = torch.nn.functional.unfold(a_padded, kernel_size=self.k, padding=0, stride=self.s)
+            else:
+                P_t = torch.nn.functional.unfold(a_prev[t], kernel_size=self.k, padding=self.p, stride=self.s)
             
-            # P_t is now 3D [Batch, patch_dim, L]. Transpose works perfectly!
             P_t = P_t.transpose(1, 2).reshape(-1, patch_dim) 
-            
             Y_flat = Y[t].movedim(self.channel_dim, -1).reshape(-1, out_channels) 
             
             denominator += P_t.t() @ P_t

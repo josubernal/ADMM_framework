@@ -17,7 +17,7 @@ class TemporalCache:
     forward_pass: torch.Tensor
     denominator_main: torch.Tensor
     denominator_last: torch.Tensor
-    numerator_without_h: torch.Tensor
+    adjoint: torch.Tensor
     @classmethod
     def build(cls, layer, next_layer, a_prev, lambda_lagrange:torch.Tensor=None):
         """Precomputes and distributes operations to accelerate the unrolled loop.
@@ -52,13 +52,13 @@ class TemporalCache:
         )
 
         #3- Term 2
-        numerator_without_h = layer._get_a_numerator_without_h(next_layer=next_layer, lambda_lagrange=lambda_lagrange, forward_pass=forward_pass)     
+        adjoint = layer._get_a_adjoint(next_layer=next_layer, lambda_lagrange=lambda_lagrange)     
 
         return cls(
                 forward_pass=forward_pass,
                 denominator_main=denominator_main,
                 denominator_last=denominator_last,
-                numerator_without_h=numerator_without_h
+                adjoint=adjoint
         )            
 
 def fold_time(x: torch.Tensor):
@@ -123,7 +123,7 @@ def get_spiking_v(z, bias, temporal_dependencies, rho, lambda_lagrange=None, bro
         v[-1] = v[-1] + (lam_sp / rho)
     return v
     
-def get_spiking_a_denominator(W, beta_current, rho_next, temporal_penalty, unrolled=False):
+def get_spiking_a_denominator(WtW, in_features, beta_current, rho_next, temporal_penalty, unrolled=False):
     """
     Computes the denominator matrix for the activation (a) update step.
 
@@ -144,21 +144,20 @@ def get_spiking_a_denominator(W, beta_current, rho_next, temporal_penalty, unrol
             - torch.Tensor: The computed denominator_last matrix (for t = T).
             - int: The number of input features.
     """
-    in_features = W.size(1)
-    I = torch.eye(in_features, device=W.device, dtype=W.dtype)
-    WtW = torch.matmul(W.t(), W) 
+    
+    I = torch.eye(in_features, device=WtW.device, dtype=WtW.dtype)
 
     denominator_last = beta_current * I + rho_next * WtW
     denominator_main = denominator_last + (temporal_penalty * I)
     
     if unrolled:
-        denominator_main = torch.linalg.inv(denominator_main).t()          
-        denominator_last = torch.linalg.inv(denominator_last).t()
+        denominator_main = torch.linalg.inv(denominator_main).transpose(-2, -1)          
+        denominator_last = torch.linalg.inv(denominator_last).transpose(-2, -1)
             
     return denominator_main, denominator_last, in_features
 
 
-def get_spiking_a_numerator_without_h(layer, next_layer, lambda_lagrange, forward_pass):
+def get_spiking_a_adjoint(layer, next_layer, lambda_lagrange):
     """
         Computes the linear components of the ADMM numerator for activation updates.
 
@@ -177,6 +176,4 @@ def get_spiking_a_numerator_without_h(layer, next_layer, lambda_lagrange, forwar
     """
     v = next_layer._get_v(include_reset=False, lambda_lagrange=lambda_lagrange)     
     adjoint = next_layer.adjoint_operator(v, original_input_shape=layer.a.shape)
-    temporal_penalty = torch.zeros_like(layer.z)
-    temporal_penalty[:-1] = -layer.thetas * layer.rho * (layer.z[1:] - layer.deltas * layer.z[:-1] - forward_pass[1:])
-    return  next_layer.rho * adjoint + temporal_penalty     
+    return  next_layer.rho * adjoint

@@ -118,6 +118,13 @@ class ADMM_AffineLayer(ADMM_Layer):
         adjoint = self.adjoint_operator(inside_adjoint, original_input_shape=a_shape)
         return beta_current * h_z + self.rho * adjoint 
         
+    def _get_WtW(self, a_shape: tuple):
+        """Template method to compute W^T W."""
+        W = self._get_expanded_weights(a_shape=a_shape)   
+        in_features = W.size(1)
+        WtW = torch.matmul(W.t(), W)
+        return WtW, in_features
+    
     def _get_a_denominator(self, beta_current, a_shape):
         """Computes the denominator matrix for the activation (a) update step.
 
@@ -134,10 +141,8 @@ class ADMM_AffineLayer(ADMM_Layer):
                 - torch.Tensor: The computed denominator matrix (LHS of the system).
                 - int: The number of input features.
         """
-        W = self._get_expanded_weights(a_shape=a_shape)   
-        in_features = W.size(1)
-        I = torch.eye(in_features, device=self.W.device, dtype=W.dtype)
-        WtW = torch.matmul(W.t(), W) 
+        WtW, in_features = self._get_WtW(a_shape)
+        I = torch.eye(in_features, device=self.W.device, dtype=WtW.dtype)
         denominator =  beta_current * I + self.rho * WtW
         # Return identical matrices for main and last to match the spiking signature
         return  denominator, denominator, in_features

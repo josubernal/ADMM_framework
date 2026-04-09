@@ -7,11 +7,12 @@ from torch.utils.data import DataLoader
 import random
 import torch.nn as nn
 import time
+import os
 
 from admm import  ADMM_SpikingLinear, ADMM, ADMM_Heaviside, ADMM_Metrics
-from old_script.admm_snn import ADMM_SNN
+from admm.tests.old_script.admm_snn import ADMM_SNN
 
-if __name__ == "__main__":
+def test_old_match():
     seed = 8281003564
     def reset_seed(s):
         random.seed(s)
@@ -23,8 +24,12 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     config = configparser.ConfigParser()
-    config.read('config/config_test.ini')
-    
+    base_path = os.path.dirname(__file__)
+    config_path = os.path.join(base_path, 'config/config_test.ini')
+
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Could not find config file at: {config_path}")
+    config.read(config_path)
     use_double = config.getboolean('affine', 'use_double', fallback=False)
     
     if use_double:
@@ -42,7 +47,6 @@ if __name__ == "__main__":
     rho = config.getfloat('affine', 'rho')
     beta = config.getfloat('affine', 'beta')
     
-    print(f"Performing training for {batch_size} images...")
     
     hidden_dims = config.getint('affine', 'hidden_dims')
     thetas = config.getfloat('affine', 'thetas')   
@@ -84,7 +88,6 @@ if __name__ == "__main__":
     # ==========================================
     # OOP MODEL EXECUTION
     # ==========================================
-    print("\n=== RUNNING OOP MODEL ===")
     reset_seed(seed) 
     
     model._init_states(base_data) 
@@ -123,12 +126,9 @@ if __name__ == "__main__":
 
     end_time_oop = time.time()
     time_oop = end_time_oop - start_time_oop
-    print(f"OOP Model finished in {time_oop:.2f} seconds.")
-
     # ==========================================
     # LEGACY MODEL EXECUTION
     # ==========================================
-    print("\n=== RUNNING LEGACY MODEL ===")
     reset_seed(seed) 
     
     # Note: Legacy script maps rho->rho (preact penalty) and rho->beta (act penalty)
@@ -170,34 +170,53 @@ if __name__ == "__main__":
 
     end_time_leg = time.time()
     time_leg = end_time_leg - start_time_leg
-    print(f"Legacy Model finished in {time_leg:.2f} seconds.")
     
     # ==========================================
     # COMPARISON
     # ==========================================
-    print("\n=== COMPARING MATRICES AND METRICS ===")
+    print("\n" + "="*55)
+    print("  OLD SCRIPT COMPARATION TEST")
+    print("="*55)
     for epoch in sorted(oop.keys()):
         diff_W0 = torch.max(torch.abs(oop[epoch]['W0'] - leg[epoch]['W0'])).item()
         diff_W1 = torch.max(torch.abs(oop[epoch]['W1'] - leg[epoch]['W1'])).item()
         diff_z0 = torch.max(torch.abs(oop[epoch]['z0'] - leg[epoch]['z0'])).item()
         diff_a0 = torch.max(torch.abs(oop[epoch]['a0'] - leg[epoch]['a0'])).item()
         diff_z1 = torch.max(torch.abs(oop[epoch]['z1'] - leg[epoch]['z1'])).item()
+        
         diff_lam = torch.max(torch.abs(oop[epoch]['lam'] - leg[epoch]['lam'])).item()
+        diff_mse = abs(oop[epoch]['mse'] - leg[epoch]['mse'])
+        diff_acc = abs(oop[epoch]['acc'] - leg[epoch]['acc'])
+        diff_lam_sum = abs(oop[epoch]['lam_sum'] - leg[epoch]['lam_sum'])
+        diff_lagr = abs(oop[epoch]['lagr'] - leg[epoch]['lagr'])
+        diff_primal = abs(oop[epoch]['primal'] - leg[epoch]['primal'])
         
-        print(f"--- Epoch [{epoch:3d}/{epochs}] Parity Check ---")
-        print(f"Max Diff W0: {diff_W0:.8e} | W1: {diff_W1:.8e}")
-        print(f"Max Diff Z0: {diff_z0:.8e} | A0: {diff_a0:.8e} | Z1: {diff_z1:.8e}")
-        print(f"Max Diff Lambda: {diff_lam:.8e}")
         
-        print(f"\n[OOP Model Metrics]")
-        print(f"| MSE: {oop[epoch]['mse']:.4f} | Acc: {oop[epoch]['acc']:6.2f}% | Firing rate: {[f'{v:.4f}' for v in oop[epoch]['firing_rates']]}")
-        print(f"| Lambda sum: {oop[epoch]['lam_sum']:.4e} | Lagr: {oop[epoch]['lagr']:10.2f} | Lamb: {oop[epoch]['primal']:10.2f}")
-        print(f"| Pre: {[f'{v:.4f}' for v in oop[epoch]['pre']]} | Act: {[f'{v:.4f}' for v in oop[epoch]['act']]}")
-
-        print(f"\n[SNN Model Metrics]")
-        print(f"| MSE: {leg[epoch]['mse']:.4f} | Acc: {leg[epoch]['acc']:6.2f}% | Firing rate: {[f'{v:.4f}' for v in leg[epoch]['firing_rates']]}")
-        print(f"| Lambda sum: {leg[epoch]['lam_sum']:.4e} | Lagr: {leg[epoch]['lagr']:10.2f} | Lamb: {leg[epoch]['primal']:10.2f}")
-        print(f"| Pre: {[f'{v:.4f}' for v in leg[epoch]['pre']]} | Act: {[f'{v:.4f}' for v in leg[epoch]['act']]}")
+        diff_fr = max([abs(o - l) for o, l in zip(oop[epoch]['firing_rates'], leg[epoch]['firing_rates'])])
+        diff_pre = max([abs(o - l) for o, l in zip(oop[epoch]['pre'], leg[epoch]['pre'])])
+        diff_act = max([abs(o - l) for o, l in zip(oop[epoch]['act'], leg[epoch]['act'])])
+        print("\n")
+        print(f"Epoch [{epoch:3d}/{epochs}]")
+        print(f"[W0]    Difference: {diff_W0:.8e} " + ("✅" if diff_W0< 1e-3 else "❌"))
+        print(f"[W1]    Difference: {diff_W1:.8e} " + ("✅" if diff_W1 < 1e-3 else "❌"))
+        print(f"[z0]    Difference: {diff_z0:.8e} " + ("✅" if diff_z0< 1e-3 else "❌"))
+        print(f"[z1]    Difference: {diff_z1:.8e} " + ("✅" if diff_z1 < 1e-3 else "❌"))
+        print(f"[a0]    Difference: {diff_a0:.8e} " + ("✅" if diff_a0< 1e-3 else "❌"))
+        print(f"[W1]    Difference: {diff_W1:.8e} " + ("✅" if diff_W1 < 1e-3 else "❌"))
+        
+        print("\n")
+        print(f"[Metrics] Difference Check:")
+        print(f"| MSE:   {diff_mse:.2e} " + ("✅" if diff_mse < 1e-4 else "❌") + 
+              f" | Acc:   {diff_acc:.2e} " + ("✅" if diff_acc < 1e-2 else "❌") + 
+              f" | LamSum: {diff_lam_sum:.2e} " + ("✅" if diff_lam_sum < 1e-6 else "❌"))
+        print(f"| Lagr:  {diff_lagr:.2e} " + ("✅" if diff_lagr < 1e-1 else "❌") + 
+              f" | Lamb:  {diff_primal:.2e} " + ("✅" if diff_primal < 1e-2 else "❌") + 
+              f" | F-Rate: {diff_fr:.2e} " + ("✅" if diff_fr < 1e-3 else "❌"))
+        print(f"| Pre:   {diff_pre:.2e} " + ("✅" if diff_pre < 1e-3 else "❌") + 
+              f" | Act:   {diff_act:.2e} " + ("✅" if diff_act < 1e-3 else "❌"))
+        print("\n")
+        
+        # print(oop[epoch]['acc'], leg[epoch]['acc'])
         print("-" * 65)
 
     print("\n=== PERFORMANCE SUMMARY ===")

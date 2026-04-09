@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 from .solvers import solve_spiking_system
 from types import SimpleNamespace
-from .temporal_helpers import TemporalCache, fold_time, unfold_time, compute_temporal_dependencies, get_spiking_v, get_spiking_a_denominator, get_spiking_a_numerator_without_h
+from .temporal_helpers import TemporalCache, fold_time, unfold_time, compute_temporal_dependencies, get_spiking_v, get_spiking_a_denominator, get_spiking_a_adjoint
 
 ############################################################################################################
 #Spiking mixing
@@ -46,24 +46,24 @@ class ADMM_Spiking:
     
     def _get_a_denominator(self, beta_current, rho_current, thetas_current, a_shape, unrolled=False):
         """Delegates to temporal_helpers.get_spiking_a_denominator."""
-        W = self._get_expanded_weights(a_shape=a_shape)
+        WtW, in_features = self._get_WtW(a_shape=a_shape)
         temporal_penalty = rho_current * (thetas_current ** 2)
         
         return get_spiking_a_denominator(
-            W=W,
+            WtW=WtW,
+            in_features=in_features,
             beta_current=beta_current,
             rho_next=self.rho,
             temporal_penalty=temporal_penalty,
             unrolled=unrolled
         )
     
-    def _get_a_numerator_without_h(self, next_layer: nn.Module, lambda_lagrange: torch.Tensor, forward_pass: torch.Tensor) -> torch.Tensor:
-        """Delegates to temporal_helpers.get_spiking_a_numerator_without_h."""
-        return get_spiking_a_numerator_without_h(
+    def _get_a_adjoint(self, next_layer: nn.Module, lambda_lagrange: torch.Tensor) -> torch.Tensor:
+        """Delegates to temporal_helpers.get_spiking_a_adjoint."""
+        return get_spiking_a_adjoint(
             layer=self,
             next_layer=next_layer,
-            lambda_lagrange=lambda_lagrange,
-            forward_pass=forward_pass
+            lambda_lagrange=lambda_lagrange
         )
         
     def _create_cache(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor):
@@ -122,13 +122,15 @@ class ADMM_Spiking:
             lambda_lagrange (torch.Tensor, optional): The Lagrange multiplier. Defaults to None.
         """
         forward_pass = self.spatial_forward(a_prev)
-        numerator_without_h = self._get_a_numerator_without_h(
+        adjoint = self._get_a_adjoint(
             next_layer=next_layer, 
-            lambda_lagrange=lambda_lagrange, 
-            forward_pass=forward_pass
+            lambda_lagrange=lambda_lagrange
         )
         
-        numerator = (self.beta * self.h(self.z)) + numerator_without_h
+        temporal_penalty_numerator = torch.zeros_like(self.z)
+        temporal_penalty_numerator[:-1] = -self.thetas * self.rho * (self.z[1:] - self.deltas * self.z[:-1] - forward_pass[1:])
+        numerator = (self.beta * self.h(self.z)) + adjoint +temporal_penalty_numerator
+        
         denominator_main, denominator_last, in_features = next_layer._get_a_denominator(  
             a_shape=self.a.shape,
             beta_current=self.beta,
@@ -244,7 +246,11 @@ class ADMM_Spiking:
             
         """
         h_t = self.beta * self.h(self.z[t])
-        numerator = cache.numerator_without_h[t] + h_t
+        temporal_penalty_numerator_t = 0.0
+        if t < self.z.size(0) - 1:
+            temporal_penalty_numerator_t = -self.thetas * self.rho * (self.z[t+1] - self.deltas * self.z[t] - cache.forward_pass[t+1])
+        numerator = cache.adjoint[t] + h_t + temporal_penalty_numerator_t
+        
         is_last = (t == self.z.size(0) - 1)
         denominator = cache.denominator_last if is_last else cache.denominator_main 
         new_a_t = next_layer.solve_activation_system_unrolled(numerator=numerator, denominator=denominator)

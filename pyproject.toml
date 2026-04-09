@@ -22,3 +22,8 @@ explicit = true
 torch = [
   { index = "pytorch-cu118", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]

@@ -5,7 +5,16 @@ To install the required dependencies for this project, you can use `uv`. If you 
 Once `uv` is installed, navigate to the project's root directory (where `pyproject.toml` is located) in your terminal and run the following command:
 
 ```bash
-uv sync
+uv sync --no-dev
 ```
 
 This command will create a virtual environment (if one doesn't exist) and install all the dependencies specified in `pyproject.toml`.
+
+If you want to run test also to verify math is correct and check bugs, intead run:
+```bash
+uv sync 
+```
+To run the tests
+```bash
+uv run pytest admm/tests/
+```
