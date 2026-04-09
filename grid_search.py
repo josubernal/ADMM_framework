@@ -18,6 +18,17 @@ from admm import (
     ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics
 )
 
+def is_valid_combination(params: dict) -> bool:    
+    is_spiking = params.get('model').split("-")[0]=="spiking"
+    print(is_spiking)
+    train_method = params.get('train_method', 'vectorized')
+    
+    if not is_spiking and train_method != 'vectorized':
+        return False
+        
+
+    return True
+
 def parse_value(v):
     """Smartly parse strings from the INI file into their correct Python types."""
     v = v.strip()
@@ -52,6 +63,7 @@ if __name__ == "__main__":
     keys = list(grid_params.keys())
     values = list(grid_params.values())
     combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
+    combinations = [combo for combo in combinations if is_valid_combination(combo)]
     
     is_static_run = (len(combinations) == 1)
     
@@ -74,7 +86,7 @@ if __name__ == "__main__":
         print(f"=======================================================")
 
         # Ensure perfect reproducibility for each run
-        seed = 8281003564
+        seed = cfg.get('seed', 8281003564)
         random.seed(seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
@@ -208,7 +220,15 @@ if __name__ == "__main__":
                         ADMM_Linear(in_f=hidden_dims, out_f=mid_dims, h=ADMM_ReLU(), init=init, bias=bias),
                         ADMM_Linear(in_f=mid_dims, out_f=10, h=ADMM_ReLU(), init=init, bias=bias)
                     ])
-                    
+                elif num_layers == 5:
+                    layers = nn.ModuleList([
+                        ADMM_Linear(28*28, out_f=hidden_dims, h=ADMM_ReLU(), init=init, bias=bias),
+                        ADMM_Linear(in_f=hidden_dims, out_f=hidden_dims//2, h=ADMM_ReLU(), init=init, bias=bias),
+                        ADMM_Linear(in_f=hidden_dims//2, out_f=hidden_dims//4, h=ADMM_ReLU(), init=init, bias=bias),
+                        ADMM_Linear(in_f=hidden_dims//4, out_f=hidden_dims//8, h=ADMM_ReLU(), init=init, bias=bias),
+                        ADMM_Linear(in_f=hidden_dims//8, out_f=10, h=ADMM_ReLU(), init=init, bias=bias)
+                     ])
+        
             case "conv":
                 k = cfg.get('kernel_size', 5)
                 p = cfg.get('padding', 2)
@@ -232,6 +252,27 @@ if __name__ == "__main__":
                         ADMM_Conv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode),
                         ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten(), bias=bias)
                     ])
+                elif num_layers == 5:
+                    spatial_out_1 = int(calc_spatial_out(28, k, p, s))
+                    spatial_out_2 = int(calc_spatial_out(spatial_out_1, k, p, s))
+                    spatial_out_3 = int(calc_spatial_out(spatial_out_2, k, p, s))
+                    
+                    c1 = hidden_channels
+                    c2 = hidden_channels // 2
+                    c3 = hidden_channels // 4
+                    
+
+                    lin_in = c3 * spatial_out_3 * spatial_out_3
+                    lin_hidden = c3 
+                    
+                    layers = nn.ModuleList([
+                        ADMM_Conv2d(in_c=1, out_c=c1, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode), 
+                        ADMM_Conv2d(in_c=c1, out_c=c2, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode),
+                        ADMM_Conv2d(in_c=c2, out_c=c3, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode),
+                        
+                        ADMM_Linear(in_f=lin_in, out_f=lin_hidden, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten(), bias=bias),
+                        ADMM_Linear(in_f=lin_hidden, out_f=10, h=ADMM_ReLU(), init=init, bias=bias)
+                    ])
 
         # ---------------------------------------------------------
         # 3. INITIALIZE MODEL & METRICS
@@ -247,14 +288,17 @@ if __name__ == "__main__":
         if is_static_run:
             print(json.dumps(m.network_size_statistics(), indent=4))
 
-
         
-        if is_static_run or not dynamic_keys:
+        keys_to_exclude = {'model', 'batch_size', 'seed'} 
+        filtered_keys = [k for k in dynamic_keys if k not in keys_to_exclude]
+
+        # 3. Build the combo string using the filtered list
+        if is_static_run or not filtered_keys:
             combo_str = "baseline"
         else:
-            combo_str = "_".join([f"{k}-{cfg[k]}" for k in dynamic_keys])
+            combo_str = "_".join([f"{k}-{cfg[k]}" for k in filtered_keys])
             
-        metrics_path = f'metrics_test/{model_name}/{batch_size}/{combo_str}'
+        metrics_path = f'metrics_test/{model_name}/{batch_size}/{combo_str}/{seed}'
         os.makedirs(metrics_path, exist_ok=True)
 
         print(f"Training...")
