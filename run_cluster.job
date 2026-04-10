@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#SBATCH --job-name bench_mark_test
+#SBATCH --output output_%j.txt
+#SBATCH --error errors_%j.txt
+#SBATCH --mail-user bernaljosu@dei.unipd.it
+#SBATCH --mail-type END,FAIL
+
+#SBATCH --exclude runner-[07-19],gpu[1-7]
+
+#SBATCH --partition allgroups
+#SBATCH --ntasks 1
+#SBATCH --mem 16G
+#SBATCH --time 01:00:00
+
+
+cd $SLURM_SUBMIT_DIR
+
+uv run python grid_search.py

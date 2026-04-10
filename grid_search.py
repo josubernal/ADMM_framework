@@ -348,6 +348,7 @@ if __name__ == "__main__":
                     lambdas.append(primal)
          
         end_time = time.time()    
+        running_time = end_time - start_time
         print(f"Model finished in {end_time - start_time:.2f} seconds.")       
         
         metrics["lagrangians"] = lagrangians
@@ -356,6 +357,7 @@ if __name__ == "__main__":
         metrics["losses"] = losses
         metrics["accuracy_list"] = accuracy_list
         metrics["firing_rate"] = firing_rate_list
+        metrics["running_time" ]= running_time
         
         # Store for plotting if static
         if is_static_run:
