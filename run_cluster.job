@@ -16,4 +16,4 @@
 
 cd $SLURM_SUBMIT_DIR
 
-uv run python grid_search.py
+uv run --python 3.12 python grid_search.py
