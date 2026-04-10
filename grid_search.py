@@ -189,7 +189,7 @@ if __name__ == "__main__":
                 k = cfg.get('kernel_size', 5)
                 p = cfg.get('padding', 2)
                 s = cfg.get('stride', 1) # FFTs require stride=1
-                pool_h, pool_w = 8, 8 
+                pool_h, pool_w = 8, 8
                 
                 if num_layers == 2:
                     lin_in = hidden_channels * pool_h * pool_w

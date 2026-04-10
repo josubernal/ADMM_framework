@@ -106,11 +106,11 @@ class ZerosRNGInitializer(ZerosInitializer):
                 x = a_pred 
                 
             for i, layer in enumerate(layers):
-                    layer.z = torch.rand(z_preds[i].shape).to(device)
+                    layer.z = torch.rand(z_preds[i].shape, device=device)
                         
             for i, layer in enumerate(layers):
                 if i <  len(layers) - 1: 
-                    layer.a = torch.rand(a_preds[i].shape).to(device)
+                    layer.a = torch.rand(a_preds[i].shape, device=device)
                 else:
                     layer.a = torch.zeros_like(a_preds[i])
                     

@@ -59,7 +59,7 @@ class ADMM(nn.Module):
             )
             self.train_method = "vectorized"
             
-        config = {'rho': self.rho, 'beta': self.beta, 'init': self.init}
+        config = {'rho': self.rho, 'beta': self.beta, 'init': self.init, 'device':self.device}
         config.update(kwargs)
         self._configure_layers(config)
 
