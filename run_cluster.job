@@ -6,14 +6,14 @@
 #SBATCH --mail-user bernaljosu@dei.unipd.it
 #SBATCH --mail-type END,FAIL
 
-#SBATCH --exclude runner-[07-19],gpu[1-7]
+#SBATCH --exclude gpu[1-6]
 
 #SBATCH --partition allgroups
 #SBATCH --ntasks 1
 #SBATCH --mem 16G
-#SBATCH --time 01:00:00
+#SBATCH --time 10:00
 
 
 cd $SLURM_SUBMIT_DIR
 
-uv run --python 3.12 python grid_search.py
+uv run --python 3.12 python -u grid_search.py
