@@ -3,7 +3,7 @@ name = "snn-admm-optimizer"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "matplotlib>=3.10.1",
     "snntorch>=0.9.4",
