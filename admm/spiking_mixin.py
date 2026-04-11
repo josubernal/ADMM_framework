@@ -111,7 +111,7 @@ class ADMM_Spiking:
             torch.Tensor: The evaluated constraints including temporal dependencies.
         """
         z = self.spatial_forward(a_prev) + self._compute_temporal_dependencies()
-        return z 
+        return z
 
     def update_a(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None):
         """Manages the vectorized activation (a) update for a specific timestep.
@@ -123,14 +123,18 @@ class ADMM_Spiking:
         """
         forward_pass = self.spatial_forward(a_prev)
         adjoint = self._get_a_adjoint(
-            next_layer=next_layer, 
+            next_layer=next_layer,
             lambda_lagrange=lambda_lagrange
         )
-        
+
         temporal_penalty_numerator = torch.zeros_like(self.z)
-        temporal_penalty_numerator[:-1] = -self.thetas * self.rho * (self.z[1:] - self.deltas * self.z[:-1] - forward_pass[1:])
-        numerator = (self.beta * self.h(self.z)) + adjoint +temporal_penalty_numerator
-        
+	temp = self.z[1:].clone()
+	temp.add_(self.z[:-1], alpha=-self.deltas)
+	temp.sub_(forward_pass[1:])
+	temp.mul_(-self.thetas*self.rho)
+	temporal_penalty_numerator[:-1] = temp
+	del temp
+	numerator = (self.beta * self.h(self.z)) + adjoint +temporal_penalty_numerator
         denominator_main, denominator_last, in_features = next_layer._get_a_denominator(  
             a_shape=self.a.shape,
             beta_current=self.beta,
