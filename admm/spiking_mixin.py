@@ -128,13 +128,13 @@ class ADMM_Spiking:
         )
 
         temporal_penalty_numerator = torch.zeros_like(self.z)
-	temp = self.z[1:].clone()
-	temp.add_(self.z[:-1], alpha=-self.deltas)
-	temp.sub_(forward_pass[1:])
-	temp.mul_(-self.thetas*self.rho)
-	temporal_penalty_numerator[:-1] = temp
-	del temp
-	numerator = (self.beta * self.h(self.z)) + adjoint +temporal_penalty_numerator
+		temp = self.z[1:].clone()
+		temp.add_(self.z[:-1], alpha=-self.deltas)
+		temp.sub_(forward_pass[1:])
+		temp.mul_(-self.thetas*self.rho)
+		temporal_penalty_numerator[:-1] = temp
+		del temp
+		numerator = (self.beta * self.h(self.z)) + adjoint +temporal_penalty_numerator
         denominator_main, denominator_last, in_features = next_layer._get_a_denominator(  
             a_shape=self.a.shape,
             beta_current=self.beta,
