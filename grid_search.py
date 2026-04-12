@@ -15,7 +15,7 @@ from torchvision import datasets, transforms
 
 from admm import (
     ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpatialPool, ADMM_SpikingConv2d, 
-    ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics
+    ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics, ADMM_GAP
 )
 
 def is_valid_combination(params: dict) -> bool:    
@@ -194,16 +194,16 @@ if __name__ == "__main__":
                 if num_layers == 2:
                     lin_in = hidden_channels * pool_h * pool_w
                     layers = nn.ModuleList([
-                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=use_fft,  padding_mode= padding_mode),
-                        ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)), bias=bias)
+                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=2, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=False,  padding_mode= "zeros"),
+                        ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h,pool_w)), bias=bias)
                     ])
                 elif num_layers == 3:
                     mid_p = k // 2 
                     mid_c = hidden_channels // 2
                     lin_in = mid_c * pool_h * pool_w
                     layers = nn.ModuleList([
-                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=use_fft,  padding_mode=padding_mode),
-                        ADMM_SpikingConv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=mid_p, s=1, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode),
+                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=1, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=True,  padding_mode="circular"),
+                        ADMM_SpikingConv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=mid_p, s=2, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=False, padding_mode="zeros"),
                         ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)), bias=bias)
                     ])
 

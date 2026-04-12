@@ -54,19 +54,18 @@ def test_proper_gpu_execution():
     T, batch = 10, 16
     in_c, H, W = 2, 32, 32 # Assuming a DVS/CIFAR-like spatial input
     
-    config = {'rho': 1.0, 'beta': 1.0, 'deltas': 0.8, 'thetas': 1.0}
     
     # Layer 1: Conv -> GAP (Massive spatial reduction)
     layer1 = ADMM_SpikingConv2d(
         in_c=in_c, out_c=16, k=5, p=2, s=2, # Stride 2 is crucial here!
-        h=ADMM_Heaviside(), pool_op=ADMM_GAP(), bias=True, use_fft=True
+        h=ADMM_Heaviside(), bias=True, use_fft=False, padding_mode="zeros"
     )
     
     # Layer 2: Linear Classifier
-    layer2 = ADMM_SpikingLinear(16, 10, h=ADMM_Heaviside(), bias=True)
+    layer2 = ADMM_SpikingLinear(16, 10, pool_op=ADMM_GAP(),h=ADMM_Heaviside(), bias=True)
     
     model = ADMM([layer1, layer2], T=T, device=device, init="zeros", 
-                 train_method="decoupled-sequential", bias=True, **config)
+                 train_method="decoupled-sequential", bias=True,deltas=0.8,thetas=1.0, rho=1.0,beta=1.0)
     
     # Dummy Input Data (Moved immediately to GPU)
     inputs = torch.randn((T, batch, in_c, H, W), device=device)
