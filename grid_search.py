@@ -207,73 +207,61 @@ if __name__ == "__main__":
                         ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)), bias=bias)
                     ])
 
-            case "linear":  
-                if num_layers == 2:
-                    layers = nn.ModuleList([
-                        ADMM_Linear(in_f=28*28, out_f=hidden_dims, h=ADMM_ReLU(), init=init, bias=bias),
-                        ADMM_Linear(in_f=hidden_dims, out_f=10, h=ADMM_ReLU(), init=init, bias=bias)
-                    ])
-                elif num_layers == 3:
-                    mid_dims = hidden_dims // 2
-                    layers = nn.ModuleList([
-                        ADMM_Linear(in_f=28*28, out_f=hidden_dims, h=ADMM_ReLU(), init=init, bias=bias),
-                        ADMM_Linear(in_f=hidden_dims, out_f=mid_dims, h=ADMM_ReLU(), init=init, bias=bias),
-                        ADMM_Linear(in_f=mid_dims, out_f=10, h=ADMM_ReLU(), init=init, bias=bias)
-                    ])
-                elif num_layers == 5:
-                    layers = nn.ModuleList([
-                        ADMM_Linear(28*28, out_f=hidden_dims, h=ADMM_ReLU(), init=init, bias=bias),
-                        ADMM_Linear(in_f=hidden_dims, out_f=hidden_dims//2, h=ADMM_ReLU(), init=init, bias=bias),
-                        ADMM_Linear(in_f=hidden_dims//2, out_f=hidden_dims//4, h=ADMM_ReLU(), init=init, bias=bias),
-                        ADMM_Linear(in_f=hidden_dims//4, out_f=hidden_dims//8, h=ADMM_ReLU(), init=init, bias=bias),
-                        ADMM_Linear(in_f=hidden_dims//8, out_f=10, h=ADMM_ReLU(), init=init, bias=bias)
-                     ])
+            case "linear": 
+                layer_list = []
+                current_in = 28 * 28
+
+                # 1. Build all hidden layers (constant width)
+                for _ in range(num_layers - 1):
+                    layer_list.append(
+                        ADMM_Linear(in_f=current_in, out_f=hidden_dims, h=ADMM_ReLU(), init=init, bias=bias)
+                    )
+                    # For all subsequent layers, the input is now hidden_dims
+                    current_in = hidden_dims
+
+                # 2. Build the final classification layer
+                layer_list.append(
+                    ADMM_Linear(in_f=current_in, out_f=10, h=ADMM_ReLU(), init=init, bias=bias)
+                )
+
+                # 3. Convert to PyTorch ModuleList
+                layers = nn.ModuleList(layer_list)
         
             case "conv":
                 k = cfg.get('kernel_size', 5)
                 p = cfg.get('padding', 2)
                 s = cfg.get('stride', 1)
                 
-                if num_layers == 2:
-                    spatial_out = int(calc_spatial_out(28, k, p, s))
-                    lin_in = hidden_channels * spatial_out * spatial_out
-                    layers = nn.ModuleList([
-                        ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode),       
-                        ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten(), bias=bias)
-                    ])
-                elif num_layers == 3:
-                    spatial_out_1 = int(calc_spatial_out(28, k, p, s))
-                    spatial_out_2 = int(calc_spatial_out(spatial_out_1, k, p, s))
-                    mid_c = hidden_channels // 2
-                    lin_in = mid_c * spatial_out_2 * spatial_out_2
+                layer_list = []
+                
+                # Initial Image dimensions (1 channel, 28x28)
+                current_in_c = 1
+                current_spatial = 28
+                
+                # 1. Build N-1 Convolutional Layers (constant channels)
+                for _ in range(num_layers - 1):
+                    layer_list.append(
+                        ADMM_Conv2d(in_c=current_in_c, out_c=hidden_channels, k=k, p=p, s=s, 
+                                    h=ADMM_ReLU(), init=init, bias=bias, 
+                                    use_fft=use_fft, padding_mode=padding_mode)
+                    )
                     
-                    layers = nn.ModuleList([
-                        ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode), 
-                        ADMM_Conv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode),
-                        ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten(), bias=bias)
-                    ])
-                elif num_layers == 5:
-                    spatial_out_1 = int(calc_spatial_out(28, k, p, s))
-                    spatial_out_2 = int(calc_spatial_out(spatial_out_1, k, p, s))
-                    spatial_out_3 = int(calc_spatial_out(spatial_out_2, k, p, s))
-                    
-                    c1 = hidden_channels
-                    c2 = hidden_channels // 2
-                    c3 = hidden_channels // 4
-                    
-
-                    lin_in = c3 * spatial_out_3 * spatial_out_3
-                    lin_hidden = c3 
-                    
-                    layers = nn.ModuleList([
-                        ADMM_Conv2d(in_c=1, out_c=c1, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode), 
-                        ADMM_Conv2d(in_c=c1, out_c=c2, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode),
-                        ADMM_Conv2d(in_c=c2, out_c=c3, k=k, p=p, s=s, h=ADMM_ReLU(), init=init, bias=bias, use_fft=use_fft, padding_mode=padding_mode),
-                        
-                        ADMM_Linear(in_f=lin_in, out_f=lin_hidden, h=ADMM_ReLU(), init=init, pool_op=ADMM_Flatten(), bias=bias),
-                        ADMM_Linear(in_f=lin_hidden, out_f=10, h=ADMM_ReLU(), init=init, bias=bias)
-                    ])
-
+                    # Update spatial size mathematically
+                    current_spatial = int(calc_spatial_out(current_spatial, k, p, s))
+                    # For all subsequent conv layers, the input channels match the hidden_channels
+                    current_in_c = hidden_channels
+                
+                # 2. Build the final single Linear Classification Layer
+                # current_in_c is guaranteed to be `hidden_channels` at this point
+                lin_in = current_in_c * current_spatial * current_spatial
+                
+                layer_list.append(
+                    ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, 
+                                pool_op=ADMM_Flatten(), bias=bias)
+                )
+                
+                # 3. Convert to PyTorch ModuleList
+                layers = nn.ModuleList(layer_list)
         # ---------------------------------------------------------
         # 3. INITIALIZE MODEL & METRICS
         # ---------------------------------------------------------
