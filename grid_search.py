@@ -238,29 +238,37 @@ if __name__ == "__main__":
                 current_in_c = 1
                 current_spatial = 28
                 
-                # 1. Build N-1 Convolutional Layers (constant channels)
-                for _ in range(num_layers - 1):
+                # 1. Build N-2 Convolutional Layers (High-Res Feature Extractors)
+                for _ in range(num_layers - 2):
                     layer_list.append(
-                        ADMM_Conv2d(in_c=current_in_c, out_c=hidden_channels, k=k, p=p, s=s, 
+                        ADMM_Conv2d(in_c=current_in_c, out_c=hidden_channels, k=k, p=p, s=1, 
                                     h=ADMM_ReLU(), init=init, bias=bias, 
-                                    use_fft=use_fft, padding_mode=padding_mode)
+                                    use_fft=True, padding_mode="circular") # <-- Changed to True for speed!
                     )
                     
-                    # Update spatial size mathematically
-                    current_spatial = int(calc_spatial_out(current_spatial, k, p, s))
-                    # For all subsequent conv layers, the input channels match the hidden_channels
+                    # Update spatial size mathematically (using stride 1)
+                    current_spatial = int(calc_spatial_out(current_spatial, k, p, 1))
                     current_in_c = hidden_channels
                 
-                # 2. Build the final single Linear Classification Layer
-                # current_in_c is guaranteed to be `hidden_channels` at this point
-                lin_in = current_in_c * current_spatial * current_spatial
+                # 2. Build the final Convolutional Layer (The Bottleneck)
+                layer_list.append(
+                    ADMM_Conv2d(in_c=current_in_c, out_c=hidden_channels, k=k, p=p, s=s, 
+                                h=ADMM_ReLU(), init=init, bias=bias, 
+                                use_fft=use_fft, padding_mode=padding_mode)
+                )
+                
+                # CRITICAL FIX: Update the spatial size one last time based on stride `s`!
+                current_spatial = int(calc_spatial_out(current_spatial, k, p, s))
+                
+                # 3. Build the final Linear Classification Layer
+                lin_in = hidden_channels * current_spatial * current_spatial
                 
                 layer_list.append(
                     ADMM_Linear(in_f=lin_in, out_f=10, h=ADMM_ReLU(), init=init, 
                                 pool_op=ADMM_Flatten(), bias=bias)
                 )
                 
-                # 3. Convert to PyTorch ModuleList
+                # 4. Convert to PyTorch ModuleList
                 layers = nn.ModuleList(layer_list)
         # ---------------------------------------------------------
         # 3. INITIALIZE MODEL & METRICS
