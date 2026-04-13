@@ -8,7 +8,7 @@ standard spatial hooks with temporal dependencies (leakage, reset).
 
 import torch
 import torch.nn as nn
-from .solvers import solve_spiking_system
+from .solvers import solve_spiking_system, solve_woodbury_system
 from types import SimpleNamespace
 from .temporal_helpers import TemporalCache, fold_time, unfold_time, compute_temporal_dependencies, get_spiking_v, get_spiking_a_denominator, get_spiking_a_adjoint
 
@@ -277,6 +277,16 @@ class ADMM_Spiking:
         Executes the unrolled step using dense matrix multiplication.
         Reshaping is aligned with solve_linear_system in solvers.py.
         """
+        if isinstance(denominator, dict):
+            in_features = denominator['W'].size(1)
+            return solve_woodbury_system(
+                W=denominator['W'], 
+                B=numerator, 
+                beta_eff=denominator['beta_eff'], 
+                rho=denominator['rho'], 
+                out_shape=numerator.shape, 
+                in_features=in_features
+            )
         original_shape = numerator.shape 
         in_features = denominator.size(1)
         numerator_flat = numerator.reshape(-1, in_features)

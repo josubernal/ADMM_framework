@@ -16,5 +16,5 @@ uv sync
 ```
 To run the tests
 ```bash
-uv run pytest admm/tests/
+uv run pytest -s admm/tests/
 ```
