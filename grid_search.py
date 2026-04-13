@@ -190,12 +190,21 @@ if __name__ == "__main__":
                 p = cfg.get('padding', 2)
                 s = cfg.get('stride', 1) # FFTs require stride=1
                 pool_h, pool_w = 8, 8
-                
+                # N-MNIST is 34x34. Calculate the exact output size of the Conv layer
                 if num_layers == 2:
-                    lin_in = hidden_channels * pool_h * pool_w
+                    # Dynamically calculate the 18x18 output
+                    spatial_out = int(calc_spatial_out(34, k, p, 1)) 
+                    # 2 * 18 * 18 = 648
+                    lin_in = hidden_channels * spatial_out * spatial_out 
+                    
                     layers = nn.ModuleList([
-                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=2, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=False,  padding_mode= "zeros", is_woodbury=True),
-                        ADMM_SpikingLinear(in_f=hidden_channels*16*16, out_f=10, init=init, h=None, pool_op=ADMM_Flatten(), bias=bias)
+                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=1, 
+                                           h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, 
+                                           use_fft=False,  padding_mode="zeros", is_woodbury=True),
+                                           
+                        # Passing 648 to in_f and using Flatten
+                        ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, 
+                                           pool_op=ADMM_Flatten(), bias=bias)
                     ])
                 elif num_layers == 3:
                     mid_p = k // 2 
