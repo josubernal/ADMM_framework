@@ -46,8 +46,18 @@ class ADMM_Spiking:
     
     def _get_a_denominator(self, beta_current, rho_current, thetas_current, a_shape, unrolled=False):
         """Delegates to temporal_helpers.get_spiking_a_denominator."""
-        WtW, in_features = self._get_WtW(a_shape=a_shape)
         temporal_penalty = rho_current * (thetas_current ** 2)
+        if getattr(self, 'is_woodbury', False) == True:
+            W = self._get_expanded_weights(a_shape)
+            in_features, out_features = W.size(1), W.size(0)
+            
+            if in_features > out_features * 4:
+                main_dict = {'W': W, 'beta_eff': beta_current + temporal_penalty, 'rho': self.rho}
+                last_dict = {'W': W, 'beta_eff': beta_current, 'rho': self.rho}
+                return main_dict, last_dict, in_features
+            
+        WtW, in_features = self._get_WtW(a_shape=a_shape)
+       
         
         return get_spiking_a_denominator(
             WtW=WtW,
@@ -134,7 +144,8 @@ class ADMM_Spiking:
         temp.mul_(-self.thetas*self.rho)
         temporal_penalty_numerator[:-1] = temp
         del temp
-        numerator = (self.beta * self.h(self.z)) + adjoint +temporal_penalty_numerator
+        numerator = (self.beta * self.h(self.z)) + adjoint + temporal_penalty_numerator
+        
         denominator_main, denominator_last, in_features = next_layer._get_a_denominator(  
             a_shape=self.a.shape,
             beta_current=self.beta,

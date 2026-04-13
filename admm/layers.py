@@ -81,7 +81,8 @@ class ADMM_Conv2d( ADMM_Convolution, ADMM_AffineLayer):
         self.in_c = in_c
         self.out_c = out_c
         self.k = k
-        self.channel_dim = -3 # Targets the [B, C, H, W] dimension       
+        self.channel_dim = -3 # Targets the [B, C, H, W] dimension     
+        
 
     def setup(self, config: dict, is_last_layer: bool = False):
         super().setup(config, is_last_layer)
@@ -182,7 +183,7 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
     - Includes a chunked covariance computation to prevent Out-Of-Memory (OOM) errors 
       during the ADMM weight update step.
     """
-    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="zeros", pool_op=None, use_fft=True, padding_mode="circular"):
+    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="zeros", pool_op=None, use_fft=True, padding_mode="circular", is_woodbury = False):
         super().__init__(h=h, bias=bias, pool_op=pool_op, use_fft=use_fft, padding_mode=padding_mode) 
         self.init = init
         self.T = None
@@ -193,7 +194,8 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
         self.k = k
         self.p = p
         self.s = s
-        self.channel_dim = -3         
+        self.channel_dim = -3       
+        self.is_woodbury = is_woodbury    
     
     def setup(self, config: dict, is_last_layer: bool = False):
         super().setup(config, is_last_layer)

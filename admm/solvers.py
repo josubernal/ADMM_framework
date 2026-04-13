@@ -33,6 +33,26 @@ def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tens
     return new_W, pinv
 
 
+def solve_woodbury_system(W: torch.Tensor, B: torch.Tensor, beta_eff: float, rho: float, out_shape: tuple, in_features: int):
+    """Solves (beta_eff * I + rho * W^T W) x = B using the Woodbury Matrix Identity."""
+    out_features = W.size(0)
+    B_flat = B.reshape(-1, in_features).t() # Shape: [in_features, Batch]
+    
+    # 1. Compute tiny S matrix
+    WWT = torch.matmul(W, W.t()) 
+    I_k = torch.eye(out_features, device=W.device, dtype=W.dtype)
+    S = beta_eff * I_k + rho * WWT
+    
+    # 2. Solve tiny system
+    WB = torch.matmul(W, B_flat) 
+    S_inv_WB = torch.linalg.solve(S, WB) 
+    
+    # 3. Final Woodbury assembly
+    term2 = torch.matmul(W.t(), S_inv_WB)
+    x_flat = (1.0 / beta_eff) * B_flat - (rho / beta_eff) * term2
+    
+    return x_flat.t().view(out_shape)
+
 def solve_linear_system(A: torch.Tensor, B: torch.Tensor, out_shape: tuple, in_features: int):
     """Solves a standard linear system Ax = B.
 
@@ -47,6 +67,8 @@ def solve_linear_system(A: torch.Tensor, B: torch.Tensor, out_shape: tuple, in_f
     Returns:
         torch.Tensor: The solved system reshaped to `out_shape`.
     """
+    if isinstance(A, dict):
+        return solve_woodbury_system(A['W'], B, A['beta_eff'], A['rho'], out_shape, in_features)
     B_flat = B.reshape(-1, in_features)
     x_flat = torch.linalg.solve(A, B_flat.t()).t()
     return x_flat.view(out_shape)

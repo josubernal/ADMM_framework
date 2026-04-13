@@ -194,8 +194,8 @@ if __name__ == "__main__":
                 if num_layers == 2:
                     lin_in = hidden_channels * pool_h * pool_w
                     layers = nn.ModuleList([
-                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=2, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=False,  padding_mode= "zeros"),
-                        ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h,pool_w)), bias=bias)
+                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=2, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=False,  padding_mode= "zeros", is_woodbury=True),
+                        ADMM_SpikingLinear(in_f=hidden_channels*16*16, out_f=10, init=init, h=None, pool_op=ADMM_Flatten(), bias=bias)
                     ])
                 elif num_layers == 3:
                     mid_p = k // 2 
