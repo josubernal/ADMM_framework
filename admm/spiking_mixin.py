@@ -51,8 +51,8 @@ class ADMM_Spiking:
         out_features, in_features = W.shape
 
         if out_features < in_features:
-                main_dict = {'W': W, 'beta': beta_current + temporal_penalty, 'rho': self.rho}
-                last_dict = {'W': W, 'beta': beta_current, 'rho': self.rho}
+                main_dict = {'W': W, 'beta': beta_current + temporal_penalty, 'rho': self.rho,  'a_shape':a_shape, 'out_features':out_features}
+                last_dict = {'W': W, 'beta': beta_current, 'rho': self.rho,  'a_shape':a_shape, 'out_features':out_features}
                 return main_dict, last_dict, in_features
             
         WtW, in_features = self._get_WtW(a_shape=a_shape)
