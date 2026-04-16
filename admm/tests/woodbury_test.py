@@ -55,7 +55,7 @@ def test_woodbury_identity():
     start_wood = time.perf_counter()
     
     # Our Woodbury solver handles the inversion internally using the 10x10 trick
-    x_wood = solve_woodbury_system(W, B, beta_eff, rho, out_shape, in_features)
+    x_wood = solve_woodbury_system(W, B, beta_eff, rho, out_shape)
     time_wood = time.perf_counter() - start_wood
     
     # =======================================================

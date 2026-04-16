@@ -33,7 +33,7 @@ def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tens
     return new_W, pinv
 
 
-def solve_woodbury_system(W: torch.Tensor, B: torch.Tensor, beta: float, rho: float, a_shape: tuple, out_features: int, in_features: int):
+def solve_woodbury_system(W: torch.Tensor, B: torch.Tensor, beta: float, rho: float, a_shape: tuple):
     """
     Solves the linear system (beta * I_N + rho * W^T W) x = B for x, using the Woodbury Matrix Identity.
     
@@ -66,6 +66,7 @@ def solve_woodbury_system(W: torch.Tensor, B: torch.Tensor, beta: float, rho: fl
     Returns:
         torch.Tensor: The solved activations x, reshaped back to a_shape.
     """
+    out_features, in_features = W.shape
     B_flat = B.reshape(-1, in_features).t() 
     
     WWT = torch.matmul(W, W.t()) 
@@ -97,7 +98,7 @@ def solve_linear_system(A: torch.Tensor, B: torch.Tensor, a_shape: tuple, in_fea
         torch.Tensor: The solved system reshaped to `a_shape`.
     """
     if isinstance(A, dict):
-        return solve_woodbury_system(A['W'], B, A['beta'], A['rho'],A['a_shape'], A['out_features'], in_features)
+        return solve_woodbury_system(A['W'], B, A['beta'], A['rho'], a_shape)
     B_flat = B.reshape(-1, in_features)
     x_flat = torch.linalg.solve(A, B_flat.t()).t()
     return x_flat.view(a_shape)

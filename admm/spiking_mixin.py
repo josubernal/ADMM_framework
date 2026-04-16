@@ -50,9 +50,9 @@ class ADMM_Spiking:
         W = self._get_expanded_weights(a_shape)
         out_features, in_features = W.shape
 
-        if out_features < in_features:
-                main_dict = {'W': W, 'beta': beta_current + temporal_penalty, 'rho': self.rho,  'a_shape':a_shape, 'out_features':out_features}
-                last_dict = {'W': W, 'beta': beta_current, 'rho': self.rho,  'a_shape':a_shape, 'out_features':out_features}
+        if getattr(self, 'W', None) is not None and self.W.dim() == 2 and in_features > out_features:
+                main_dict = {'W': W, 'beta': beta_current + temporal_penalty, 'rho': self.rho}
+                last_dict = {'W': W, 'beta': beta_current, 'rho': self.rho}
                 return main_dict, last_dict, in_features
             
         WtW, in_features = self._get_WtW(a_shape=a_shape)
@@ -278,6 +278,14 @@ class ADMM_Spiking:
         Executes the unrolled step using dense matrix multiplication.
         Reshaping is aligned with solve_linear_system in solvers.py.
         """
+        if isinstance(denominator, dict):
+            return solve_woodbury_system(
+                W=denominator['W'], 
+                B=numerator, 
+                beta=denominator['beta'], 
+                rho=denominator['rho'], 
+                a_shape=numerator.shape
+            )
         original_shape = numerator.shape 
         in_features = denominator.size(1)
         numerator_flat = numerator.reshape(-1, in_features)

@@ -148,8 +148,8 @@ class ADMM_AffineLayer(ADMM_Layer):
     
     def _get_woodbury_params(self, beta_current, a_shape):
          W = self._get_expanded_weights(a_shape=a_shape) 
-         out_features, in_features = W.shape
-         dic= {'W':W, 'beta':beta_current, 'rho': self.rho, 'a_shape':a_shape, 'out_features':out_features}
+         _, in_features = W.shape
+         dic= {'W':W, 'beta':beta_current, 'rho': self.rho}
          return dic,dic, in_features
           
     def update_weights(self, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None, cache_pinv: bool = False):
