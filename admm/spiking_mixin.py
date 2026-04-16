@@ -47,13 +47,12 @@ class ADMM_Spiking:
     def _get_a_denominator(self, beta_current, rho_current, thetas_current, a_shape, unrolled=False):
         """Delegates to temporal_helpers.get_spiking_a_denominator."""
         temporal_penalty = rho_current * (thetas_current ** 2)
-        if getattr(self, 'is_woodbury', False) == True:
-            W = self._get_expanded_weights(a_shape)
-            in_features, out_features = W.size(1), W.size(0)
-            
-            if in_features > out_features * 4:
-                main_dict = {'W': W, 'beta_eff': beta_current + temporal_penalty, 'rho': self.rho}
-                last_dict = {'W': W, 'beta_eff': beta_current, 'rho': self.rho}
+        W = self._get_expanded_weights(a_shape)
+        out_features, in_features = W.shape
+
+        if out_features < in_features:
+                main_dict = {'W': W, 'beta': beta_current + temporal_penalty, 'rho': self.rho}
+                last_dict = {'W': W, 'beta': beta_current, 'rho': self.rho}
                 return main_dict, last_dict, in_features
             
         WtW, in_features = self._get_WtW(a_shape=a_shape)
@@ -144,6 +143,7 @@ class ADMM_Spiking:
         temp.mul_(-self.thetas*self.rho)
         temporal_penalty_numerator[:-1] = temp
         del temp
+        
         numerator = (self.beta * self.h(self.z)) + adjoint + temporal_penalty_numerator
         
         denominator_main, denominator_last, in_features = next_layer._get_a_denominator(  
@@ -152,6 +152,7 @@ class ADMM_Spiking:
             rho_current=self.rho,
             thetas_current=self.thetas,
             unrolled=False)
+        
         new_a = next_layer.solve_activation_system(
             numerator=numerator,
             denominator_main=denominator_main,
@@ -217,17 +218,17 @@ class ADMM_Spiking:
         lambda_lagrange = self._broadcast_to_match(lambda_lagrange, shape)
 
         numerator = (self.rho * temporal_forward)
-        denominator = torch.full_like(self.z, self.rho)
+
         
         numerator[:-1] += self.rho * self.deltas * (self.z - forward)[1:]
         numerator[-2] += lambda_lagrange * self.deltas
         numerator[-1] += 2*labels - lambda_lagrange 
         
-        denominator[:-1] += self.rho * (self.deltas ** 2) 
-        denominator[-1] += 2.0
-                
-            
-        self.z.copy_(numerator / denominator)     
+        denominator_main = self.rho * (self.deltas ** 2) + self.rho
+        denominator_last = 2.0 + self.rho
+
+        self.z[:-1].copy_(numerator[:-1] / denominator_main)
+        self.z[-1].copy_(numerator[-1] / denominator_last)   
 
     def update_az_interleaved(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list):
         """Orchestrates the interleaved updates of a and z over time using caching.
@@ -277,16 +278,6 @@ class ADMM_Spiking:
         Executes the unrolled step using dense matrix multiplication.
         Reshaping is aligned with solve_linear_system in solvers.py.
         """
-        if isinstance(denominator, dict):
-            in_features = denominator['W'].size(1)
-            return solve_woodbury_system(
-                W=denominator['W'], 
-                B=numerator, 
-                beta_eff=denominator['beta_eff'], 
-                rho=denominator['rho'], 
-                out_shape=numerator.shape, 
-                in_features=in_features
-            )
         original_shape = numerator.shape 
         in_features = denominator.size(1)
         numerator_flat = numerator.reshape(-1, in_features)
