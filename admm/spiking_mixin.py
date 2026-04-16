@@ -169,7 +169,7 @@ class ADMM_Spiking:
             A_main=denominator_main, 
             A_last=denominator_last, 
             B=numerator, 
-            out_shape=a_shape, 
+            a_shape=a_shape, 
             in_features=in_features,
             T=numerator.size(0) 
         )
