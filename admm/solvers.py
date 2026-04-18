@@ -79,7 +79,8 @@ def solve_woodbury_system(W: torch.Tensor, B: torch.Tensor, beta: float, rho: fl
     
     term2 = torch.matmul(W.t(), parenthesis_inv_WB)
 
-    x_flat = (1.0 / beta) * B_flat - (rho / beta) * term2
+    x_flat = B_flat.div(beta)
+    x_flat.sub_(term2, alpha=(rho / beta))
     
     return x_flat.t().view(a_shape)
 

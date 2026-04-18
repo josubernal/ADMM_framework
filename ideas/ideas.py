@@ -38,3 +38,5 @@ class Spiking_ADMMAvgPool2d(Spiking_ADMMConv2d):
     def update_bias(self, a_prev, lambda_lagrange=None):
         pass # Override to prevent bias learning
 
+#######################
+#USE CHOELESKY

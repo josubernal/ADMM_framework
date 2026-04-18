@@ -67,12 +67,13 @@ class ADMM_Spiking:
             unrolled=unrolled
         )
     
-    def _get_a_adjoint(self, next_layer: nn.Module, lambda_lagrange: torch.Tensor) -> torch.Tensor:
+    def _get_a_adjoint(self, next_layer: nn.Module, lambda_lagrange: torch.Tensor) -> torch.Tensor: # forward_pass:torch.Tensor DEPRECATED
         """Delegates to temporal_helpers.get_spiking_a_adjoint."""
         return get_spiking_a_adjoint(
             layer=self,
             next_layer=next_layer,
             lambda_lagrange=lambda_lagrange
+            #forward_pass=forward_pass DEPRECATED
         )
         
     def _create_cache(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor):
@@ -136,13 +137,12 @@ class ADMM_Spiking:
             lambda_lagrange=lambda_lagrange
         )
 
-        temporal_penalty_numerator = torch.zeros_like(self.z)
-        temp = self.z[1:].clone()
-        temp.add_(self.z[:-1], alpha=-self.deltas)
-        temp.sub_(forward_pass[1:])
-        temp.mul_(-self.thetas*self.rho)
-        temporal_penalty_numerator[:-1] = temp
-        del temp
+        temporal_penalty_numerator = torch.empty_like(self.z)
+        temporal_penalty_numerator[-1].zero_()
+        temporal_penalty_numerator[:-1] = self.z[1:]
+        temporal_penalty_numerator[:-1].add_(self.z[:-1], alpha=-self.deltas)
+        temporal_penalty_numerator[:-1].sub_(forward_pass[1:])
+        temporal_penalty_numerator[:-1].mul_(-self.thetas * self.rho)
         
         numerator = (self.beta * self.h(self.z)) + adjoint + temporal_penalty_numerator
         
@@ -192,6 +192,7 @@ class ADMM_Spiking:
         new_bias = torch.mean(in_mean, dim=self._get_bias_reduction_dims())
         self.b.copy_(new_bias)
 
+        
     def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor):
         """Solves the proximal update for the $z$ variable for the final layer, incorporating 
         spiking temporal penalties into the numerator and denominator.
@@ -292,7 +293,7 @@ class ADMM_Spiking:
         a_t_flat = torch.matmul(numerator_flat, denominator)   
         return a_t_flat.view(original_shape)
 
-    def update_z_unrolled(self, t, cache):
+    def update_z_unrolled(self, t, cache, z_to_use=None):
         """Performs the unrolled pre-activation (z) update for hidden layers.
 
         Defines the proximal update based on two main terms:
@@ -306,16 +307,17 @@ class ADMM_Spiking:
             t (int): The current timestep index.
             cache (TemporalCache): The precomputed matrices.
         """
+        z_to_use = z_to_use if z_to_use is not None else self.z
         T = self.z.size(0)
         temporal_forward = cache.forward_pass[t]
         if t > 0:
-            temporal_forward = temporal_forward + (self.deltas * self.z[t-1] - self.thetas * self.a[t-1])
+            temporal_forward = temporal_forward + (self.deltas * z_to_use[t-1] - self.thetas * self.a[t-1])
         
-        z_minus_forward= self.z[t+1] - cache.forward_pass[t+1] if t < T - 1 else None
+        z_minus_forward= z_to_use[t+1] - cache.forward_pass[t+1] if t < T - 1 else None
         new_z_t = self.h.activation_z_unrolled(temporal_forward=temporal_forward, z_minus_forward=z_minus_forward,a_t=self.a[t])  
         self.z[t].copy_(new_z_t)
 
-    def update_z_last_unrolled(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list):
+    def update_z_last_unrolled(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list, jacobi:bool=False):
         """
         Urolled z update for the final layer (L).
         Computes z_L,t = numerator / denominator 
@@ -337,19 +339,20 @@ class ADMM_Spiking:
         lambda_lagrange = self._broadcast_to_match(lambda_lagrange, self.z[-1]) 
         forward= self.spatial_forward(a_prev)
         denominator_main =  (self.rho * self.deltas ** 2) + self.rho
+        z_to_use = self.z.clone() if jacobi else self.z
         for t in time_steps:
             temporal_forward = forward[t]
             if t >= 1:
-                temporal_forward = temporal_forward + self.deltas * self.z[t-1]
+                temporal_forward = temporal_forward + self.deltas * z_to_use[t-1]
 
             term_lambda = lambda_lagrange * self.deltas if t == T - 2 else torch.zeros_like(lambda_lagrange)
-            z_t = (temporal_forward + self.deltas * (self.z[t+1] - forward[t+1]) + term_lambda) / denominator_main
+            z_t = (self.rho *(temporal_forward + self.deltas * (z_to_use[t+1] - forward[t+1])) + term_lambda) / denominator_main
             self.z[t].copy_(z_t)
 
         t = T - 1
         temporal_forward_T = forward[t]
         if t >= 1:
-            temporal_forward_T = temporal_forward_T + self.deltas * self.z[t-1]
+            temporal_forward_T = temporal_forward_T + self.deltas * z_to_use[t-1]
     
         z_T = (self.rho * temporal_forward_T + (2 * labels - lambda_lagrange)) / (2 + self.rho)
         self.z[t].copy_(z_T)

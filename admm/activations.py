@@ -223,6 +223,8 @@ class ADMM_Heaviside(ADMMActivationBase):
         q[1:] -= self.thetas * a[:-1] 
 
         r = z - res
+        r_shifted = torch.zeros_like(r)
+        r_shifted[:-1] = r[1:]
             
         numerator = self.rho * q
         denominator = self.rho
@@ -235,4 +237,4 @@ class ADMM_Heaviside(ADMMActivationBase):
         numerator = numerator + temporal_penalty_num
         denominator = denominator + temporal_penalty_den
 
-        return self.check_entries(numerator / denominator,  q, a, r, is_vectorized=True)
+        return self.check_entries(numerator / denominator,  q, a, r_shifted, is_vectorized=True)
