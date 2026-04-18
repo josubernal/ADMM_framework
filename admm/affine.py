@@ -141,6 +141,11 @@ class ADMM_AffineLayer(ADMM_Layer):
                 - torch.Tensor: The computed denominator matrix (LHS of the system).
                 - int: The number of input features.
         """
+        W= self._get_expanded_weights(a_shape=a_shape)
+        out_features, in_features = W.shape
+        if in_features > out_features:
+            return self._get_woodbury_params(beta_current, a_shape)
+        
         WtW, in_features = self._get_WtW(a_shape)
         I = torch.eye(in_features, device=self.W.device, dtype=WtW.dtype)
         denominator =  beta_current * I + self.rho * WtW
@@ -220,7 +225,7 @@ class ADMM_AffineLayer(ADMM_Layer):
             lambda_lagrange (torch.Tensor, optional): The Lagrange multiplier. Defaults to None.
         """
         numerator = next_layer._get_a_numerator(beta_current=self.beta, a_shape=self.a.shape, h_z=self.h(self.z), lambda_lagrange=lambda_lagrange)
-        denominator_main, denominator_last , in_features = next_layer._get_a_denominator(beta_current=self.beta, a_shape=self.a.shape) if len(self.a)>=len(next_layer.z) else next_layer._get_woodbury_params(beta_current=self.beta, a_shape=self.a.shape)
+        denominator_main, denominator_last , in_features = next_layer._get_a_denominator(beta_current=self.beta, a_shape=self.a.shape)
         new_a = next_layer.solve_activation_system(
             numerator=numerator,
             denominator_main=denominator_main,
