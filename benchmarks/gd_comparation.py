@@ -34,8 +34,15 @@ p =  config.getint('config', 'p')
 s =  config.getint('config', 's')
 lr = config.getfloat('config', 'learning_rate')
 
-rho = config.getfloat('config', 'rho')
-beta = config.getfloat('config', 'beta')
+linear_rho = config.getfloat('config', 'linear_rho')
+linear_beta = config.getfloat('config', 'linear_beta')
+conv_rho = config.getfloat('config', 'conv_rho')
+conv_beta = config.getfloat('config', 'conv_beta')
+splinear_rho = config.getfloat('config', 'splinear_rho')
+splinear_beta = config.getfloat('config', 'splinear_beta')
+spconv_rho = config.getfloat('config', 'spconv_rho')
+spconv_beta = config.getfloat('config', 'spconv_beta')
+
 deltas = config.getfloat('config', 'deltas')
 thetas = config.getfloat('config', 'thetas')
 input_size = 784
@@ -130,7 +137,7 @@ class GDSpConvNet(nn.Module):
 # AUTOMATED ITERATION OVER MODELS
 #########################################
 # Un-commented array to loop through all models
-model_types = ["linear", "conv", "spiking-linear", "spiking-conv"]
+model_types = [ "conv"]
 
 for model_name in model_types:
     # Reset seeds per model to guarantee identical environments
@@ -190,7 +197,7 @@ for model_name in model_types:
                 ADMM_Linear(in_f=input_size, out_f=hidden_size, h=ADMM_ReLU(), init='zeros', bias=True),
                 ADMM_Linear(in_f=hidden_size, out_f=10, h=ADMM_ReLU(), init='zeros', bias=True)
             ])
-            admm_model = ADMM(linear_layers, rho=rho, beta=beta, init='zeros', bias=True, train_method='vectorized').to(device)
+            admm_model = ADMM(linear_layers, rho=linear_rho, beta=linear_beta, init='zeros', bias=True, train_method='vectorized').to(device)
             with torch.no_grad():
                 linear_layers[0].W.copy_(model.fc1.weight)
                 linear_layers[0].b.copy_(model.fc1.bias)
@@ -206,7 +213,7 @@ for model_name in model_types:
                 ADMM_Conv2d(in_c=1, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), init='zeros', bias=True, use_fft=False, padding_mode='zeros'),
                 ADMM_Linear(in_f=lin_in_dim, out_f=10, h=ADMM_ReLU(),pool_op=ADMM_Flatten(), init='zeros', bias=True)
             ])
-            admm_model = ADMM(conv_layers, rho=rho, beta=beta, init='zeros', bias=True, train_method='vectorized').to(device) 
+            admm_model = ADMM(conv_layers, rho=conv_rho, beta=conv_beta, init='zeros', bias=True, train_method='vectorized').to(device) 
             with torch.no_grad():
                 conv_layers[0].W.copy_(model.conv.weight)
                 conv_layers[0].b.copy_(model.conv.bias)
@@ -219,7 +226,7 @@ for model_name in model_types:
                 ADMM_SpikingLinear(in_f=34*34*2, out_f=hidden_size, h=ADMM_Heaviside(thetas=thetas), init='zeros', bias=False),
                 ADMM_SpikingLinear(in_f=hidden_size, out_f=10, h=None, init='zeros', bias=False)
             ])
-            admm_model = ADMM(splinear_layers, T=n_timesteps, rho=rho, thetas=thetas, deltas=deltas, beta=beta, init='zeros', bias=False, train_method='decoupled-sequential').to(device)
+            admm_model = ADMM(splinear_layers, T=n_timesteps, rho=splinear_rho, thetas=thetas, deltas=deltas, beta=splinear_beta, init='zeros', bias=False, train_method='decoupled-random').to(device)
             images = images.view(images.size(0), images.size(1), -1).permute(1, 0, 2)
             with torch.no_grad():
                 splinear_layers[0].W.copy_(model.fc1.weight)
@@ -233,7 +240,7 @@ for model_name in model_types:
                 ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init="zeros", bias=False, use_fft=False,  padding_mode="zeros"),
                 ADMM_SpikingLinear(in_f=lin_in_dim, pool_op=ADMM_Flatten(), out_f=10, h=None, init='zeros', bias=False)
             ])
-            admm_model = ADMM(spconv_layers, T=n_timesteps, rho=rho, thetas=thetas, deltas=deltas, beta=beta, init='zeros', bias=False, train_method='decoupled-sequential').to(device)
+            admm_model = ADMM(spconv_layers, T=n_timesteps, rho=spconv_rho, thetas=thetas, deltas=deltas, beta=spconv_beta, init='zeros', bias=False, train_method='decoupled-random').to(device)
             images = images.permute(1, 0, 2, 3, 4)
             with torch.no_grad():
                 spconv_layers[0].W.copy_(model.conv.weight)

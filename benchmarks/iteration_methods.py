@@ -45,8 +45,8 @@ if __name__ == "__main__":
     prev_primal_residual = float('inf')
     
     # Standard Scalar Hyperparameters
-    rho = config.getfloat('config', 'rho')
-    beta = config.getfloat('config', 'beta')
+    rho = config.getfloat('config', 'splinear_rho')
+    beta = config.getfloat('config', 'splinear_beta')
     deltas = config.getfloat('config', 'deltas')
     thetas = config.getfloat('config', 'thetas')
     
