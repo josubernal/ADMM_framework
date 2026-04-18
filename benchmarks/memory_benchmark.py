@@ -22,7 +22,7 @@ def format_mb(memory_bytes):
 def profile_architecture(arch_name, layers, inputs, labels, device, T_val):
     """Runs the profiling suite and returns Init Memory, 1-Epoch Peak, and 10-Epoch Peak."""
     print("\n" + "="*85)
-    print(f"  PROFILING: {arch_name.upper()} | BATCH: {inputs.shape[1] if T_val > 1 else inputs.shape[0]}")
+    print(f"  PROFILING: {arch_name.upper()} | BATCH: {inputs.shape[1] if T_val is not None else inputs.shape[0]}")
     print("="*85)
     
     # 1. Reset everything
@@ -177,10 +177,10 @@ def run_all_profiles():
         # -----------------------------------------------------------------
         inputs = torch.randn((batch, in_c, H, W), device=device)
         layers = [
-            ADMM_Conv2d(in_c, hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), bias=True), 
+            ADMM_Conv2d(in_c, hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), bias=True, use_fft=False, padding_mode="zeros"), 
             ADMM_Linear( hidden_channels * spatial * spatial, classes, pool_op=ADMM_Flatten(), h=ADMM_ReLU(), bias=True)
         ]
-        m_i, m_1, m_10 = profile_architecture("Static Conv", layers, inputs, labels, device, T_val=1)
+        m_i, m_1, m_10 = profile_architecture("Static Conv", layers, inputs, labels, device, T_val=None)
         results["Static Conv"]['init'].append(m_i)
         results["Static Conv"]['peak_1'].append(m_1)
         results["Static Conv"]['peak_10'].append(m_10)
@@ -194,7 +194,7 @@ def run_all_profiles():
             ADMM_Linear(flat_dim, hidden_dim, h=ADMM_ReLU(), bias=True),
             ADMM_Linear(hidden_dim, classes, h=None, bias=True)
         ]
-        m_i, m_1, m_10 = profile_architecture("Static Linear", layers, inputs, labels, device, T_val=1)
+        m_i, m_1, m_10 = profile_architecture("Static Linear", layers, inputs, labels, device, T_val=None)
         results["Static Linear"]['init'].append(m_i)
         results["Static Linear"]['peak_1'].append(m_1)
         results["Static Linear"]['peak_10'].append(m_10)
