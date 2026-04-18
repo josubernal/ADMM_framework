@@ -85,7 +85,7 @@ def profile_architecture(arch_name, layers, inputs, labels, device, T_val):
     print_gpu_stats("5. After 10 Epochs")
     print(f"📈 Total VRAM Drift after 10 epochs: {memory_drift:.4f} MB " + ("✅" if memory_drift <= 1.0 else "❌"))
 
-def run_all_profiles():
+def test_all_profiles():
     if not torch.cuda.is_available():
         print("❌ FATAL: CUDA is not available. You must run this on the cluster node!")
         return
@@ -94,7 +94,7 @@ def run_all_profiles():
     device = torch.device('cuda')
     
     # Shared Dimensions
-    T, batch = 10, 16
+    T, batch = 10, 20
     in_c, H, W = 2, 32, 32 
     flat_dim = in_c * H * W  # 2048
     classes = 10
@@ -133,7 +133,7 @@ def run_all_profiles():
         ADMM_Linear(16, classes, pool_op=ADMM_GAP(), h=ADMM_ReLU(), bias=True)
     ]
     # For non-spiking, T is effectively 1
-    profile_architecture("Static Conv", layers_conv, inputs_conv, labels, device, T_val=1)
+    profile_architecture("Static Conv", layers_conv, inputs_conv, labels, device, T_val=None)
 
     # -----------------------------------------------------------------
     # 4. NON-SPIKING (STATIC) LINEAR
@@ -143,7 +143,7 @@ def run_all_profiles():
         ADMM_Linear(flat_dim, hidden_dim, h=ADMM_ReLU(), bias=True),
         ADMM_Linear(hidden_dim, classes, h=None, bias=True)
     ]
-    profile_architecture("Static Linear", layers_lin, inputs_lin, labels, device, T_val=1)
+    profile_architecture("Static Linear", layers_lin, inputs_lin, labels, device, T_val=None)
 
 if __name__ == "__main__":
-    run_all_profiles()
+    test_all_profiles()
