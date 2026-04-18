@@ -129,14 +129,17 @@ class GDSpConvNet(nn.Module):
 #########################################
 # AUTOMATED ITERATION OVER MODELS
 #########################################
-model_types = ["linear"] #, "conv", "spiking-linear", "spiking-conv"]
+# Un-commented array to loop through all models
+model_types = ["linear", "conv", "spiking-linear", "spiking-conv"]
 
 for model_name in model_types:
+    # Reset seeds per model to guarantee identical environments
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True 
     torch.backends.cudnn.benchmark = False
+    
     print(f"\n{'='*50}")
     print(f"EVALUATING MODEL: {model_name.upper()}")
     print(f"{'='*50}")
@@ -216,7 +219,7 @@ for model_name in model_types:
                 ADMM_SpikingLinear(in_f=34*34*2, out_f=hidden_size, h=ADMM_Heaviside(thetas=thetas), init='zeros', bias=False),
                 ADMM_SpikingLinear(in_f=hidden_size, out_f=10, h=None, init='zeros', bias=False)
             ])
-            admm_model = ADMM(splinear_layers, T=n_timesteps, rho=rho, thetas=thetas, deltas=deltas, beta=beta, init='zeros', bias=False, train_method='unrolled-random').to(device)
+            admm_model = ADMM(splinear_layers, T=n_timesteps, rho=rho, thetas=thetas, deltas=deltas, beta=beta, init='zeros', bias=False, train_method='decoupled-sequential').to(device)
             images = images.view(images.size(0), images.size(1), -1).permute(1, 0, 2)
             with torch.no_grad():
                 splinear_layers[0].W.copy_(model.fc1.weight)
@@ -230,7 +233,7 @@ for model_name in model_types:
                 ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init="zeros", bias=False, use_fft=False,  padding_mode="zeros"),
                 ADMM_SpikingLinear(in_f=lin_in_dim, pool_op=ADMM_Flatten(), out_f=10, h=None, init='zeros', bias=False)
             ])
-            admm_model = ADMM(spconv_layers, T=n_timesteps, rho=rho, thetas=thetas, deltas=deltas, beta=beta, init='zeros', bias=False, train_method='unrolled-random').to(device)
+            admm_model = ADMM(spconv_layers, T=n_timesteps, rho=rho, thetas=thetas, deltas=deltas, beta=beta, init='zeros', bias=False, train_method='decoupled-sequential').to(device)
             images = images.permute(1, 0, 2, 3, 4)
             with torch.no_grad():
                 spconv_layers[0].W.copy_(model.conv.weight)
@@ -238,6 +241,7 @@ for model_name in model_types:
 
     #########################################
     # ADMM TRAINING LOOP
+    criterion = nn.MSELoss()
     m = ADMM_Metrics(admm_model) 
     admm_model._init_states(images)
     admm_steps = []
@@ -245,7 +249,7 @@ for model_name in model_types:
     admm_accs = []
 
     print("\nTraining model with ADMM...")
-    for epoch in range(epochs + 1):
+    for epoch in range(epochs):
         admm_model.fit(images, labels_one_hot, warming=is_warming)             
         
         with torch.no_grad():
@@ -255,9 +259,9 @@ for model_name in model_types:
             accuracy = 100. * (predictions == labels_one_hot.argmax(dim=1)).sum().item() / batch_size
             current_metrics = m.get_all_metrics(images, labels_one_hot)
                 
-            mse = current_metrics["mse"]
+            mse = criterion(raw_outputs, labels_one_hot)
             admm_steps.append(epoch)
-            admm_mses.append(mse)
+            admm_mses.append(mse.item())
             admm_accs.append(accuracy)
             
             lagr = current_metrics["lagrangian_cost"]
@@ -279,11 +283,11 @@ for model_name in model_types:
                         is_warming = False
                         warming_stop = epoch
             
-            print(f"Epoch [{epoch:3d}/{epochs}] | MSE: {mse:.4f} | Acc: {accuracy:6.2f}% | Firing rate: {[f'{v:.4f}' for v in firing_rates]} | Lagr: {lagr:10.2f} | Lamb: {primal:10.2f}")
+            print(f"Epoch [{epoch+1:3d}/{epochs}] | MSE: {mse:.4f} | Acc: {accuracy:6.2f}% | Firing rate: {[f'{v:.4f}' for v in firing_rates]} | Lagr: {lagr:10.2f} | Lamb: {primal:10.2f}")
 
     #########################################
     # GRADIENT DESCENT TRAINING LOOP
-    criterion = nn.MSELoss()
+
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     gd_steps = []
@@ -362,5 +366,9 @@ for model_name in model_types:
     plot_filename = f"gd_comp/{model_name}/{batch_size}/plot.png"
     plt.savefig(plot_filename, dpi=300)
     plt.close() # Close the plot to prevent overlapping in the next loop iteration
+    
+    # Free up memory before the next model
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 print("\nAll models evaluated successfully!")
