@@ -137,7 +137,7 @@ class GDSpConvNet(nn.Module):
 # AUTOMATED ITERATION OVER MODELS
 #########################################
 # Un-commented array to loop through all models
-model_types = [ "conv"]
+model_types = ["linear", "conv", "spiking-linear","spiking-conv"]
 
 for model_name in model_types:
     # Reset seeds per model to guarantee identical environments
@@ -198,11 +198,11 @@ for model_name in model_types:
                 ADMM_Linear(in_f=hidden_size, out_f=10, h=ADMM_ReLU(), init='zeros', bias=True)
             ])
             admm_model = ADMM(linear_layers, rho=linear_rho, beta=linear_beta, init='zeros', bias=True, train_method='vectorized').to(device)
-            with torch.no_grad():
-                linear_layers[0].W.copy_(model.fc1.weight)
-                linear_layers[0].b.copy_(model.fc1.bias)
-                linear_layers[1].W.copy_(model.fc2.weight)
-                linear_layers[1].b.copy_(model.fc2.bias)
+#            with torch.no_grad():
+#                linear_layers[0].W.copy_(model.fc1.weight)
+#                linear_layers[0].b.copy_(model.fc1.bias)
+#                linear_layers[1].W.copy_(model.fc2.weight)
+#                linear_layers[1].b.copy_(model.fc2.bias)
             images = images.view(images.size(0), -1)
 
         case "conv":
@@ -214,11 +214,11 @@ for model_name in model_types:
                 ADMM_Linear(in_f=lin_in_dim, out_f=10, h=ADMM_ReLU(),pool_op=ADMM_Flatten(), init='zeros', bias=True)
             ])
             admm_model = ADMM(conv_layers, rho=conv_rho, beta=conv_beta, init='zeros', bias=True, train_method='vectorized').to(device) 
-            with torch.no_grad():
-                conv_layers[0].W.copy_(model.conv.weight)
-                conv_layers[0].b.copy_(model.conv.bias)
-                conv_layers[1].W.copy_(model.fc2.weight)
-                conv_layers[1].b.copy_(model.fc2.bias)  
+#            with torch.no_grad():
+#                conv_layers[0].W.copy_(model.conv.weight)
+#                conv_layers[0].b.copy_(model.conv.bias)
+#                conv_layers[1].W.copy_(model.fc2.weight)
+#                conv_layers[1].b.copy_(model.fc2.bias)  
 
         case "spiking-linear":
             model = GDSpLinearNet().to(device)
@@ -228,9 +228,9 @@ for model_name in model_types:
             ])
             admm_model = ADMM(splinear_layers, T=n_timesteps, rho=splinear_rho, thetas=thetas, deltas=deltas, beta=splinear_beta, init='zeros', bias=False, train_method='decoupled-random').to(device)
             images = images.view(images.size(0), images.size(1), -1).permute(1, 0, 2)
-            with torch.no_grad():
-                splinear_layers[0].W.copy_(model.fc1.weight)
-                splinear_layers[1].W.copy_(model.fc2.weight)
+#            with torch.no_grad():
+#                splinear_layers[0].W.copy_(model.fc1.weight)
+#                splinear_layers[1].W.copy_(model.fc2.weight)
 
         case "spiking-conv":
             model = GDSpConvNet().to(device)
@@ -242,9 +242,9 @@ for model_name in model_types:
             ])
             admm_model = ADMM(spconv_layers, T=n_timesteps, rho=spconv_rho, thetas=thetas, deltas=deltas, beta=spconv_beta, init='zeros', bias=False, train_method='decoupled-random').to(device)
             images = images.permute(1, 0, 2, 3, 4)
-            with torch.no_grad():
-                spconv_layers[0].W.copy_(model.conv.weight)
-                spconv_layers[1].W.copy_(model.fc2.weight)
+#            with torch.no_grad():
+#                spconv_layers[0].W.copy_(model.conv.weight)
+#                spconv_layers[1].W.copy_(model.fc2.weight)
 
     #########################################
     # ADMM TRAINING LOOP
