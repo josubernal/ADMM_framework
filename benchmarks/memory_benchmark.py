@@ -7,8 +7,11 @@ import os
 import csv
 import torch
 import gc
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import configparser
+from datetime import datetime
 
 from admm.manager import ADMM
 from admm.layers import ADMM_SpikingConv2d, ADMM_SpikingLinear, ADMM_Conv2d, ADMM_Linear
@@ -65,6 +68,7 @@ def profile_architecture(arch_name, layers, inputs, labels, device, T_val):
 def save_and_plot_results(results_dict, batch_sizes, output_dir):
     """Saves results to CSV and generates matplotlib plots for the 3 memory metrics."""
     os.makedirs(output_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_path = os.path.join(output_dir, "benchmark_memory_metrics.csv")
 
     # 1. Write to CSV
@@ -91,7 +95,7 @@ def save_and_plot_results(results_dict, batch_sizes, output_dir):
         plt.grid(True, linestyle='--', alpha=0.7)
         plt.legend()
         plt.tight_layout()
-        filepath = os.path.join(output_dir, filename)
+        filepath = os.path.join(output_dir, f"{filename}_{timestamp}.png")
         plt.savefig(filepath, dpi=300)
         plt.close()
         print(f"📊 Plot saved to {filepath}")
