@@ -29,17 +29,13 @@ def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tens
         is_cached_cholesky = torch.allclose(cached_pinv, torch.tril(cached_pinv))
 
     if use_cholesky:
-        
         if cached_pinv is None or not is_cached_cholesky:
-            D_sym = (denominator + denominator.mT) / 2.0
-        
-            max_val = torch.max(torch.abs(D_sym)).clamp(min=1.0)
+            denominator.add_(denominator.mT).div_(2.0)
+            max_val = torch.max(torch.abs(denominator)).clamp(min=1.0)
             jitter = 1e-4 * max_val
-            
-            D_safe = D_sym + torch.eye(D_sym.size(0), device=D_sym.device, dtype=D_sym.dtype) * jitter
-            
+            denominator.diagonal().add_(jitter)
             try:
-                L = torch.linalg.cholesky(D_safe)
+                L = torch.linalg.cholesky(denominator)
                 W_new_T = torch.cholesky_solve(numerator.mT, L)
                 return W_new_T.mT, L
             except torch._C._LinAlgError:
@@ -47,7 +43,6 @@ def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tens
                 pinv = torch.linalg.pinv(denominator)
                 return numerator @ pinv, pinv
         else:
-           
             L = cached_pinv 
             W_new_T = torch.cholesky_solve(numerator.mT, L)
             return W_new_T.mT, L
@@ -98,12 +93,11 @@ def solve_woodbury_system(W: torch.Tensor, B: torch.Tensor, beta: float, rho: fl
     B_flat = B.reshape(-1, in_features).t() 
     
     WWT = torch.matmul(W, W.t()) 
-    I = torch.eye(out_features, device=W.device, dtype=W.dtype)
-    parenthesis = beta * I + rho * WWT
-    
-    WB = torch.matmul(W, B_flat) 
+    WWT.mul_(rho)
+    WWT.diagonal().add_(beta)
 
-    parenthesis_inv_WB = torch.linalg.solve(parenthesis, WB) 
+    WB = torch.matmul(W, B_flat) 
+    parenthesis_inv_WB = torch.linalg.solve(WWT, WB) 
     
     term2 = torch.matmul(W.t(), parenthesis_inv_WB)
 

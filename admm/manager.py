@@ -245,6 +245,8 @@ class ADMM(nn.Module):
                     lagrange = self.lambda_lagrange if l == self.L - 2 else None
                     self._optimize_w_and_b(layer, a_prev, cache_pinv=cache_pinv)
                     self._optimize_a_and_z(layer, next_layer, a_prev, lagrange, time_steps)
+                    del a_prev
+                    del lagrange
             
             # Update last layer
             last_layer = self.layers[-1]

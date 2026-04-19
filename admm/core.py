@@ -114,10 +114,12 @@ class ADMM_Layer(nn.Module):
         labels = self._broadcast_to_match(labels, forward)
         lambda_lagrange = self._broadcast_to_match(lambda_lagrange, forward)
 
-        numerator = (self.rho * forward) + (2* labels - lambda_lagrange)
-        denominator = 2 + self.rho 
+        forward.mul_(self.rho)
+        forward.add_(labels, alpha=2.0)
+        forward.sub_(lambda_lagrange)
+        forward.div_(2.0 + self.rho)
         
-        self.z.copy_(numerator / denominator)        
+        self.z.copy_(forward)        
         
 
     

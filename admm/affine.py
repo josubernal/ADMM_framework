@@ -91,10 +91,13 @@ class ADMM_AffineLayer(ADMM_Layer):
         Returns:
             torch.Tensor: The tensor v, calculated as z - bias.
         """
-        v =  self.z - self._format_bias()
+        v = self.z.clone()
+        bias_formatted = self._format_bias()
+        if isinstance(bias_formatted, torch.Tensor):
+            v.sub_(bias_formatted)
         if lambda_lagrange is not None:
             lambda_lagrange = self._broadcast_to_match(lambda_lagrange, v)
-            v += (lambda_lagrange/ self.rho)
+            v.add_(lambda_lagrange, alpha=1.0 / self.rho)
         return v
 
     def _get_expanded_weights(self, a_shape):
@@ -116,7 +119,9 @@ class ADMM_AffineLayer(ADMM_Layer):
     def _get_a_numerator(self, beta_current, a_shape, h_z:torch.Tensor, lambda_lagrange: torch.Tensor= None):
         inside_adjoint = self._get_v(lambda_lagrange=lambda_lagrange)
         adjoint = self.adjoint_operator(inside_adjoint, original_input_shape=a_shape)
-        return beta_current * h_z + self.rho * adjoint 
+        numerator = h_z.clone().mul_(beta_current)
+        numerator.add_(adjoint, alpha=self.rho)
+        return numerator
         
     def _get_WtW(self, a_shape: tuple):
         """Template method to compute W^T W."""
@@ -196,11 +201,12 @@ class ADMM_AffineLayer(ADMM_Layer):
             a_prev (torch.Tensor): The previous layer's activations.
             lambda_lagrange (torch.Tensor, optional): The Lagrange multiplier. Defaults to None.
         """
-        in_mean= self.z - self.spatial_forward(a_prev, use_bias=False)
+        in_mean = self.spatial_forward(a_prev, use_bias=False)
+        in_mean.neg_().add_(self.z)
         
         if lambda_lagrange is not None:
             lam_spatial = self._broadcast_to_match(lambda_lagrange, self.z)
-            in_mean = in_mean + (lam_spatial / (self.rho))
+            in_mean.add_(lam_spatial, alpha=1.0 / self.rho)
                 
         new_bias = torch.mean(in_mean, dim=self._get_bias_reduction_dims())
         self.b.copy_(new_bias)
