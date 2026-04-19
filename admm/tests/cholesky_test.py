@@ -48,48 +48,44 @@ def test_cholesky_vs_pinv():
     # METHOD 1: STANDARD PINV SOLVER
     # =======================================================
     # tracemalloc tracks exact Python RAM allocations
-    tracemalloc.start()
     start_pinv = time.perf_counter()
     
-    w_pinv, _ = solve_least_squares_weights(numerator, denominator, use_cholesky=False)
+    w_pinv, cached_pinv= solve_least_squares_weights(numerator, denominator, use_cholesky=False)
     
     time_pinv = time.perf_counter() - start_pinv
-    _, peak_mem_pinv = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
+ 
+    size_pinv_mb = (cached_pinv.element_size() * cached_pinv.nelement()) / (1024 * 1024)
     
     # =======================================================
     # METHOD 2: CHOLESKY SOLVER
     # =======================================================
-    tracemalloc.start()
     start_chol = time.perf_counter()
     
-    w_chol, _ = solve_least_squares_weights(numerator, denominator, use_cholesky=True)
+    w_chol, cached_chol = solve_least_squares_weights(numerator, denominator, use_cholesky=True)
     
     time_chol = time.perf_counter() - start_chol
-    _, peak_mem_chol = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
 
+    if isinstance(cached_chol, tuple):
+        size_chol_mb = sum((tensor.element_size() * tensor.nelement()) for tensor in cached_chol) / (1024 * 1024)
+    else:
+        size_chol_mb = (cached_chol.element_size() * cached_chol.nelement()) / (1024 * 1024)
     # =======================================================
     # VERIFICATION & METRICS
     # =======================================================
     # Find the maximum absolute difference between the two computed weight matrices
     diff = torch.max(torch.abs(w_pinv - w_chol)).item()
     
-    # Convert bytes to Megabytes
-    mem_pinv_mb = peak_mem_pinv / (1024 * 1024)
-    mem_chol_mb = peak_mem_chol / (1024 * 1024)
-    
     print(f"[{'Math Equivalence':<22}] Max Difference: {diff:.8e} " + ("✅" if diff < 1e-4 else "❌"))
-    print(f"[{'Pseudo-Inverse (pinv)':<22}] Time: {time_pinv:.4f} sec | Peak CPU Mem: {mem_pinv_mb:7.2f} MB")
-    print(f"[{'Cholesky Solver':<22}] Time: {time_chol:.4f} sec | Peak CPU Mem: {mem_chol_mb:7.2f} MB")
+    print(f"[{'Pseudo-Inverse (pinv)':<22}] Time: {time_pinv:.4f} sec | Matrix Size: {size_pinv_mb:7.2f} MB")
+    print(f"[{'Cholesky Solver':<22}] Time: {time_chol:.4f} sec | Matrix Size: {size_chol_mb:7.2f} MB")
     
     # Calculate performance gains
     if diff < 1e-4:
         speedup = time_pinv / time_chol if time_chol > 0 else float('inf')
-        mem_saving = mem_pinv_mb / mem_chol_mb if mem_chol_mb > 0 else float('inf')
         
+        # Note: Depending on implementation, PINV and Cholesky caches might actually 
+        # take up similar static memory, but Cholesky skips the massive intermediate RAM spikes!
         print(f"\n🚀 Cholesky is {speedup:.2f}x faster!")
-        print(f"💾 Cholesky uses {mem_saving:.2f}x less operational memory!")
         
     print("="*65 + "\n")
     

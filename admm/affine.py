@@ -143,7 +143,7 @@ class ADMM_AffineLayer(ADMM_Layer):
         """
         W= self._get_expanded_weights(a_shape=a_shape)
         out_features, in_features = W.shape
-        if in_features > out_features:
+        if getattr(self, 'W', None) is not None and self.W.dim() == 2 and in_features > out_features:
             return self._get_woodbury_params(beta_current, a_shape)
         
         WtW, in_features = self._get_WtW(a_shape)
