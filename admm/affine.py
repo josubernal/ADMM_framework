@@ -183,13 +183,15 @@ class ADMM_AffineLayer(ADMM_Layer):
         """
         v = self._get_v(lambda_lagrange=lambda_lagrange) 
         numerator, denominator = self._compute_covariances(v, a_prev)
-        new_W, self.pinv = solve_least_squares_weights(
+        new_W, temp_pinv = solve_least_squares_weights(
             numerator, 
             denominator, 
             use_cholesky=self.use_cholesky,
             cached_pinv=self.pinv if cache_pinv else None   
         )
-        self.W.copy_(new_W.reshape(self.W.shape))
+        self.W.copy_(new_W.detach().reshape(self.W.shape))
+        if temp_pinv is not None:
+            self.pinv = temp_pinv.detach()
           
     def update_bias(self, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None):
         """Averages the residual errors to update the bias vector.
