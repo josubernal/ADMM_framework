@@ -137,14 +137,18 @@ class ADMM_Spiking:
             lambda_lagrange=lambda_lagrange
         )
 
-        temporal_penalty_numerator = torch.empty_like(self.z)
-        temporal_penalty_numerator[-1].zero_()
-        temporal_penalty_numerator[:-1] = self.z[1:]
-        temporal_penalty_numerator[:-1].add_(self.z[:-1], alpha=-self.deltas)
-        temporal_penalty_numerator[:-1].sub_(forward_pass[1:])
-        temporal_penalty_numerator[:-1].mul_(-self.thetas * self.rho)
+        # Temporal penalty 
+        numerator = torch.empty_like(self.z)
+        numerator[-1].zero_()
+        numerator[:-1] = self.z[1:]
+        numerator[:-1].add_(self.z[:-1], alpha=-self.deltas)
+        numerator[:-1].sub_(forward_pass[1:])
+        numerator[:-1].mul_(-self.thetas * self.rho)
         
-        numerator = (self.beta * self.h(self.z)) + adjoint + temporal_penalty_numerator
+        # self.beta * self.h(self.z) + adjoint + temporal penalty
+        numerator.add_(adjoint)
+        h_z = self.h(self.z)
+        numerator.add_(h_z, alpha=self.beta)
         
         denominator_main, denominator_last, in_features = next_layer._get_a_denominator(  
             a_shape=self.a.shape,
@@ -183,12 +187,14 @@ class ADMM_Spiking:
             a_prev (torch.Tensor): The previous layer's activations.
             lambda_lagrange (torch.Tensor, optional): The Lagrange multiplier. Defaults to None.
         """
-        in_mean = self.z - self.spatial_forward(a_prev, use_bias=False) - self._compute_temporal_dependencies()
-
+        in_mean = self.spatial_forward(a_prev, use_bias=False)
+        in_mean.add_(self._compute_temporal_dependencies())
+        in_mean.neg_().add_(self.z)
+        
         if lambda_lagrange is not None:
             lambda_lagrange= self._broadcast_to_match(lambda_lagrange, self.z[-1])
-            in_mean[-1] = in_mean[-1] + (lambda_lagrange / (self.rho))
-          
+            in_mean[-1].add_(lambda_lagrange, alpha=1.0 / self.rho)
+            
         new_bias = torch.mean(in_mean, dim=self._get_bias_reduction_dims())
         self.b.copy_(new_bias)
 
@@ -218,12 +224,12 @@ class ADMM_Spiking:
         labels = self._broadcast_to_match(labels, shape)
         lambda_lagrange = self._broadcast_to_match(lambda_lagrange, shape)
 
-        numerator = (self.rho * temporal_forward)
-
+        numerator = temporal_forward.clone().mul_(self.rho)
+        z_minus_fwd = self.z.clone().sub_(forward)
         
-        numerator[:-1] += self.rho * self.deltas * (self.z - forward)[1:]
-        numerator[-2] += lambda_lagrange * self.deltas
-        numerator[-1] += 2*labels - lambda_lagrange 
+        numerator[:-1].add_(z_minus_fwd[1:], alpha=self.rho * self.deltas)
+        numerator[-2].add_(lambda_lagrange, alpha=self.deltas)
+        numerator[-1].add_(labels, alpha=2.0).sub_(lambda_lagrange)
         
         denominator_main = self.rho * (self.deltas ** 2) + self.rho
         denominator_last = 2.0 + self.rho
@@ -341,21 +347,31 @@ class ADMM_Spiking:
         denominator_main =  (self.rho * self.deltas ** 2) + self.rho
         z_to_use = self.z.clone() if jacobi else self.z
         for t in time_steps:
-            temporal_forward = forward[t]
+            temporal_forward = forward[t].clone()
             if t >= 1:
-                temporal_forward = temporal_forward + self.deltas * z_to_use[t-1]
+                temporal_forward.add_(z_to_use[t-1], alpha=self.deltas)
 
-            term_lambda = lambda_lagrange * self.deltas if t == T - 2 else torch.zeros_like(lambda_lagrange)
-            z_t = (self.rho *(temporal_forward + self.deltas * (z_to_use[t+1] - forward[t+1])) + term_lambda) / denominator_main
-            self.z[t].copy_(z_t)
+            z_diff = z_to_use[t+1].clone().sub_(forward[t+1])
+            temporal_forward.add_(z_diff, alpha=self.deltas)
+            temporal_forward.mul_(self.rho)
 
+            if t == T - 2:
+                term_lambda = lambda_lagrange * self.deltas
+                temporal_forward.add_(term_lambda)
+                
+            temporal_forward.div_(denominator_main)
+            self.z[t].copy_(temporal_forward)
         t = T - 1
-        temporal_forward_T = forward[t]
+        temporal_forward_T = forward[t].clone()
         if t >= 1:
-            temporal_forward_T = temporal_forward_T + self.deltas * z_to_use[t-1]
+            temporal_forward_T.add_(z_to_use[t-1], alpha=self.deltas)
     
-        z_T = (self.rho * temporal_forward_T + (2 * labels - lambda_lagrange)) / (2 + self.rho)
-        self.z[t].copy_(z_T)
+        temporal_forward_T.mul_(self.rho)
+        temporal_forward_T.add_(labels, alpha=2.0)
+        temporal_forward_T.sub_(lambda_lagrange)
+        temporal_forward_T.div_(2.0 + self.rho)
+        
+        self.z[t].copy_(temporal_forward_T)
     
     def update_z_decoupled(self, a_prev: torch.Tensor, time_steps: list):
         """Decoupled causal sweep for the z update.

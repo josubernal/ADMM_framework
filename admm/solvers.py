@@ -30,7 +30,7 @@ def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tens
 
     if use_cholesky:
         if cached_pinv is None or not is_cached_cholesky:
-            denominator.add_(denominator.mT).div_(2.0)
+            denominator.add_(denominator.mT.clone()).div_(2.0)
             max_val = torch.max(torch.abs(denominator)).clamp(min=1.0)
             jitter = 1e-4 * max_val
             denominator.diagonal().add_(jitter)
