@@ -26,7 +26,7 @@ class ADMM(nn.Module):
     """   
     def __init__(self, layers: nn.ModuleList, rho: float = 1.0, beta: float = 1.0, 
                  init: str = "zeros", bias: bool = False, device=None, 
-                 train_method: str = "decoupled-random", **kwargs):
+                 train_method: str = "decoupled-random", use_cholesky=True, **kwargs):
         super().__init__()
         
         self.device = device if device is not None else torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -40,6 +40,8 @@ class ADMM(nn.Module):
         self.rho = rho
         self.beta = beta
         self.bias = bias
+        
+        self.use_cholesky=use_cholesky
         
         for key, val in kwargs.items():
             setattr(self, key, val)
@@ -59,7 +61,7 @@ class ADMM(nn.Module):
             )
             self.train_method = "vectorized"
             
-        config = {'rho': self.rho, 'beta': self.beta, 'init': self.init, 'device':self.device}
+        config = {'rho': self.rho, 'beta': self.beta, 'init': self.init, 'device':self.device, 'use_cholesky': self.use_cholesky}
         config.update(kwargs)
         self._configure_layers(config)
 

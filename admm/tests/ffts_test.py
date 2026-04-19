@@ -46,7 +46,7 @@ def test_fft_math():
     den_d_main, _, in_f_d = l_conv_dense._get_a_denominator(1.0, shape_4d)
     den_f_main, _, in_f_f = l_conv_fft._get_a_denominator(1.0, shape_4d)
     
-    a_d = l_conv_dense.solve_activation_system(num_4d, den_d_main, den_d_main, shape_4d, in_f_d)
+    a_d = l_conv_dense.solve_activation_system(num_4d, den_d_main, den_d_main, shape_4d, in_f_d, use_w)
     a_f = l_conv_fft.solve_activation_system(num_4d, den_f_main, den_f_main, shape_4d, in_f_f)
     diff_sol = torch.max(torch.abs(a_d - a_f)).item()
     print(f"[4D System Solver]      Difference: {diff_sol:.8e} " + ("✅" if diff_sol < 1e-9 else "❌"))

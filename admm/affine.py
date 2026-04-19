@@ -181,7 +181,8 @@ class ADMM_AffineLayer(ADMM_Layer):
         new_W, self.pinv = solve_least_squares_weights(
             numerator, 
             denominator, 
-            cached_pinv=self.pinv if cache_pinv else None
+            use_cholesky=self.use_cholesky,
+            cached_pinv=self.pinv if cache_pinv else None   
         )
         self.W.copy_(new_W.reshape(self.W.shape))
           

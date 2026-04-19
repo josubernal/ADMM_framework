@@ -24,6 +24,7 @@ class ADMM_Layer(nn.Module):
     def __init__(self, h: nn.Module = None):
         super().__init__()
         self.device = None
+        self.use_cholesky= None
         self.rho = None
         self.beta = None
         self.deltas = None

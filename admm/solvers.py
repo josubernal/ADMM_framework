@@ -8,7 +8,7 @@ and read independently from the layer mechanics.
 
 import torch
 
-def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tensor, cached_pinv: torch.Tensor = None):
+def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tensor, cached_pinv: torch.Tensor = None, use_cholesky: bool = True):
     """Solves the regularized least-squares problem for the Weight matrix W.
 
     W_new = (Y^T @ P) @ (P^T @ P)^-1
@@ -24,15 +24,43 @@ def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tens
             - torch.Tensor: The newly computed weight matrix.
             - torch.Tensor: The computed or utilized pseudoinverse matrix.
     """
-    if cached_pinv is None:
-        pinv = torch.linalg.pinv(denominator)
-    else:
-        pinv = cached_pinv
+    is_cached_cholesky = False
+    if cached_pinv is not None:
+        is_cached_cholesky = torch.allclose(cached_pinv, torch.tril(cached_pinv))
+
+    if use_cholesky:
         
-    new_W = numerator @ pinv
-    return new_W, pinv
-
-
+        if cached_pinv is None or not is_cached_cholesky:
+            D_sym = (denominator + denominator.mT) / 2.0
+        
+            max_val = torch.max(torch.abs(D_sym)).clamp(min=1.0)
+            jitter = 1e-4 * max_val
+            
+            D_safe = D_sym + torch.eye(D_sym.size(0), device=D_sym.device, dtype=D_sym.dtype) * jitter
+            
+            try:
+                L = torch.linalg.cholesky(D_safe)
+                W_new_T = torch.cholesky_solve(numerator.mT, L)
+                return W_new_T.mT, L
+            except torch._C._LinAlgError:
+                print("⚠️ Cholesky failed. Falling back to pinv.")
+                pinv = torch.linalg.pinv(denominator)
+                return numerator @ pinv, pinv
+        else:
+           
+            L = cached_pinv 
+            W_new_T = torch.cholesky_solve(numerator.mT, L)
+            return W_new_T.mT, L
+            
+    else:
+        # Standard pinv route
+        if cached_pinv is None or is_cached_cholesky:
+            pinv = torch.linalg.pinv(denominator)
+        else:
+            pinv = cached_pinv
+            
+        return numerator @ pinv, pinv
+    
 def solve_woodbury_system(W: torch.Tensor, B: torch.Tensor, beta: float, rho: float, a_shape: tuple):
     """
     Solves the linear system (beta * I_N + rho * W^T W) x = B for x, using the Woodbury Matrix Identity.
