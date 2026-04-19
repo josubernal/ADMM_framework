@@ -190,8 +190,10 @@ class ADMM_AffineLayer(ADMM_Layer):
             cached_pinv=self.pinv if cache_pinv else None   
         )
         self.W.copy_(new_W.detach().reshape(self.W.shape))
-        if temp_pinv is not None:
+        if cache_pinv and temp_pinv is not None:
             self.pinv = temp_pinv.detach()
+        else:
+            self.pinv = None
           
     def update_bias(self, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None):
         """Averages the residual errors to update the bias vector.
