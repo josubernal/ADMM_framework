@@ -151,9 +151,9 @@ class ADMM_AffineLayer(ADMM_Layer):
         if getattr(self, 'W', None) is not None and self.W.dim() == 2 and in_features > out_features:
             return self._get_woodbury_params(beta_current, a_shape)
         
-        WtW, in_features = self._get_WtW(a_shape)
-        I = torch.eye(in_features, device=self.W.device, dtype=WtW.dtype)
-        denominator =  beta_current * I + self.rho * WtW
+        denominator, in_features = self._get_WtW(a_shape)
+        denominator.mul_(self.rho)
+        denominator.diagonal().add_(beta_current)
         return  denominator, denominator, in_features
     
     def _get_woodbury_params(self, beta_current, a_shape):

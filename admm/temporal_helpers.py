@@ -118,10 +118,13 @@ def get_spiking_v(z, bias, temporal_dependencies, rho, lambda_lagrange=None, bro
         Returns:
             torch.Tensor: The calculated spiking target tensor.
     """
-    v = z - bias - temporal_dependencies
+    v = z.clone()
+    if isinstance(bias, torch.Tensor):
+        v.sub_(bias)
+    v.sub_(temporal_dependencies)
     if lambda_lagrange is not None and broadcast_func is not None:
         lam_sp = broadcast_func(lambda_lagrange, z[-1])
-        v[-1] = v[-1] + (lam_sp / rho)
+        v[-1].add_(lam_sp, alpha=1.0 / rho)
     return v
     
 def get_spiking_a_denominator(WtW, in_features, beta_current, rho_next, temporal_penalty, unrolled=False):
@@ -146,10 +149,12 @@ def get_spiking_a_denominator(WtW, in_features, beta_current, rho_next, temporal
             - int: The number of input features.
     """
     
-    I = torch.eye(in_features, device=WtW.device, dtype=WtW.dtype)
-
-    denominator_last = beta_current * I + rho_next * WtW
-    denominator_main = denominator_last + (temporal_penalty * I)
+    denominator_last = WtW * rho_next
+    
+    denominator_last.diagonal().add_(beta_current)
+   
+    denominator_main = denominator_last.clone()
+    denominator_main.diagonal().add_(temporal_penalty)
     
     if unrolled:
         denominator_main = torch.linalg.inv(denominator_main).transpose(-2, -1)          
@@ -179,4 +184,4 @@ def get_spiking_a_adjoint(layer, next_layer, lambda_lagrange): #forward_pass):DE
     adjoint = next_layer.adjoint_operator(v, original_input_shape=layer.a.shape)
     # temporal_penalty = torch.zeros_like(layer.z)
     # temporal_penalty[:-1] = -layer.thetas * layer.rho * (layer.z[1:] - layer.deltas * layer.z[:-1] - forward_pass[1:]) DEPRECATED
-    return  next_layer.rho * adjoint #+ temporal_penalty  
+    return  adjoint.mul_(next_layer.rho) #+ temporal_penalty  
