@@ -86,7 +86,6 @@ class ADMM_Spiking:
 
         Returns:
             TemporalCache: A typed data class containing the precomputed matrices."""
-        print("caching")
         return TemporalCache.build(self, next_layer, a_prev, lambda_lagrange)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:    
@@ -315,11 +314,15 @@ class ADMM_Spiking:
         """
         z_to_use = z_to_use if z_to_use is not None else self.z
         T = self.z.size(0)
-        temporal_forward = cache.forward_pass[t]
+        temporal_forward = cache.forward_pass[t].clone()
         if t > 0:
-            temporal_forward = temporal_forward + (self.deltas * z_to_use[t-1] - self.thetas * self.a[t-1])
+            temporal_forward.add_(z_to_use[t-1], alpha=self.deltas)
+            temporal_forward.add_(self.a[t-1], alpha=-self.thetas)
         
-        z_minus_forward= z_to_use[t+1] - cache.forward_pass[t+1] if t < T - 1 else None
+        if t < T - 1:
+            z_minus_forward = z_to_use[t+1].sub(cache.forward_pass[t+1])
+        else:
+            z_minus_forward = None
         new_z_t = self.h.activation_z_unrolled(temporal_forward=temporal_forward, z_minus_forward=z_minus_forward,a_t=self.a[t])  
         self.z[t].copy_(new_z_t)
 
@@ -346,32 +349,37 @@ class ADMM_Spiking:
         forward= self.spatial_forward(a_prev)
         denominator_main =  (self.rho * self.deltas ** 2) + self.rho
         z_to_use = self.z.clone() if jacobi else self.z
+        buffer = torch.empty_like(self.z[0])
         for t in time_steps:
-            temporal_forward = forward[t].clone()
+            if t == T - 1:
+                continue
+            buffer.copy_(forward[t])
             if t >= 1:
-                temporal_forward.add_(z_to_use[t-1], alpha=self.deltas)
+                buffer.add_(z_to_use[t-1], alpha=self.deltas)
 
-            z_diff = z_to_use[t+1].clone().sub_(forward[t+1])
-            temporal_forward.add_(z_diff, alpha=self.deltas)
-            temporal_forward.mul_(self.rho)
-
+            buffer.add_(z_to_use[t+1], alpha=self.deltas)
+            buffer.add_(forward[t+1], alpha=-self.deltas)
+            buffer.mul_(self.rho)
             if t == T - 2:
-                term_lambda = lambda_lagrange * self.deltas
-                temporal_forward.add_(term_lambda)
+                buffer.add_(lambda_lagrange, alpha=self.deltas)
                 
-            temporal_forward.div_(denominator_main)
-            self.z[t].copy_(temporal_forward)
+            buffer.div_(denominator_main)
+            self.z[t].copy_(buffer)
         t = T - 1
-        temporal_forward_T = forward[t].clone()
+        buffer.copy_(forward[t])
+        del forward
         if t >= 1:
-            temporal_forward_T.add_(z_to_use[t-1], alpha=self.deltas)
+            buffer.add_(z_to_use[t-1], alpha=self.deltas)
     
-        temporal_forward_T.mul_(self.rho)
-        temporal_forward_T.add_(labels, alpha=2.0)
-        temporal_forward_T.sub_(lambda_lagrange)
-        temporal_forward_T.div_(2.0 + self.rho)
+        buffer.mul_(self.rho)
+        buffer.add_(labels, alpha=2.0)
+        buffer.sub_(lambda_lagrange)
+        buffer.div_(2.0 + self.rho)
+            
+        self.z[t].copy_(buffer)
         
-        self.z[t].copy_(temporal_forward_T)
+        if jacobi:
+            del z_to_use
     
     def update_z_decoupled(self, a_prev: torch.Tensor, time_steps: list):
         """Decoupled causal sweep for the z update.
@@ -389,6 +397,7 @@ class ADMM_Spiking:
             self.update_z_unrolled(t, mock_cache)
         t_final = self.z.size(0) - 1
         self.update_z_unrolled(t_final, mock_cache)
-        
+        del forward_pass
+        del mock_cache
 
 
