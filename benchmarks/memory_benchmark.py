@@ -11,7 +11,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import configparser
-from datetime import datetime
 
 from admm.manager import ADMM
 from admm.layers import ADMM_SpikingConv2d, ADMM_SpikingLinear, ADMM_Conv2d, ADMM_Linear
@@ -68,7 +67,6 @@ def profile_architecture(arch_name, layers, inputs, labels, device, T_val):
 def save_and_plot_results(results_dict, batch_sizes, output_dir):
     """Saves results to CSV and generates matplotlib plots for the 3 memory metrics."""
     os.makedirs(output_dir, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_path = os.path.join(output_dir, "benchmark_memory_metrics.csv")
 
     # 1. Write to CSV
@@ -80,29 +78,29 @@ def save_and_plot_results(results_dict, batch_sizes, output_dir):
                 writer.writerow([arch, b, metrics['init'][i], metrics['peak_1'][i], metrics['peak_10'][i]])
     print(f"\n💾 Data saved to {csv_path}")
 
-    # 2. Plotting Utilities
-    plt.style.use('ggplot')
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
-    markers = ['o', 's', '^', 'D']
+    # # 2. Plotting Utilities
+    # plt.style.use('ggplot')
+    # colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
+    # markers = ['o', 's', '^', 'D']
 
-    def generate_plot(metric_key, title, filename):
-        plt.figure(figsize=(10, 6))
-        for i, (arch, metrics) in enumerate(results_dict.items()):
-            plt.plot(batch_sizes, metrics[metric_key], marker=markers[i], color=colors[i], label=arch, linewidth=2)
-        plt.title(title, fontsize=14, fontweight='bold')
-        plt.xlabel("Batch Size", fontsize=12)
-        plt.ylabel("VRAM (MB)", fontsize=12)
-        plt.grid(True, linestyle='--', alpha=0.7)
-        plt.legend()
-        plt.tight_layout()
-        filepath = os.path.join(output_dir, f"{filename}_{timestamp}.png")
-        plt.savefig(filepath, dpi=300)
-        plt.close()
-        print(f"📊 Plot saved to {filepath}")
+    # def generate_plot(metric_key, title, filename):
+    #     plt.figure(figsize=(10, 6))
+    #     for i, (arch, metrics) in enumerate(results_dict.items()):
+    #         plt.plot(batch_sizes, metrics[metric_key], marker=markers[i], color=colors[i], label=arch, linewidth=2)
+    #     plt.title(title, fontsize=14, fontweight='bold')
+    #     plt.xlabel("Batch Size", fontsize=12)
+    #     plt.ylabel("VRAM (MB)", fontsize=12)
+    #     plt.grid(True, linestyle='--', alpha=0.7)
+    #     plt.legend()
+    #     plt.tight_layout()
+    #     filepath = os.path.join(output_dir, f"{filename}_{timestamp}.png")
+    #     plt.savefig(filepath, dpi=300)
+    #     plt.close()
+    #     print(f"📊 Plot saved to {filepath}")
 
-    generate_plot('init', "Allocated Memory After Init (a, z) vs Batch Size", "init_memory_vs_batch.png")
-    generate_plot('peak_1', "Peak VRAM (1 Epoch) vs Batch Size", "peak_memory_1_epoch_vs_batch.png")
-    generate_plot('peak_10', "Peak VRAM (10 Epochs) vs Batch Size", "peak_memory_10_epochs_vs_batch.png")
+    # generate_plot('init', "Allocated Memory After Init (a, z) vs Batch Size", "init_memory_vs_batch.png")
+    # generate_plot('peak_1', "Peak VRAM (1 Epoch) vs Batch Size", "peak_memory_1_epoch_vs_batch.png")
+    # generate_plot('peak_10', "Peak VRAM (10 Epochs) vs Batch Size", "peak_memory_10_epochs_vs_batch.png")
 
 def run_all_profiles():
     if not torch.cuda.is_available():
@@ -205,7 +203,7 @@ def run_all_profiles():
         del inputs, layers; gc.collect(); torch.cuda.empty_cache()
 
     # Save and Plot
-    save_and_plot_results(results, batch_sizes, output_dir="benchmark_results/memory")
+    save_and_plot_results(results, batch_sizes, output_dir="benchmarks/results/memory_benchmark")
 
 if __name__ == "__main__":
     run_all_profiles()
