@@ -7,9 +7,6 @@ import os
 import csv
 import torch
 import gc
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 import configparser
 
 from admm.manager import ADMM
@@ -77,30 +74,6 @@ def save_and_plot_results(results_dict, batch_sizes, output_dir):
             for i, b in enumerate(batch_sizes):
                 writer.writerow([arch, b, metrics['init'][i], metrics['peak_1'][i], metrics['peak_10'][i]])
     print(f"\n💾 Data saved to {csv_path}")
-
-    # # 2. Plotting Utilities
-    # plt.style.use('ggplot')
-    # colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
-    # markers = ['o', 's', '^', 'D']
-
-    # def generate_plot(metric_key, title, filename):
-    #     plt.figure(figsize=(10, 6))
-    #     for i, (arch, metrics) in enumerate(results_dict.items()):
-    #         plt.plot(batch_sizes, metrics[metric_key], marker=markers[i], color=colors[i], label=arch, linewidth=2)
-    #     plt.title(title, fontsize=14, fontweight='bold')
-    #     plt.xlabel("Batch Size", fontsize=12)
-    #     plt.ylabel("VRAM (MB)", fontsize=12)
-    #     plt.grid(True, linestyle='--', alpha=0.7)
-    #     plt.legend()
-    #     plt.tight_layout()
-    #     filepath = os.path.join(output_dir, f"{filename}_{timestamp}.png")
-    #     plt.savefig(filepath, dpi=300)
-    #     plt.close()
-    #     print(f"📊 Plot saved to {filepath}")
-
-    # generate_plot('init', "Allocated Memory After Init (a, z) vs Batch Size", "init_memory_vs_batch.png")
-    # generate_plot('peak_1', "Peak VRAM (1 Epoch) vs Batch Size", "peak_memory_1_epoch_vs_batch.png")
-    # generate_plot('peak_10', "Peak VRAM (10 Epochs) vs Batch Size", "peak_memory_10_epochs_vs_batch.png")
 
 def run_all_profiles():
     if not torch.cuda.is_available():

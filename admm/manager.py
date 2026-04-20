@@ -168,14 +168,16 @@ class ADMM(nn.Module):
         if self.is_spiking:
             z_T = last_layer.z[-1]
             z_T_minus_1 = last_layer.z[-2]
-            F_a_T = last_layer.spatial_forward(a_prev_L[-1].unsqueeze(0)).squeeze(0)
-            residual = z_T - (last_layer.deltas * z_T_minus_1) - F_a_T
+            forward = last_layer.spatial_forward(a_prev_L[-1].unsqueeze(0)).squeeze(0)
+            self.lambda_lagrange.add_(z_T, alpha=self.rho)
+            self.lambda_lagrange.add_(z_T_minus_1, alpha=-self.rho*last_layer.deltas)
+            self.lambda_lagrange.add_(forward, alpha=-self.rho)
         else:
-            spatial_out = last_layer.spatial_forward(a_prev_L)
-            residual = last_layer.z - spatial_out
+            forward = last_layer.spatial_forward(a_prev_L)
+            self.lambda_lagrange.add_(last_layer.z, alpha=self.rho)
+            self.lambda_lagrange.add_(forward, alpha=-self.rho)
 
-        self.lambda_lagrange += self.rho * residual
-    
+
     def _optimize_w_and_b(self, layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None, cache_pinv: bool = False):
         """Unified interface for updating all trainable parameters (W, b).
 

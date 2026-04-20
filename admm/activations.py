@@ -169,19 +169,34 @@ class ADMM_Heaviside(ADMMActivationBase):
         Returns:
             torch.Tensor: The projected and bounded $z$ tensor.
         """
-        delta1 = self.beta * (1.0 - 2.0 * a)
-        delta2 = self.rho * ((z - temporal_forward)**2 - (self.thetas - temporal_forward)**2) 
-        delta3= 0
-        if  z_minus_forward is not None:
-           delta3 = self.rho * ((z_minus_forward - self.deltas * z + self.thetas * a)**2 - ( z_minus_forward - self.deltas * self.thetas + self.thetas * a)**2)
-           if is_vectorized:
-                delta3[-1] = 0.0
-        
-        total_delta = delta1 + delta2 + delta3
+        delta1 = a.mul(-2.0).add_(1.0).mul_(self.beta)
 
-        z = torch.where((z > self.thetas) & (total_delta > 0), self.thetas, z)
-        z = torch.where((z <= self.thetas) & ((delta2 + delta3 - delta1) > 0), self.thetas + 1e-5, z)
+        total_delta = z.sub(temporal_forward).pow_(2)
+        tmp = temporal_forward.sub(self.thetas).pow_(2)
+        total_delta.sub_(tmp).mul_(self.rho)
+        total_delta.add_(delta1) # total_delta is now delta1 + delta2
+    
+        if z_minus_forward is not None:
+            res_term = z_minus_forward.add(a, alpha=self.thetas) 
+            
+            d3 = res_term.sub(self.deltas * z).pow_(2)
+            d3_sub = res_term.sub(self.deltas * self.thetas).pow_(2)
+            d3.sub_(d3_sub).mul_(self.rho)
+            
+            if is_vectorized:
+                d3[-1].zero_()
+                
+            total_delta.add_(d3)
+
+        # Mask 1: z = theta if z > theta and total_delta > 0
+        mask1 = (z > self.thetas).logical_and_(total_delta > 0)
+        z.masked_fill_(mask1, self.thetas)
         
+        # Mask 2: z = theta + eps if z <= theta and (total_delta - 2*delta1) > 0
+        # Note: (d1+d2+d3) - 2*d1 = d2+d3-d1
+        total_delta.add_(delta1, alpha=-2.0) 
+        mask2 = (z <= self.thetas).logical_and_(total_delta > 0)
+        z.masked_fill_(mask2, self.thetas + 1e-5)
         return z
 
     def activation_z_unrolled(self, temporal_forward, z_minus_forward, a_t):
@@ -200,7 +215,9 @@ class ADMM_Heaviside(ADMMActivationBase):
             torch.Tensor: The updated z tensor for the current timestep.
         """
         if z_minus_forward is not None:
-            z_res = (temporal_forward + self.deltas * (z_minus_forward + self.thetas * a_t)) / (1.0 + self.deltas ** 2)
+            z_res = z_minus_forward.add(a_t, alpha=self.thetas)
+            z_res.mul_(self.deltas).add_(temporal_forward)
+            z_res.div_(1.0 + self.deltas ** 2)
         else:
             z_res = temporal_forward.clone()
         return self.check_entries(z=z_res, temporal_forward=temporal_forward, a= a_t,  z_minus_forward= z_minus_forward, is_vectorized=False)
@@ -219,22 +236,21 @@ class ADMM_Heaviside(ADMMActivationBase):
         """
 
         q = res.clone()
-        q[1:] += self.deltas * z[:-1] 
-        q[1:] -= self.thetas * a[:-1] 
+        q[1:].add_(z[:-1], alpha= self.deltas)
+        q[1:].add_(a[:-1], alpha=-self.thetas)
 
-        r = z - res
-        r_shifted = torch.zeros_like(r)
-        r_shifted[:-1] = r[1:]
+        r = torch.zeros_like(z)
+        r[:-1].copy_(z[1:]).sub_(res[1:])
             
-        numerator = self.rho * q
-        denominator = self.rho
+        numerator = q.mul(self.rho)
+        denominator = torch.full_like(numerator, self.rho)
 
-        temporal_penalty_num = torch.zeros_like(numerator)
-        temporal_penalty_den = torch.zeros_like(numerator)
-        temporal_penalty_num[:-1] = self.deltas * self.rho * (r[1:] + self.thetas * a[:-1]) 
-        temporal_penalty_den[:-1] = (self.deltas**2) * self.rho  
+        num_slice = numerator[:-1]
+        # temp_term = (z_next - res_next) + thetas * a_curr
+        temp_term = z[1:].sub(res[1:]).add_(a[:-1], alpha=self.thetas)
+        num_slice.add_(temp_term, alpha=self.deltas * self.rho)
+        
+        denominator[:-1].add_( (self.deltas**2) * self.rho )
+        z_new = numerator.div_(denominator)
 
-        numerator = numerator + temporal_penalty_num
-        denominator = denominator + temporal_penalty_den
-
-        return self.check_entries(numerator / denominator,  q, a, r_shifted, is_vectorized=True)
+        return self.check_entries(z_new,  q, a, r, is_vectorized=True)

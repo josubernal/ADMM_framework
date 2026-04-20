@@ -8,7 +8,6 @@ from admm import (
     ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpikingConv2d, 
     ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics
 )
-import matplotlib.pyplot as plt
 import snntorch as snn
 import tonic
 from tonic import DiskCachedDataset
@@ -338,44 +337,8 @@ for model_name in model_types:
     with open(metrics_filename, "w") as f:
         json.dump(metrics_data, f, indent=4)
 
-#     plt.figure(figsize=(12, 5))
-#     plt.suptitle(f'Gradient Descent vs ADMM ({model_name}, batch={batch_size})', fontsize=16, fontweight='bold')
 
-#     # --- Plot 1: MSE ---
-#     plt.subplot(1, 2, 1)
-#     plt.plot(gd_steps, gd_mses, label='Gradient Descent', color='blue', linewidth=2)
-#     plt.plot(admm_steps, admm_mses, label='ADMM', color='orange', linewidth=2)
+    # Free up memory before the next model
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
-#     if warming_stop is not None:
-#         plt.axvline(x=warming_stop, color='red', linestyle='--', alpha=0.7, label=f'Warming Stopped (Ep {warming_stop})')
-
-#     plt.title('Mean Squared Error vs. Time')
-#     plt.xlabel('Steps / Epochs')
-#     plt.ylabel('MSE')
-#     plt.legend()
-#     plt.grid(True, linestyle='dotted', alpha=0.7)
-
-#     # --- Plot 2: Accuracy ---
-#     plt.subplot(1, 2, 2)
-#     plt.plot(gd_steps, gd_accs, label='Gradient Descent', color='blue', linewidth=2)
-#     plt.plot(admm_steps, admm_accs, label='ADMM', color='orange', linewidth=2)
-
-#     if warming_stop is not None:
-#         plt.axvline(x=warming_stop, color='red', linestyle='--', alpha=0.7, label=f'Warming Stopped (Ep {warming_stop})')
-
-#     plt.title('Accuracy vs. Time')
-#     plt.xlabel('Steps / Epochs')
-#     plt.ylabel('Accuracy')
-#     plt.legend()
-#     plt.grid(True, linestyle='--', alpha=0.7)
-
-#     plt.tight_layout()
-#     plot_filename = f"benchmarks/results/gd_comparation/{model_name}/{batch_size}/plot.png"
-#     plt.savefig(plot_filename, dpi=300)
-#     plt.close() # Close the plot to prevent overlapping in the next loop iteration
-    
-#     # Free up memory before the next model
-#     if torch.cuda.is_available():
-#         torch.cuda.empty_cache()
-
-# print("\nAll models evaluated successfully!")

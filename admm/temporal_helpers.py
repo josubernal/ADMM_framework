@@ -102,10 +102,11 @@ def compute_temporal_dependencies(z: torch.Tensor, a: torch.Tensor, deltas: floa
     """
     out = torch.empty_like(z)
     out[0].zero_()
-    out[1:] = deltas * z[:-1]
-    
+    out_slice = out[1:]
+    out_slice.copy_(z[:-1])
+    out_slice.mul_(deltas)
     if use_reset and include_reset:
-        out[1:] -= thetas * a[:-1]
+        out[1:].add_(a[:-1], alpha=-thetas)
         
     return out  
 

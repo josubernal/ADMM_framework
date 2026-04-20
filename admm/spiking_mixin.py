@@ -140,10 +140,11 @@ class ADMM_Spiking:
         # Temporal penalty 
         numerator = torch.empty_like(self.z)
         numerator[-1].zero_()
-        numerator[:-1] = self.z[1:]
-        numerator[:-1].add_(self.z[:-1], alpha=-self.deltas)
-        numerator[:-1].sub_(forward_pass[1:])
-        numerator[:-1].mul_(-self.thetas * self.rho)
+        num_slice = numerator[:-1]
+        num_slice.copy_(self.z[1:])
+        num_slice.add_(self.z[:-1], alpha=-self.deltas)
+        num_slice.sub_(forward_pass[1:])
+        num_slice.mul_(-self.thetas * self.rho)
         
         # self.beta * self.h(self.z) + adjoint + temporal penalty
         numerator.add_(adjoint)
@@ -233,9 +234,11 @@ class ADMM_Spiking:
         
         denominator_main = self.rho * (self.deltas ** 2) + self.rho
         denominator_last = 2.0 + self.rho
+        
+        numerator[:-1].div_(denominator_main)
+        numerator[-1].div_(denominator_last)
 
-        self.z[:-1].copy_(numerator[:-1] / denominator_main)
-        self.z[-1].copy_(numerator[-1] / denominator_last)   
+        self.z.copy_(numerator)   
 
     def update_az_interleaved(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list):
         """Orchestrates the interleaved updates of a and z over time using caching.
