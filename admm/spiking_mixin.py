@@ -86,6 +86,7 @@ class ADMM_Spiking:
 
         Returns:
             TemporalCache: A typed data class containing the precomputed matrices."""
+        print("caching")
         return TemporalCache.build(self, next_layer, a_prev, lambda_lagrange)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:    
@@ -131,26 +132,22 @@ class ADMM_Spiking:
             a_prev (torch.Tensor): The previous layer's activations.
             lambda_lagrange (torch.Tensor, optional): The Lagrange multiplier. Defaults to None.
         """
-        forward_pass = self.spatial_forward(a_prev)
-        adjoint = self._get_a_adjoint(
+        
+        # self.beta * self.h(self.z) + adjoint + temporal penalty
+        numerator = self._get_a_adjoint(
             next_layer=next_layer,
             lambda_lagrange=lambda_lagrange
         )
-
-        # Temporal penalty 
-        numerator = torch.empty_like(self.z)
-        numerator[-1].zero_()
+        numerator.add_(self.h(self.z), alpha=self.beta)
+        
+        #Temporal penalty  =  -rho*thetas(z_t+1 -forward_t+1 -delta*z)
         num_slice = numerator[:-1]
-        num_slice.copy_(self.z[1:])
-        num_slice.add_(self.z[:-1], alpha=-self.deltas)
-        num_slice.sub_(forward_pass[1:])
-        num_slice.mul_(-self.thetas * self.rho)
-        
-        # self.beta * self.h(self.z) + adjoint + temporal penalty
-        numerator.add_(adjoint)
-        h_z = self.h(self.z)
-        numerator.add_(h_z, alpha=self.beta)
-        
+        forward_pass = self.spatial_forward(a_prev)
+        num_slice.sub_(forward_pass[1:], alpha=-self.thetas * self.rho)
+        del forward_pass
+        num_slice.add_(self.z[1:], alpha=-self.thetas * self.rho)
+        num_slice.add_(self.z[:-1], alpha=self.deltas*self.thetas * self.rho)
+                
         denominator_main, denominator_last, in_features = next_layer._get_a_denominator(  
             a_shape=self.a.shape,
             beta_current=self.beta,
