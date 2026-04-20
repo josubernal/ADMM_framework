@@ -18,7 +18,7 @@ def calc_spatial_out(size_in, k, p, s):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     config = configparser.ConfigParser()
-    config.read('benchmarks/benchmarks_config/config.ini')
+    config.read('benchmarks/config/config.ini')
     # ==========================================
     # 1. GLOBAL SETUP & SEEDING
     # ==========================================

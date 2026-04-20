@@ -20,7 +20,7 @@ import os
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 config = configparser.ConfigParser()
 
-config.read('benchmarks/benchmarks_config/config.ini') 
+config.read('benchmarks/config/config.ini') 
 
 seed = config.getint('config','seed')
 

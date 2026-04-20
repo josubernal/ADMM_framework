@@ -111,7 +111,7 @@ def run_all_profiles():
     device = torch.device('cuda')
     
     config = configparser.ConfigParser()
-    config.read('benchmarks/benchmarks_config/config.ini')
+    config.read('benchmarks/config/config.ini')
     # ==========================================
     # 1. GLOBAL SETUP & SEEDING
     # ==========================================
