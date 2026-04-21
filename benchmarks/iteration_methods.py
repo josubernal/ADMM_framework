@@ -47,8 +47,10 @@ if __name__ == "__main__":
     prev_primal_residual = float('inf')
     
     # Standard Scalar Hyperparameters
-    rho = config.getfloat('config', 'splinear_rho')
-    beta = config.getfloat('config', 'splinear_beta')
+    linear_rho = config.getfloat('config', 'splinear_rho')
+    linear_beta = config.getfloat('config', 'splinear_beta')
+    conv_rho = config.getfloat('config', 'splinear_rho')
+    conv_beta = config.getfloat('config', 'splinear_beta')
     deltas = config.getfloat('config', 'deltas')
     thetas = config.getfloat('config', 'thetas')
     
@@ -121,11 +123,15 @@ if __name__ == "__main__":
             
             if arch == "linear":
                 # 34 * 34 * 2 = 2312
+                rho=linear_rho
+                beta=linear_beta
                 layers = nn.ModuleList([ 
                     ADMM_SpikingLinear(in_f=2312, out_f=hidden_size_spiking, h=h_func, init='zeros', bias=False),
                     ADMM_SpikingLinear(in_f=hidden_size_spiking, out_f=10, h=None, init='zeros', bias=False)
                 ])
             else:
+                rho=conv_rho
+                beta=conv_beta
                 spatial = int(calc_spatial_out(34, k, p, s))
                 lin_in = hidden_channels_spiking * spatial * spatial
                 layers = nn.ModuleList([ 
