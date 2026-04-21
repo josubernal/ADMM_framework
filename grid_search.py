@@ -193,14 +193,14 @@ if __name__ == "__main__":
                 # N-MNIST is 34x34. Calculate the exact output size of the Conv layer
                 if num_layers == 2:
                     # Dynamically calculate the 18x18 output
-                    spatial_out = int(calc_spatial_out(34, k, p, 1)) 
+                    spatial_out = int(calc_spatial_out(34, k, p, s)) 
                     # 2 * 18 * 18 = 648
                     lin_in = hidden_channels * spatial_out * spatial_out 
                     
                     layers = nn.ModuleList([
-                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=1, 
+                        ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, 
                                            h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, 
-                                           use_fft=False,  padding_mode="zeros", is_woodbury=True),
+                                           use_fft=False,  padding_mode="zeros"),
                                            
                         # Passing 648 to in_f and using Flatten
                         ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, 
@@ -212,7 +212,7 @@ if __name__ == "__main__":
                     lin_in = mid_c * pool_h * pool_w
                     layers = nn.ModuleList([
                         ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=1, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=True,  padding_mode="circular"),
-                        ADMM_SpikingConv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=mid_p, s=2, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=False, padding_mode="zeros"),
+                        ADMM_SpikingConv2d(in_c=hidden_channels, out_c=mid_c, k=k, p=mid_p, s=s, h=ADMM_Heaviside(thetas=thetas), init=init, bias=bias, use_fft=False, padding_mode="zeros"),
                         ADMM_SpikingLinear(in_f=lin_in, out_f=10, init=init, h=None, pool_op=ADMM_SpatialPool((pool_h, pool_w)), bias=bias)
                     ])
 
