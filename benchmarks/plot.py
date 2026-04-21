@@ -115,6 +115,56 @@ def main():
     else:
         print(f"Skipping Memory plot: {memory_csv_path} not found.")
 
+    all_jsons = list(Path(folder_path).rglob("*.json"))
+    
+    iter_data = []
+    for jp in all_jsons:
+        try:
+            with open(jp, 'r') as f:
+                d = json.load(f)
+                # Only keep JSONs that have the specific keys from iteration_methods.py
+                if "method" in d and "architecture" in d and "accuracy" in d:
+                    iter_data.append(d)
+        except:
+            continue
+
+    if iter_data:
+        # Find unique architectures (should be 'linear' and 'conv')
+        archs = list(set([d["architecture"] for d in iter_data]))
+        archs.sort(reverse=True) # Usually puts 'linear' first, then 'conv'
+        
+        cols = len(archs)
+        if cols > 0:
+            fig_iter, axes_iter = plt.subplots(1, cols, figsize=(7 * cols, 6), squeeze=False)
+            fig_iter.suptitle("Iteration Methods Comparison: Accuracy over Epochs", fontsize=16, fontweight='bold')
+            
+            for i, arch in enumerate(archs):
+                ax = axes_iter[0, i]
+                # Get all runs for this specific architecture
+                arch_specific_data = [d for d in iter_data if d["architecture"] == arch]
+                
+                # Sort alphabetically by method so colors/legend stay consistent
+                arch_specific_data.sort(key=lambda x: x["method"])
+                
+                for d in arch_specific_data:
+                    acc = d["accuracy"]
+                    method_name = d["method"]
+                    epochs_list = list(range(len(acc)))
+                    
+                    # Plot the accuracy curve for this method
+                    ax.plot(epochs_list, acc, label=method_name, linewidth=2, marker='o', markersize=4)
+                    
+                ax.set_title(f"Architecture: {arch.upper()}", fontsize=14)
+                ax.set_xlabel("Epochs")
+                ax.set_ylabel("Accuracy (%)")
+                ax.legend(fontsize='small', loc='lower right')
+                ax.grid(True, linestyle='--', alpha=0.7)
+                
+            plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    else:
+        print(f"Skipping Iteration Methods plot: No compatible JSONs found in {folder_path}")
+
+    # Show all generated plots
     plt.show()
 
 if __name__ == "__main__":

@@ -49,8 +49,8 @@ if __name__ == "__main__":
     # Standard Scalar Hyperparameters
     linear_rho = config.getfloat('config', 'splinear_rho')
     linear_beta = config.getfloat('config', 'splinear_beta')
-    conv_rho = config.getfloat('config', 'splinear_rho')
-    conv_beta = config.getfloat('config', 'splinear_beta')
+    conv_rho = config.getfloat('config', 'spconv_rho')
+    conv_beta = config.getfloat('config', 'spconv_beta')
     deltas = config.getfloat('config', 'deltas')
     thetas = config.getfloat('config', 'thetas')
     
