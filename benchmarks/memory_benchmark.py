@@ -96,8 +96,10 @@ def run_all_profiles():
     torch.backends.cudnn.benchmark = False
     
    
-    hidden_dim = config.getint('config', 'hidden_size')
-    hidden_channels = config.getint('config', 'hidden_channels')
+    hidden_size_static = config.getint('config', 'hidden_size_static')
+    hidden_channels_static =  config.getint('config', 'hidden_channels_static')
+    hidden_size_spiking = config.getint('config', 'hidden_size_spiking')
+    hidden_channels_spiking =  config.getint('config', 'hidden_channels_spiking')
     k = config.getint('config', 'k')
     p = config.getint('config', 'p')
     s = config.getint('config', 's')
@@ -124,8 +126,8 @@ def run_all_profiles():
         # -----------------------------------------------------------------
         inputs = torch.randn((T, batch, in_c, H, W), device=device)
         layers = [
-            ADMM_SpikingConv2d(in_c, hidden_channels, k=k, p=p, s=s, h=ADMM_Heaviside(), bias=True, use_fft=False, padding_mode="zeros"),
-            ADMM_SpikingLinear( hidden_channels * spatial * spatial, classes, pool_op=ADMM_Flatten(), h=ADMM_Heaviside(), bias=True)
+            ADMM_SpikingConv2d(in_c, hidden_channels_spiking, k=k, p=p, s=s, h=ADMM_Heaviside(), bias=True, use_fft=False, padding_mode="zeros"),
+            ADMM_SpikingLinear( hidden_channels_spiking * spatial * spatial, classes, pool_op=ADMM_Flatten(), h=ADMM_Heaviside(), bias=True)
         ]
         m_i, m_1, m_10 = profile_architecture("Spiking Conv", layers, inputs, labels, device, T_val=T)
         results["Spiking Conv"]['init'].append(m_i)
@@ -138,8 +140,8 @@ def run_all_profiles():
         # -----------------------------------------------------------------
         inputs = torch.randn((T, batch, flat_dim), device=device)
         layers = [
-            ADMM_SpikingLinear(flat_dim, hidden_dim, h=ADMM_Heaviside(), bias=True),
-            ADMM_SpikingLinear(hidden_dim, classes, h=ADMM_Heaviside(), bias=True)
+            ADMM_SpikingLinear(flat_dim, hidden_size_spiking, h=ADMM_Heaviside(), bias=True),
+            ADMM_SpikingLinear(hidden_size_spiking, classes, h=ADMM_Heaviside(), bias=True)
         ]
         m_i, m_1, m_10 = profile_architecture("Spiking Linear", layers, inputs, labels, device, T_val=T)
         results["Spiking Linear"]['init'].append(m_i)
@@ -152,8 +154,8 @@ def run_all_profiles():
         # -----------------------------------------------------------------
         inputs = torch.randn((batch, in_c, H, W), device=device)
         layers = [
-            ADMM_Conv2d(in_c, hidden_channels, k=k, p=p, s=s, h=ADMM_ReLU(), bias=True, use_fft=False, padding_mode="zeros"), 
-            ADMM_Linear( hidden_channels * spatial * spatial, classes, pool_op=ADMM_Flatten(), h=ADMM_ReLU(), bias=True)
+            ADMM_Conv2d(in_c, hidden_channels_static, k=k, p=p, s=s, h=ADMM_ReLU(), bias=True, use_fft=False, padding_mode="zeros"), 
+            ADMM_Linear( hidden_channels_static * spatial * spatial, classes, pool_op=ADMM_Flatten(), h=ADMM_ReLU(), bias=True)
         ]
         m_i, m_1, m_10 = profile_architecture("Static Conv", layers, inputs, labels, device, T_val=None)
         results["Static Conv"]['init'].append(m_i)
@@ -166,8 +168,8 @@ def run_all_profiles():
         # -----------------------------------------------------------------
         inputs = torch.randn((batch, flat_dim), device=device)
         layers = [
-            ADMM_Linear(flat_dim, hidden_dim, h=ADMM_ReLU(), bias=True),
-            ADMM_Linear(hidden_dim, classes, h=None, bias=True)
+            ADMM_Linear(flat_dim, hidden_size_static, h=ADMM_ReLU(), bias=True),
+            ADMM_Linear(hidden_size_static, classes, h=None, bias=True)
         ]
         m_i, m_1, m_10 = profile_architecture("Static Linear", layers, inputs, labels, device, T_val=None)
         results["Static Linear"]['init'].append(m_i)

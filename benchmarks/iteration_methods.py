@@ -6,6 +6,8 @@ import tonic.transforms as tr
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import time
+import os       
+import json
 
 from admm import (
     ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpikingConv2d, 
@@ -31,8 +33,8 @@ if __name__ == "__main__":
     
     batch_size = config.getint('config', 'batch_size_spiking')
     epochs = config.getint('config', 'epochs')
-    hidden_size = config.getint('config', 'hidden_size')
-    hidden_channels = config.getint('config', 'hidden_channels')
+    hidden_size_spiking = config.getint('config', 'hidden_size_spiking')
+    hidden_channels_spiking =  config.getint('config', 'hidden_channels_spiking')
     k = config.getint('config', 'k')
     p = config.getint('config', 'p')
     s = config.getint('config', 's')
@@ -120,14 +122,14 @@ if __name__ == "__main__":
             if arch == "linear":
                 # 34 * 34 * 2 = 2312
                 layers = nn.ModuleList([ 
-                    ADMM_SpikingLinear(in_f=2312, out_f=hidden_size, h=h_func, init='zeros', bias=False),
-                    ADMM_SpikingLinear(in_f=hidden_size, out_f=10, h=None, init='zeros', bias=False)
+                    ADMM_SpikingLinear(in_f=2312, out_f=hidden_size_spiking, h=h_func, init='zeros', bias=False),
+                    ADMM_SpikingLinear(in_f=hidden_size_spiking, out_f=10, h=None, init='zeros', bias=False)
                 ])
             else:
                 spatial = int(calc_spatial_out(34, k, p, s))
-                lin_in = hidden_channels * spatial * spatial
+                lin_in = hidden_channels_spiking * spatial * spatial
                 layers = nn.ModuleList([ 
-                    ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels, k=k, p=p, s=s, h=h_func, init="zeros", bias=False, padding_mode="zeros"),
+                    ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels_spiking, k=k, p=p, s=s, h=h_func, init="zeros", bias=False, padding_mode="zeros"),
                     ADMM_SpikingLinear(in_f=lin_in, pool_op=ADMM_Flatten(), out_f=10, h=None, init='zeros', bias=False)
                 ])
 
@@ -198,3 +200,31 @@ if __name__ == "__main__":
             end_time = time.time()    
             running_time = end_time - start_time
             print(f"[Finished {method} on {arch.upper()} in {running_time:.2f} seconds]")
+
+            # ==========================================
+            # 4. SAVING RESULTS TO JSON
+            # ==========================================
+            # Add some metadata to the JSON for reference later
+            metrics["running_time"] = running_time
+            metrics["architecture"] = arch
+            metrics["method"] = method
+            metrics["batch_size"] = batch_size
+            metrics["epochs"] = epochs
+            metrics["seed"] = seed
+
+            # Create a dynamic folder path: e.g., benchmarks/results/methods_benchmark/conv/vectorized/
+            save_dir = f"benchmarks/results/iteration_methods/{arch}/{method}"
+            os.makedirs(save_dir, exist_ok=True)
+            
+            # Define the file name
+            save_path = os.path.join(save_dir, f"batch_{batch_size}_seed_{seed}.json")
+
+            # Write the dictionary to the file
+            with open(save_path, "w") as f:
+                json.dump(metrics, f, indent=4)
+                
+            print(f"--> Saved results to: {save_path}\n")
+            
+            # Free up memory before the next method/architecture loads
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
