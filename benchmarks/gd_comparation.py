@@ -138,7 +138,7 @@ class GDSpConvNet(nn.Module):
 # AUTOMATED ITERATION OVER MODELS
 #########################################
 # Un-commented array to loop through all models
-model_types = [ "conv"]
+model_types = ["linear", "conv", "spiking-linear", "spiking-conv"]
 
 for model_name in model_types:
     # Reset seeds per model to guarantee identical environments
