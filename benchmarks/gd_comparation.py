@@ -227,7 +227,7 @@ for model_name in model_types:
                 ADMM_SpikingLinear(in_f=34*34*2, out_f=hidden_size_spiking, h=ADMM_Heaviside(thetas=thetas), init='zeros', bias=False),
                 ADMM_SpikingLinear(in_f=hidden_size_spiking, out_f=10, h=None, init='zeros', bias=False)
             ])
-            admm_model = ADMM(splinear_layers, T=n_timesteps, rho=splinear_rho, thetas=thetas, deltas=deltas, beta=splinear_beta, init='zeros', bias=False, train_method='decoupled-random').to(device)
+            admm_model = ADMM(splinear_layers, T=n_timesteps, rho=splinear_rho, thetas=thetas, deltas=deltas, beta=splinear_beta, init='zeros', bias=False, train_method='decoupled-sequential').to(device)
             images = images.view(images.size(0), images.size(1), -1).permute(1, 0, 2)
 #            with torch.no_grad():
 #                splinear_layers[0].W.copy_(model.fc1.weight)
@@ -241,7 +241,7 @@ for model_name in model_types:
                 ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels_spiking, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init="zeros", bias=False, use_fft=False,  padding_mode="zeros"),
                 ADMM_SpikingLinear(in_f=lin_in_dim, pool_op=ADMM_Flatten(), out_f=10, h=None, init='zeros', bias=False)
             ])
-            admm_model = ADMM(spconv_layers, T=n_timesteps, rho=spconv_rho, thetas=thetas, deltas=deltas, beta=spconv_beta, init='zeros', bias=False, train_method='decoupled-random').to(device)
+            admm_model = ADMM(spconv_layers, T=n_timesteps, rho=spconv_rho, thetas=thetas, deltas=deltas, beta=spconv_beta, init='zeros', bias=False, train_method='decoupled-sequential').to(device)
             images = images.permute(1, 0, 2, 3, 4)
 #            with torch.no_grad():
 #                spconv_layers[0].W.copy_(model.conv.weight)
@@ -256,42 +256,42 @@ for model_name in model_types:
     admm_mses = []
     admm_accs = []
 
-    # print("\nTraining model with ADMM...")
-    # for epoch in range(epochs):
-    #     admm_model.fit(images, labels_one_hot, warming=is_warming)             
+    print("\nTraining model with ADMM...")
+    for epoch in range(epochs):
+        admm_model.fit(images, labels_one_hot, warming=is_warming)             
         
-    #     with torch.no_grad():
-    #         raw_outputs, firing_rates = admm_model.forward_model(images)
-    #         flat_outputs = raw_outputs.view(batch_size, -1) 
-    #         _, predictions = flat_outputs.max(dim=1)
-    #         accuracy = 100. * (predictions == labels_one_hot.argmax(dim=1)).sum().item() / batch_size
-    #         current_metrics = m.get_all_metrics(images, labels_one_hot)
+        with torch.no_grad():
+            raw_outputs, firing_rates = admm_model.forward_model(images)
+            flat_outputs = raw_outputs.view(batch_size, -1) 
+            _, predictions = flat_outputs.max(dim=1)
+            accuracy = 100. * (predictions == labels_one_hot.argmax(dim=1)).sum().item() / batch_size
+            current_metrics = m.get_all_metrics(images, labels_one_hot)
                 
-    #         mse = criterion(raw_outputs, labels_one_hot)
-    #         admm_steps.append(epoch)
-    #         admm_mses.append(mse.item())
-    #         admm_accs.append(accuracy)
+            mse = criterion(raw_outputs, labels_one_hot)
+            admm_steps.append(epoch)
+            admm_mses.append(mse.item())
+            admm_accs.append(accuracy)
             
-    #         lagr = current_metrics["lagrangian_cost"]
-    #         primal = current_metrics["primal_residual"]
+            lagr = current_metrics["lagrangian_cost"]
+            primal = current_metrics["primal_residual"]
 
-    #         # --- DYNAMIC WARMING LOGIC ---
-    #         current_primal = current_metrics.get("primal_residual", 0.0)
-    #         primal_residual_delta = abs(prev_primal_residual - current_primal)
-    #         prev_primal_residual = current_primal
+            # --- DYNAMIC WARMING LOGIC ---
+            current_primal = current_metrics.get("primal_residual", 0.0)
+            primal_residual_delta = abs(prev_primal_residual - current_primal)
+            prev_primal_residual = current_primal
 
-    #         if is_warming:
-    #             hit_accuracy = (accuracy > accuracy_threshold) and (epoch > min_warming_iters)
-    #             hit_time_limit = epoch >= max_warming_iters
+            if is_warming:
+                hit_accuracy = (accuracy > accuracy_threshold) and (epoch > min_warming_iters)
+                hit_time_limit = epoch >= max_warming_iters
                 
-    #             if hit_accuracy or hit_time_limit:
-    #                 if primal_residual_delta < primal_delta_limit or hit_time_limit:
-    #                     reason = "Accuracy/Delta Target Met" if hit_accuracy else "Max Epochs Reached"
-    #                     print(f"--- STOPPING WARMING at Epoch {epoch} ({reason}) ---")
-    #                     is_warming = False
-    #                     warming_stop = epoch
+                if hit_accuracy or hit_time_limit:
+                    if primal_residual_delta < primal_delta_limit or hit_time_limit:
+                        reason = "Accuracy/Delta Target Met" if hit_accuracy else "Max Epochs Reached"
+                        print(f"--- STOPPING WARMING at Epoch {epoch} ({reason}) ---")
+                        is_warming = False
+                        warming_stop = epoch
             
-    #         print(f"Epoch [{epoch+1:3d}/{epochs}] | MSE: {mse:.4f} | Acc: {accuracy:6.2f}% | Firing rate: {[f'{v:.4f}' for v in firing_rates]} | Lagr: {lagr:10.2f} | Lamb: {primal:10.2f}")
+            print(f"Epoch [{epoch+1:3d}/{epochs}] | MSE: {mse:.4f} | Acc: {accuracy:6.2f}% | Firing rate: {[f'{v:.4f}' for v in firing_rates]} | Lagr: {lagr:10.2f} | Lamb: {primal:10.2f}")
 
     #########################################
     # GRADIENT DESCENT TRAINING LOOP
