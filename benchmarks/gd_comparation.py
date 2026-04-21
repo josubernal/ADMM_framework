@@ -187,6 +187,7 @@ for model_name in model_types:
         images, labels = next(iter(dataloader))
 
     images, labels = images.to(device), labels.to(device)
+    images += 0.01 * torch.randn_like(images)
     labels_one_hot = F.one_hot(labels.long(), num_classes=10).float()
 
     #########################################
