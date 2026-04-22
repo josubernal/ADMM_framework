@@ -74,7 +74,7 @@ if __name__ == "__main__":
             
     raw_data, targets_orig = next(iter(train_loader))
     raw_data, targets_orig = raw_data.to(device), targets_orig.to(device)
-    targets = torch.nn.functional.one_hot(targets_orig.to(torch.long), num_classes=10)
+    targets = torch.nn.functional.one_hot(targets_orig.long(), num_classes=10).float()
 
     if raw_data.size(1) > n_timesteps:
         raw_data = raw_data[:, :n_timesteps, :]
@@ -115,18 +115,20 @@ if __name__ == "__main__":
             torch.backends.cudnn.deterministic = True 
             torch.backends.cudnn.benchmark = False
     
-            is_warming = True  
+            is_warming = True       
+            prev_primal_residual = float('inf')
+            warming_stop = None
             print(f"\n---> Testing Method: {method.upper()}")
             
             # Construct fresh layers to prevent state bleeding between runs
-            h_func = ADMM_Heaviside(thetas=thetas)
+
             
             if arch == "linear":
                 # 34 * 34 * 2 = 2312
                 rho=linear_rho
                 beta=linear_beta
                 layers = nn.ModuleList([ 
-                    ADMM_SpikingLinear(in_f=2312, out_f=hidden_size_spiking, h=h_func, init='zeros', bias=False),
+                    ADMM_SpikingLinear(in_f=2312, out_f=hidden_size_spiking, h=ADMM_Heaviside(thetas=thetas), init='zeros', bias=False),
                     ADMM_SpikingLinear(in_f=hidden_size_spiking, out_f=10, h=None, init='zeros', bias=False)
                 ])
             else:
@@ -135,9 +137,9 @@ if __name__ == "__main__":
                 spatial = int(calc_spatial_out(34, k, p, s))
                 lin_in = hidden_channels_spiking * spatial * spatial
                 layers = nn.ModuleList([ 
-                    ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels_spiking, k=k, p=p, s=s, h=h_func, init="zeros", bias=False, padding_mode="zeros"),
+                     ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels_spiking, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init="zeros", bias=False, use_fft=False,  padding_mode="zeros"),
                     ADMM_SpikingLinear(in_f=lin_in, pool_op=ADMM_Flatten(), out_f=10, h=None, init='zeros', bias=False)
-                ])
+           ])
 
             # Instantiate fresh model
             model = ADMM(
