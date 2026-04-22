@@ -250,11 +250,10 @@ for model_name in model_types:
 
     #########################################
     # ADMM TRAINING LOOP
-    criterion = nn.MSELoss()
+    criterion = nn.CrossEntropyLoss()
     m = ADMM_Metrics(admm_model) 
     admm_model._init_states(images)
     admm_steps = []
-    admm_mses = []
     admm_accs = []
 
     print("\nTraining model with ADMM...")
@@ -268,9 +267,8 @@ for model_name in model_types:
             accuracy = 100. * (predictions == labels_one_hot.argmax(dim=1)).sum().item() / batch_size
             current_metrics = m.get_all_metrics(images, labels_one_hot)
                 
-            mse = criterion(raw_outputs, labels_one_hot)
+            #loss = criterion(raw_outputs, labels_one_)
             admm_steps.append(epoch)
-            admm_mses.append(mse.item())
             admm_accs.append(accuracy)
             
             lagr = current_metrics["lagrangian_cost"]
@@ -292,7 +290,7 @@ for model_name in model_types:
                         is_warming = False
                         warming_stop = epoch
             
-            print(f"Epoch [{epoch+1:3d}/{epochs}] | MSE: {mse:.4f} | Acc: {accuracy:6.2f}% | Firing rate: {[f'{v:.4f}' for v in firing_rates]} | Lagr: {lagr:10.2f} | Lamb: {primal:10.2f}")
+            print(f"Epoch [{epoch+1:3d}/{epochs}] |Acc: {accuracy:6.2f}% | Firing rate: {[f'{v:.4f}' for v in firing_rates]} | Lagr: {lagr:10.2f} | Lamb: {primal:10.2f}")
 
     #########################################
     # GRADIENT DESCENT TRAINING LOOP
@@ -300,13 +298,12 @@ for model_name in model_types:
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     gd_steps = []
-    gd_mses = []
     gd_accs = []
     
     print("\nTraining model with gradient descent...")
     for epoch in range(epochs):
         outputs = model(images)
-        loss = criterion(outputs, labels_one_hot)
+        loss = criterion(outputs, labels.long())
         
         _, predictions = torch.max(outputs, 1)
         correct = (predictions == labels).sum().item()
@@ -317,10 +314,9 @@ for model_name in model_types:
         optimizer.step()
         
         gd_steps.append(epoch)
-        gd_mses.append(loss.item())
         gd_accs.append(accuracy)
         
-        print(f"Step {epoch + 1} | MSE: {loss.item():.4f} | Acc: {accuracy:.4f}")
+        print(f"Step {epoch + 1} |  Acc: {accuracy:.4f}")
 
     #########################################
     # SAVING RESULTS AND PLOTTING
@@ -328,9 +324,7 @@ for model_name in model_types:
         "model_name": model_name,
         "batch_size": batch_size,
         "warming_stop": warming_stop,
-        "gd_mses": gd_mses,
         "gd_accs": gd_accs,
-        "admm_mses": admm_mses,
         "admm_accs": admm_accs
     }
 
