@@ -25,8 +25,8 @@ epochs = config.getint('config', 'epochs')
 hidden_size_static = config.getint('config', 'hidden_size_static')
 hidden_channels_static =  config.getint('config', 'hidden_channels_static')
 k =  config.getint('config', 'k')
-p =  config.getint('config', 'p')
-s =  config.getint('config', 's')
+p =  (k - 1) // 2 #To prevent shrinkage
+s =  1
 
 linear_rho = config.getfloat('config', 'linear_rho')
 linear_beta = config.getfloat('config', 'linear_beta')
@@ -57,32 +57,31 @@ transform = transforms.Compose([
 
 mnist_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
 dataloader = torch.utils.data.DataLoader(mnist_train, batch_size=batch_size, shuffle=True)
-images, labels = next(iter(dataloader))
-images, labels = images.to(device), labels.to(device)
-images += 0.01 * torch.randn_like(images)
+images_orig, labels = next(iter(dataloader))
+images_orig, labels = images_orig.to(device), labels.to(device)
+images_orig += 0.01 * torch.randn_like(images_orig)
 labels_one_hot = F.one_hot(labels.long(), num_classes=10).float()
 
 
 for model_name in model_types:
+    print(f"\n{'='*50}")
+    print(f"EVALUATING MODEL: {model_name.upper()}")
+    print(f"{'='*50}")
     for layers in range(1, max_layers + 1):
         # Reset seeds per model to guarantee identical environments
+        print(f"\nHidden layers:{layers}")
+        images = images_orig.clone()
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True 
         torch.backends.cudnn.benchmark = False
-        
-        print(f"\n{'='*50}")
-        print(f"EVALUATING MODEL: {model_name.upper()}")
-        print(f"{'='*50}")
-
+ 
         # Reset warming logic for each model
         is_warming = True       
         prev_primal_residual = float('inf')
         warming_stop = None
-
-
-
+        
         #########################################
         # MODEL INSTANTIATION
         layer_list=[]
@@ -134,13 +133,16 @@ for model_name in model_types:
 
         #########################################
         # ADMM TRAINING LOOP
-        criterion = nn.CrossEntropyLoss()
         m = ADMM_Metrics(admm_model) 
         admm_model._init_states(images)
-        admm_steps = []
-        admm_accs = []
 
-        print("\nTraining model with ADMM...")
+        metrics = {}
+        lagrangians, lambdas = [], []
+        soft_constraints = {"a": [], "z": []}
+        losses = []
+        accuracy_list = []            
+
+        print("Training model with ADMM...")
         for epoch in range(epochs):
             admm_model.fit(images, labels_one_hot, warming=is_warming)             
             
@@ -151,14 +153,25 @@ for model_name in model_types:
                 accuracy = 100. * (predictions == labels_one_hot.argmax(dim=1)).sum().item() / batch_size
                 current_metrics = m.get_all_metrics(images, labels_one_hot)
                     
-                #loss = criterion(raw_outputs, labels_one_)
-                admm_steps.append(epoch)
-                admm_accs.append(accuracy)
-                
+                mse = current_metrics["mse"]
                 lagr = current_metrics["lagrangian_cost"]
                 primal = current_metrics["primal_residual"]
+                preactivation_constraint_sum = current_metrics["preactivation_constraint_sum"]
+                activation_constraint_sum = current_metrics["activation_constraint_sum"]
 
-                # --- DYNAMIC WARMING LOGIC ---
+                print(f"Epoch [{epoch:3d}/{epochs}] "
+                          f"| MSE: {mse:.4f} "
+                          f"| Acc: {accuracy:6.2f}% "
+                          f"| Lagr: {lagr:10.2f} "
+                          f"| Lamb: {primal:10.2f}")
+                    
+                losses.append(mse)
+                accuracy_list.append(accuracy)
+                soft_constraints["a"].append(activation_constraint_sum)
+                soft_constraints["z"].append(preactivation_constraint_sum)
+                lagrangians.append(lagr)  
+                lambdas.append(primal)
+                    
                 current_primal = current_metrics.get("primal_residual", 0.0)
                 primal_residual_delta = abs(prev_primal_residual - current_primal)
                 prev_primal_residual = current_primal
@@ -166,32 +179,33 @@ for model_name in model_types:
                 if is_warming:
                     hit_accuracy = (accuracy > accuracy_threshold) and (epoch > min_warming_iters)
                     hit_time_limit = epoch >= max_warming_iters
-                    
+                        
                     if hit_accuracy or hit_time_limit:
                         if primal_residual_delta < primal_delta_limit or hit_time_limit:
                             reason = "Accuracy/Delta Target Met" if hit_accuracy else "Max Epochs Reached"
                             print(f"--- STOPPING WARMING at Epoch {epoch} ({reason}) ---")
                             is_warming = False
                             warming_stop = epoch
-                
-                print(f"Epoch [{epoch+1:3d}/{epochs}] | Acc: {accuracy:6.2f}% | Lagr: {lagr:10.2f} | Lamb: {primal:10.2f}")
-
     
         #########################################
         # SAVING RESULTS
-        metrics_data = {
-            "model_name": model_name,
-            "batch_size": batch_size,
-            "layers": layers,
-            "warming_stop": warming_stop,
-            "admm_accs": admm_accs
-        }
+        metrics["architecture"] = model_name
+        metrics["batch_size"] = batch_size
+        metrics["layers"]=layers
+        metrics["warming_stop"]=warming_stop
+        metrics["epochs"] = epochs
+        metrics["seed"] = seed                    
+        metrics["lagrangians"] = lagrangians
+        metrics["lambdas"] = lambdas
+        metrics["soft_constraints"] = soft_constraints
+        metrics["losses"] = losses
+        metrics["accuracy_list"] = accuracy_list
 
         metrics_filename = f"benchmarks/results//{model_name}/{batch_size}/{layers}/results.json"
         os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
         with open(metrics_filename, "w") as f:
-            json.dump(metrics_data, f, indent=4)
+            json.dump(metrics, f, indent=4)
 
 
         # Free up memory before the next model

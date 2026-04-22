@@ -157,7 +157,12 @@ if __name__ == "__main__":
             m = ADMM_Metrics(model)
             model._init_states(arch_data)
             
-            metrics = {"losses": [], "accuracy": [], "lagrangians": [], "lambdas": []}
+            metrics = {}
+            lagrangians, lambdas = [], []
+            soft_constraints = {"a": [], "z": []}
+            losses = []
+            accuracy_list = []
+            firing_rate_list = []
             
             # ---------------------------------------------------------
             # TRAINING LOOP
@@ -180,16 +185,24 @@ if __name__ == "__main__":
                     lagr = current_metrics["lagrangian_cost"]
                     primal = current_metrics["primal_residual"]
 
-                    print(f"  Epoch [{epoch:3d}/{epochs}] "
+                    preactivation_constraint_sum = current_metrics["preactivation_constraint_sum"]
+                    activation_constraint_sum = current_metrics["activation_constraint_sum"]
+
+                    print(f"Epoch [{epoch:3d}/{epochs}] "
                           f"| MSE: {mse:.4f} "
                           f"| Acc: {accuracy:6.2f}% "
+                          f"| Firing rate: {[f'{v:.4f}' for v in firing_rates]} "
                           f"| Lagr: {lagr:10.2f} "
                           f"| Lamb: {primal:10.2f}")
-
-                    metrics["losses"].append(mse)
-                    metrics["accuracy"].append(accuracy)
-                    metrics["lagrangians"].append(lagr)  
-                    metrics["lambdas"].append(primal)
+                    
+                    losses.append(mse)
+                    accuracy_list.append(accuracy)
+                    firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
+                    soft_constraints["a"].append(activation_constraint_sum)
+                    soft_constraints["z"].append(preactivation_constraint_sum)
+                    lagrangians.append(lagr)  
+                    lambdas.append(primal)
+                    
                     current_primal = current_metrics.get("primal_residual", 0.0)
                     primal_residual_delta = abs(prev_primal_residual - current_primal)
                     prev_primal_residual = current_primal
@@ -218,7 +231,14 @@ if __name__ == "__main__":
             metrics["method"] = method
             metrics["batch_size"] = batch_size
             metrics["epochs"] = epochs
-            metrics["seed"] = seed
+            metrics["seed"] = seed                    
+            metrics["lagrangians"] = lagrangians
+            metrics["lambdas"] = lambdas
+            metrics["soft_constraints"] = soft_constraints
+            metrics["losses"] = losses
+            metrics["accuracy_list"] = accuracy_list
+            metrics["firing_rate"] = firing_rate_list
+        
 
             # Create a dynamic folder path: e.g., benchmarks/results/methods_benchmark/conv/vectorized/
             save_dir = f"benchmarks/results/iteration_methods/{arch}/{method}"

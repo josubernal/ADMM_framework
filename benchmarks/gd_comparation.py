@@ -253,8 +253,12 @@ for model_name in model_types:
     criterion = nn.CrossEntropyLoss()
     m = ADMM_Metrics(admm_model) 
     admm_model._init_states(images)
-    admm_steps = []
-    admm_accs = []
+    metrics = {}
+    lagrangians, lambdas = [], []
+    soft_constraints = {"a": [], "z": []}
+    losses = []
+    accuracy_list = []
+    firing_rate_list = []
 
     print("\nTraining model with ADMM...")
     for epoch in range(epochs):
@@ -268,12 +272,28 @@ for model_name in model_types:
             current_metrics = m.get_all_metrics(images, labels_one_hot)
                 
             #loss = criterion(raw_outputs, labels_one_)
-            admm_steps.append(epoch)
-            admm_accs.append(accuracy)
-            
+            mse = current_metrics["mse"]
             lagr = current_metrics["lagrangian_cost"]
             primal = current_metrics["primal_residual"]
 
+            preactivation_constraint_sum = current_metrics["preactivation_constraint_sum"]
+            activation_constraint_sum = current_metrics["activation_constraint_sum"]
+
+            print(f"Epoch [{epoch:3d}/{epochs}] "
+                          f"| MSE: {mse:.4f} "
+                          f"| Acc: {accuracy:6.2f}% "
+                          f"| Firing rate: {[f'{v:.4f}' for v in firing_rates]} "
+                          f"| Lagr: {lagr:10.2f} "
+                          f"| Lamb: {primal:10.2f}")
+                    
+            losses.append(mse)
+            accuracy_list.append(accuracy)
+            firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
+            soft_constraints["a"].append(activation_constraint_sum)
+            soft_constraints["z"].append(preactivation_constraint_sum)
+            lagrangians.append(lagr)  
+            lambdas.append(primal)
+            
             # --- DYNAMIC WARMING LOGIC ---
             current_primal = current_metrics.get("primal_residual", 0.0)
             primal_residual_delta = abs(prev_primal_residual - current_primal)
@@ -289,15 +309,12 @@ for model_name in model_types:
                         print(f"--- STOPPING WARMING at Epoch {epoch} ({reason}) ---")
                         is_warming = False
                         warming_stop = epoch
-            
-            print(f"Epoch [{epoch+1:3d}/{epochs}] |Acc: {accuracy:6.2f}% | Firing rate: {[f'{v:.4f}' for v in firing_rates]} | Lagr: {lagr:10.2f} | Lamb: {primal:10.2f}")
-
+                    
     #########################################
     # GRADIENT DESCENT TRAINING LOOP
 
     optimizer = optim.Adam(model.parameters(), lr=lr)
-
-    gd_steps = []
+    
     gd_accs = []
     
     print("\nTraining model with gradient descent...")
@@ -313,26 +330,31 @@ for model_name in model_types:
         loss.backward()
         optimizer.step()
         
-        gd_steps.append(epoch)
         gd_accs.append(accuracy)
         
         print(f"Step {epoch + 1} |  Acc: {accuracy:.4f}")
 
     #########################################
     # SAVING RESULTS AND PLOTTING
-    metrics_data = {
-        "model_name": model_name,
-        "batch_size": batch_size,
-        "warming_stop": warming_stop,
-        "gd_accs": gd_accs,
-        "admm_accs": admm_accs
-    }
+
+    metrics["architecture"] = model_name
+    metrics["batch_size"] = batch_size
+    metrics["warming_stop"] = warming_stop
+    metrics["epochs"] = epochs
+    metrics["seed"] = seed                    
+    metrics["lagrangians"] = lagrangians
+    metrics["lambdas"] = lambdas
+    metrics["soft_constraints"] = soft_constraints
+    metrics["losses"] = losses
+    metrics["accuracy_list"] = accuracy_list
+    metrics["firing_rate"] = firing_rate_list
+    metrics["gd_accuracy"] = gd_accs
 
     metrics_filename = f"benchmarks/results/gd_comparation/{model_name}/{batch_size}/results.json"
     os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
     with open(metrics_filename, "w") as f:
-        json.dump(metrics_data, f, indent=4)
+        json.dump(metrics, f, indent=4)
 
 
     # Free up memory before the next model
