@@ -112,84 +112,70 @@ class ZerosRNGInitializer(ZerosInitializer):
                 if i <  len(layers) - 1: 
                     layer.a = torch.rand(a_preds[i].shape, device=device)
                 else:
-                    layer.a = torch.zeros_like(a_preds[i])
-                    
+                    layer.a = torch.zeros_like(a_preds[i])                   
 
-class HeWarmStartInitializer(ADMM_Initializer):
-    """Kaiming (He) weights + Exact Forward Pass States for ReLU networks."""
-    
-    def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
-        w = torch.empty(*weight_shape, device=device)
-        # Kaiming Normal is the gold standard for ReLU-based networks
-        nn.init.kaiming_normal_(w, mode='fan_out', nonlinearity='relu')
-        return w
+#ABLATION STUDY INITS
+class BaseWeightTester(ADMM_Initializer):
+    """
+    Base class for Phase 1 testing. 
+    Forces the Exact Warm Start for states so ADMM starts with 0 error.
+    """
+    def init_bias(self, bias_shape: tuple, device:torch.device) -> torch.Tensor:
+        # Fixed: Bias is 1D and cannot use Kaiming/Xavier. Zero is standard.
+        return torch.zeros(*bias_shape, device=device)
 
     def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
         x = inputs.to(device)
         with torch.no_grad():
             for layer in layers:
                 z_pred = layer.forward(x)
-                a_pred = layer.h(z_pred)     
-                
-                # Use the EXACT forward pass, not random noise
-                layer.z = z_pred.clone() 
+                a_pred = layer.h(z_pred) if layer.h is not None else z_pred
+                layer.z = z_pred.clone()
                 layer.a = a_pred.clone()
                 x = a_pred
-class GaussianPassInitializer(ADMM_Initializer):
-    """Weights to Xavier, states initialized to specific Gaussian distribution."""
+
+class WeightsZerosInitializer(BaseWeightTester):
+    """Zero weights (Baseline)."""  
+    def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
+        return torch.zeros(*weight_shape, device=device)
     
+class WeightsKaimingInitializer(BaseWeightTester):
+    """Kaiming (He) weights. Gold standard for Static ReLU networks."""
+    def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
+        w = torch.empty(*weight_shape, device=device)
+        nn.init.kaiming_normal_(w, mode='fan_out', nonlinearity='relu')
+        return w
+
+class WeightsXavierInitializer(BaseWeightTester):
+    """Xavier weights."""
     def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
         w = torch.empty(*weight_shape, device=device)
         nn.init.xavier_normal_(w)
         return w
 
-    def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
-        x = inputs.to(device)
-        variance = 0.1
-        std_dev = variance ** 0.5
-        mean = 1.0
-        
-        with torch.no_grad():
-            for layer in layers:
-                z_pred = layer.forward(x)
-                
-                # Gaussian distribution with Mean 1, Variance 0.1
-                noise = torch.randn_like(z_pred) * std_dev + mean
-                layer.z = noise
-                layer.a = layer.h(layer.z)
-                x = layer.a
-
-class DataDrivenInitializer(ADMM_Initializer):
-    """Scales weights dynamically based on the variance of the first batch."""
-    
+class WeightsRandomInitializer(BaseWeightTester):
+    """Standard Normal Random weights."""
     def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
-        # Start with standard normal
-        w = torch.randn(*weight_shape, device=device)
+        return torch.randn(*weight_shape, device=device)
+
+class WeightsSNNThresholdInitializer(BaseWeightTester):
+    """
+    Threshold-scaled Normal weights. 
+    Gold standard for Spiking networks (SNNs).
+    """
+    def __init__(self, threshold=1.0):
+        super().__init__()
+        self.threshold = threshold
+
+    def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
+        w = torch.empty(*weight_shape, device=device)
+        fan_in = weight_shape[1] if len(weight_shape) > 1 else weight_shape[0]
+        # Scale std dev so membrane potentials gently reach the threshold
+        std = (self.threshold / (fan_in ** 0.5)) * 0.5 
+        nn.init.normal_(w, mean=0.0, std=std)
         return w
 
-    def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
-        x = inputs.to(device)
-        with torch.no_grad():
-            for layer in layers:
-                # Get raw pre-activation
-                z_pred = layer.forward(x)
-                
-                # Calculate standard deviation of the batch
-                std = z_pred.std() + 1e-5
-                mean = z_pred.mean()
-                # Scale the weights of the layer so the output variance is 1
-                layer.W.data = layer.W.data / std
-                if hasattr(layer, 'b') and layer.b is not None:
-                    layer.b.data = layer.b.data - (mean / std)
-                
-                # Recalculate with corrected weights
-                z_pred_corrected = layer.forward(x)
-                a_pred = layer.h(z_pred_corrected)
-                
-                layer.z = z_pred_corrected.clone()
-                layer.a = a_pred.clone()
-                x = a_pred
-                
+
 def get_initializer(init_type: str) -> ADMM_Initializer:
     """Factory function to retrieve the correct initializer strategy.
     Args:
@@ -206,10 +192,11 @@ def get_initializer(init_type: str) -> ADMM_Initializer:
         "zeros-rng": ZerosRNGInitializer(),
         "zeros-pass": ZerosPassInitializer(),
         "xavier": XavierInitializer(),
-        "kaiming": HeWarmStartInitializer(),
-        "gaussian": GaussianPassInitializer(),
-        "data": DataDrivenInitializer()       
-        
+        "wzeros": WeightsZerosInitializer(),
+        "wkaiming": WeightsKaimingInitializer(),
+        "wxavier": WeightsXavierInitializer(),
+        "wrandom": WeightsRandomInitializer(),
+        "wthreshold": WeightsSNNThresholdInitializer() 
     }
     if init_type not in strategies:
         raise ValueError(f"Initialization method '{init_type}' not defined. Options: {list(strategies.keys())}")
