@@ -141,7 +141,6 @@ class GDSpConvNet(nn.Module):
 model_types = ["linear", "conv", "spiking-linear", "spiking-conv"]
 
 for model_name in model_types:
-    # Reset seeds per model to guarantee identical environments
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
@@ -152,7 +151,6 @@ for model_name in model_types:
     print(f"EVALUATING MODEL: {model_name.upper()}")
     print(f"{'='*50}")
 
-    # Reset warming logic for each model
     is_warming = True       
     prev_primal_residual = float('inf')
     warming_stop = None
@@ -271,7 +269,6 @@ for model_name in model_types:
             accuracy = 100. * (predictions == labels_one_hot.argmax(dim=1)).sum().item() / batch_size
             current_metrics = m.get_all_metrics(images, labels_one_hot)
                 
-            #loss = criterion(raw_outputs, labels_one_)
             mse = current_metrics["mse"]
             lagr = current_metrics["lagrangian_cost"]
             primal = current_metrics["primal_residual"]

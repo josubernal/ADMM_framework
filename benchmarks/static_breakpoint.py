@@ -22,8 +22,8 @@ seed = config.getint('config','seed')
 
 batch_size_static  = config.getint('config', 'batch_size_static')
 epochs = config.getint('config', 'epochs')
-hidden_size_static = config.getint('config', 'hidden_size_static')
-hidden_channels_static =  config.getint('config', 'hidden_channels_static')
+hidden_size_static = 512
+hidden_channels_static = 2
 k =  config.getint('config', 'k')
 p =  (k - 1) // 2 #To prevent shrinkage
 s =  1
@@ -46,7 +46,6 @@ def calc_spatial_out(size_in, k, p, s):
 
 ########################################
 
-# Un-commented array to loop through all models
 model_types = ["linear", "conv"]
 
 batch_size = batch_size_static
@@ -68,7 +67,6 @@ for model_name in model_types:
     print(f"EVALUATING MODEL: {model_name.upper()}")
     print(f"{'='*50}")
     for layers in range(1, max_layers + 1):
-        # Reset seeds per model to guarantee identical environments
         print(f"\nHidden layers:{layers}")
         images = images_orig.clone()
         torch.manual_seed(seed)
@@ -77,7 +75,6 @@ for model_name in model_types:
         torch.backends.cudnn.deterministic = True 
         torch.backends.cudnn.benchmark = False
  
-        # Reset warming logic for each model
         is_warming = True       
         prev_primal_residual = float('inf')
         warming_stop = None
@@ -99,11 +96,6 @@ for model_name in model_types:
                 linear_layers = nn.ModuleList(layer_list)
 
                 admm_model = ADMM(linear_layers, rho=linear_rho, beta=linear_beta, init='zeros', bias=True, train_method='vectorized').to(device)
-    #            with torch.no_grad():
-    #                linear_layers[0].W.copy_(model.fc1.weight)
-    #                linear_layers[0].b.copy_(model.fc1.bias)
-    #                linear_layers[1].W.copy_(model.fc2.weight)
-    #                linear_layers[1].b.copy_(model.fc2.bias)
                 images = images.view(images.size(0), -1)
 
             case "conv":
@@ -112,12 +104,10 @@ for model_name in model_types:
                 layer_list.append(ADMM_Conv2d(in_c=1, out_c=hidden_channels_static, k=k, p=p, s=s, h=ADMM_ReLU(), init='zeros', bias=True, use_fft=False, padding_mode='zeros'))
                 current_spatial = int(calc_spatial_out(current_spatial, k, p, s))
                 
-                # Intermediate conv layers
                 for _ in range(layers - 1):
                     layer_list.append(
                         ADMM_Conv2d(in_c=hidden_channels_static, out_c=hidden_channels_static, k=k, p=p, s=s, h=ADMM_ReLU(), init='zeros', bias=True, use_fft=False, padding_mode='zeros')
                     )
-                    # Shrink the dimension tracker again
                     current_spatial = int(calc_spatial_out(current_spatial, k, p, s))
 
                 lin_in_dim = hidden_channels_static * current_spatial * current_spatial
@@ -125,12 +115,7 @@ for model_name in model_types:
                 conv_layers = nn.ModuleList(layer_list)
 
                 admm_model = ADMM(conv_layers, rho=conv_rho, beta=conv_beta, init='zeros', bias=True, train_method='vectorized').to(device) 
-    #            with torch.no_grad():
-    #                conv_layers[0].W.copy_(model.conv.weight)
-    #                conv_layers[0].b.copy_(model.conv.bias)
-    #                conv_layers[1].W.copy_(model.fc2.weight)
-    #                conv_layers[1].b.copy_(model.fc2.bias)  
-
+   
         #########################################
         # ADMM TRAINING LOOP
         m = ADMM_Metrics(admm_model) 
@@ -201,14 +186,12 @@ for model_name in model_types:
         metrics["losses"] = losses
         metrics["accuracy_list"] = accuracy_list
 
-        metrics_filename = f"benchmarks/results//{model_name}/{batch_size}/{layers}/results.json"
+        metrics_filename = f"benchmarks/results/static_breakpoint/{model_name}/{batch_size}/{layers}/results.json"
         os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
         with open(metrics_filename, "w") as f:
             json.dump(metrics, f, indent=4)
 
-
-        # Free up memory before the next model
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 

@@ -24,29 +24,24 @@ def profile_architecture(arch_name, layers, inputs, labels, device, T_val):
     print(f"  PROFILING: {arch_name.upper()} | BATCH: {inputs.shape[1] if T_val is not None else inputs.shape[0]}")
     print("="*85)
     
-    # 1. Reset everything
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
 
-    # 2. Build Model
     model = ADMM(layers, T=T_val, device=device, init="zeros", 
                  train_method="decoupled-sequential", bias=True, 
                  deltas=0.8, thetas=1.0, rho=1.0, beta=1.0)
-    
-    # 3. Initialization Memory (Parameters, a, z)
+
     model._init_states(inputs)
     torch.cuda.synchronize()
     mem_init = format_mb(torch.cuda.memory_allocated())
     print(f"🔹 Init (a,z) Allocated: {mem_init:.2f} MB")
 
-    # 4. Single Epoch Peak Test
     torch.cuda.reset_peak_memory_stats() 
     model.fit(inputs, labels, warming=False)
     torch.cuda.synchronize() 
     mem_peak_1 = format_mb(torch.cuda.max_memory_allocated())
     print(f"🔹 1-Epoch Peak VRAM:   {mem_peak_1:.2f} MB")
     
-    # 5. 10 Epochs Stress Test Peak
     torch.cuda.reset_peak_memory_stats() 
     for _ in range(10):
         model.fit(inputs, labels, warming=False)
@@ -54,7 +49,6 @@ def profile_architecture(arch_name, layers, inputs, labels, device, T_val):
     mem_peak_10 = format_mb(torch.cuda.max_memory_allocated())
     print(f"🔹 10-Epoch Peak VRAM:  {mem_peak_10:.2f} MB")
     
-    # Cleanup to prevent OOM on next iteration
     del model
     gc.collect()
     torch.cuda.empty_cache()
@@ -66,7 +60,6 @@ def save_and_plot_results(results_dict, batch_sizes, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     csv_path = os.path.join(output_dir, "benchmark_memory_metrics.csv")
 
-    # 1. Write to CSV
     with open(csv_path, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Architecture", "Batch Size", "Init Memory (MB)", "Peak 1 Epoch (MB)", "Peak 10 Epochs (MB)"])
@@ -110,11 +103,9 @@ def run_all_profiles():
     classes = 10
     spatial = ((32 + 2 * p - k) // s) + 1
     
-    # Test Matrix
     batch_sizes = [4, 8, 16, 32, 64, 128, 256, 512]
     architectures = ["Spiking Conv", "Spiking Linear", "Static Conv", "Static Linear"]
     
-    # Initialize dictionary to hold all results
     results = {arch: {'init': [], 'peak_1': [], 'peak_10': []} for arch in architectures}
 
     for batch in batch_sizes:

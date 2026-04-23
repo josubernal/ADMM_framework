@@ -102,7 +102,6 @@ if __name__ == "__main__":
         print(f"### EVALUATING ARCHITECTURE: {arch.upper()}")
         print(f"{'#'*60}")
         
-        # Prepare Data Shape for Architecture
         if arch == "linear":
             arch_data = raw_data.view(raw_data.size(0), raw_data.size(1), -1).permute(1, 0, 2)
         else:
@@ -119,9 +118,6 @@ if __name__ == "__main__":
             prev_primal_residual = float('inf')
             warming_stop = None
             print(f"\n---> Testing Method: {method.upper()}")
-            
-            # Construct fresh layers to prevent state bleeding between runs
-
             
             if arch == "linear":
                 # 34 * 34 * 2 = 2312
@@ -141,7 +137,6 @@ if __name__ == "__main__":
                     ADMM_SpikingLinear(in_f=lin_in, pool_op=ADMM_Flatten(), out_f=10, h=None, init='zeros', bias=False)
            ])
 
-            # Instantiate fresh model
             model = ADMM(
                 layers, 
                 T=n_timesteps, 
@@ -225,7 +220,6 @@ if __name__ == "__main__":
             # ==========================================
             # 4. SAVING RESULTS TO JSON
             # ==========================================
-            # Add some metadata to the JSON for reference later
             metrics["running_time"] = running_time
             metrics["architecture"] = arch
             metrics["method"] = method
@@ -238,21 +232,16 @@ if __name__ == "__main__":
             metrics["losses"] = losses
             metrics["accuracy_list"] = accuracy_list
             metrics["firing_rate"] = firing_rate_list
-        
 
-            # Create a dynamic folder path: e.g., benchmarks/results/methods_benchmark/conv/vectorized/
             save_dir = f"benchmarks/results/iteration_methods/{arch}/{method}"
             os.makedirs(save_dir, exist_ok=True)
-            
-            # Define the file name
+
             save_path = os.path.join(save_dir, f"batch_{batch_size}_seed_{seed}.json")
 
-            # Write the dictionary to the file
             with open(save_path, "w") as f:
                 json.dump(metrics, f, indent=4)
                 
             print(f"--> Saved results to: {save_path}\n")
-            
-            # Free up memory before the next method/architecture loads
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
