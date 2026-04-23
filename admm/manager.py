@@ -17,6 +17,8 @@ import torch.nn as nn
 import random
 import warnings
 from .initializers import get_initializer
+from .loss_functions import ADMM_MSE
+
 
 class ADMM(nn.Module):
     """Universal Manager for ADMM networks.
@@ -25,11 +27,12 @@ class ADMM(nn.Module):
     layer-wise optimization loops.
     """   
     def __init__(self, layers: nn.ModuleList, rho: float = 1.0, beta: float = 1.0, 
-                 init: str = "zeros", bias: bool = False, device=None, 
+                 init: str = "zeros", bias: bool = False, device=None, loss_f=None,
                  train_method: str = "decoupled-random", use_cholesky=True, **kwargs):
         super().__init__()
         
         self.device = device if device is not None else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.loss_f = loss_f if loss_f is not None else ADMM_MSE()
         self.layers = layers
         self.L = len(self.layers)
         self.initialized = False

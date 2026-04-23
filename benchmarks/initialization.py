@@ -63,14 +63,16 @@ def calc_spatial_out(size_in, k, p, s):
 #########################################
 # Un-commented array to loop through all models
 model_types = ["linear", "conv", "spiking-linear", "spiking-conv"]
-initializations = ["wzeros", "wxavier", "wkaiming", "wrandom","wthreshold"]
+initializations = ["wzeros", "wxavier", "wkaiming", "wrandom","wpytorch","wdata","wthreshold","szeros","swarm","snoisy","srandom","spiking-szeros","spiking-swarm","spiking-snoisy","spiking-srandom"]
 
 for model_name in model_types:
     print(f"\n{'='*50}")
     print(f"EVALUATING MODEL: {model_name.upper()}")
     print(f"{'='*50}")
     for initialization in initializations:
-        if model_name in ["linear", "conv"] and initialization=="wthreshold":
+        if model_name in ["linear", "conv"] and["wthreshold","spiking-szeros","spiking-swarm","spiking-snoisy","spiking-srandom"]:
+            continue
+        if model_name in ["spiking-linear", "spiking-conv"] and initialization in ["wxavier", "wkaiming","wdata","wpytorch","szeros","swarm","snoisy","srandom"]:
             continue
         print(f"\nINITIALIZATION: {initialization}")
         # Reset seeds per model to guarantee identical environments
@@ -233,7 +235,7 @@ for model_name in model_types:
         metrics["accuracy_list"] = accuracy_list
         metrics["firing_rate"] = firing_rate_list
 
-        metrics_filename = f"benchmarks/results/gd_comparation/{model_name}/{batch_size}/results.json"
+        metrics_filename = f"benchmarks/results/initialization/{model_name}/{batch_size}/results.json"
         os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
         with open(metrics_filename, "w") as f:
