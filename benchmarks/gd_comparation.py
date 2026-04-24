@@ -135,7 +135,7 @@ class GDSpConvNet(nn.Module):
 # AUTOMATED ITERATION OVER MODELS
 #########################################
 # Un-commented array to loop through all models
-model_types = ["conv"]
+model_types = ["linear","conv","spiking-linear", "spiking-conv"]
 
 for model_name in model_types:
     torch.manual_seed(seed)
@@ -229,37 +229,37 @@ for model_name in model_types:
     accuracy_list = []
     firing_rate_list = []
 
-    # print("\nTraining model with ADMM...")
-    # for epoch in range(epochs):
-    #     admm_model.fit(images, labels_one_hot, warming=is_warming)             
+    print("\nTraining model with ADMM...")
+    for epoch in range(epochs):
+        admm_model.fit(images, labels_one_hot, warming=is_warming)             
         
-    #     with torch.no_grad():
-    #         raw_outputs, firing_rates = admm_model.forward_model(images)
-    #         flat_outputs = raw_outputs.view(batch_size, -1) 
-    #         _, predictions = flat_outputs.max(dim=1)
-    #         accuracy = 100. * (predictions == labels_one_hot.argmax(dim=1)).sum().item() / batch_size
-    #         m.save_metrics(images, labels_one_hot)
+        with torch.no_grad():
+            raw_outputs, firing_rates = admm_model.forward_model(images)
+            flat_outputs = raw_outputs.view(batch_size, -1) 
+            _, predictions = flat_outputs.max(dim=1)
+            accuracy = 100. * (predictions == labels_one_hot.argmax(dim=1)).sum().item() / batch_size
+            m.save_metrics(images, labels_one_hot)
 
-    #         print(f"Epoch [{epoch:3d}/{epochs}] | Acc: {accuracy:6.2f}%| Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
+            print(f"Epoch [{epoch:3d}/{epochs}] | Acc: {accuracy:6.2f}%| Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
                
-    #         accuracy_list.append(accuracy)
-    #         firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
+            accuracy_list.append(accuracy)
+            firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
 
-    #         # --- DYNAMIC WARMING LOGIC ---
-    #         current_primal = m.metrics["primal_residual"][-1]
-    #         primal_residual_delta = abs(prev_primal_residual - current_primal)
-    #         prev_primal_residual = current_primal
+            # --- DYNAMIC WARMING LOGIC ---
+            current_primal = m.metrics["primal_residual"][-1]
+            primal_residual_delta = abs(prev_primal_residual - current_primal)
+            prev_primal_residual = current_primal
 
-    #         if is_warming:
-    #             hit_accuracy = (accuracy > accuracy_threshold) and (epoch > min_warming_iters)
-    #             hit_time_limit = epoch >= max_warming_iters
+            if is_warming:
+                hit_accuracy = (accuracy > accuracy_threshold) and (epoch > min_warming_iters)
+                hit_time_limit = epoch >= max_warming_iters
                  
-    #             if hit_accuracy or hit_time_limit:
-    #                 if primal_residual_delta < primal_delta_limit or hit_time_limit:
-    #                     reason = "Accuracy/Delta Target Met" if hit_accuracy else "Max Epochs Reached"
-    #                     print(f"--- STOPPING WARMING at Epoch {epoch} ({reason}) ---")
-    #                     is_warming = False
-    #                     warming_stop = epoch
+                if hit_accuracy or hit_time_limit:
+                    if primal_residual_delta < primal_delta_limit or hit_time_limit:
+                        reason = "Accuracy/Delta Target Met" if hit_accuracy else "Max Epochs Reached"
+                        print(f"--- STOPPING WARMING at Epoch {epoch} ({reason}) ---")
+                        is_warming = False
+                        warming_stop = epoch
                     
     #########################################
     # GRADIENT DESCENT TRAINING LOOP
