@@ -75,6 +75,22 @@ class ADMM_Spiking:
             lambda_lagrange=lambda_lagrange
             #forward_pass=forward_pass DEPRECATED
         )
+    
+    def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor):
+        """Delegates to loss function"""
+        forward = self.spatial_forward(a_prev)
+        temporal_forward = self.vectorized_forward(a_prev)
+        shape = self.z[-1]  
+        labels = self._broadcast_to_match(labels, shape)
+        lambda_lagrange = self._broadcast_to_match(lambda_lagrange, shape)
+        self.z.copy_( self.loss_f.update_z_last_spiking(forward=forward, temporal_forward=temporal_forward, labels=labels, lambda_lagrange=lambda_lagrange, z=self.z, rho=self.rho, deltas=self.deltas))
+        
+    def update_z_last_unrolled(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list, jacobi:bool=False):
+        """Delegates to loss function"""
+        labels = self._broadcast_to_match(labels, self.z[-1]) 
+        lambda_lagrange = self._broadcast_to_match(lambda_lagrange, self.z[-1]) 
+        forward= self.spatial_forward(a_prev)
+        self.z.copy_(self.loss_f.update_z_last_unrolled_spiking(forward=forward, labels=labels,lambda_lagrange=lambda_lagrange,z=self.z, rho=self.rho, deltas=self.deltas, time_steps=time_steps, jacobi=jacobi))
         
     def _create_cache(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor):
         """Delegates cache construction to the TemporalCache factory.
@@ -196,46 +212,6 @@ class ADMM_Spiking:
         self.b.copy_(new_bias)
 
         
-    def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor):
-        """Solves the proximal update for the $z$ variable for the final layer, incorporating 
-        spiking temporal penalties into the numerator and denominator.
-
-        Computes z_L= numerator / denominator 
-        where: 
-            numerator = rho * (temporal_forward + delta * (z - forward)) if t<T-1
-                      = rho * (temporal_forward + delta * (z - forward)) + (lamda*delta) if t=T-1
-                      = rho * (temporal_forward) + (2y-lambda) if t=T
-                       
-            numerator = rho + (delta^2 * rho) if t<T
-                      = rho + 2  if t=T
-
-        Args:
-            a_prev (torch.Tensor): The previous layer's activations.
-            labels (torch.Tensor): The ground truth labels.
-            lambda_lagrange (torch.Tensor): The Lagrange multiplier.
-        """
-        forward = self.spatial_forward(a_prev)
-        temporal_forward = self.vectorized_forward(a_prev)
-        shape = self.z[-1] 
-            
-        labels = self._broadcast_to_match(labels, shape)
-        lambda_lagrange = self._broadcast_to_match(lambda_lagrange, shape)
-
-        numerator = temporal_forward.clone().mul_(self.rho)
-        z_minus_fwd = self.z.clone().sub_(forward)
-        
-        numerator[:-1].add_(z_minus_fwd[1:], alpha=self.rho * self.deltas)
-        numerator[-2].add_(lambda_lagrange, alpha=self.deltas)
-        numerator[-1].add_(labels, alpha=2.0).sub_(lambda_lagrange)
-        
-        denominator_main = self.rho * (self.deltas ** 2) + self.rho
-        denominator_last = 2.0 + self.rho
-        
-        numerator[:-1].div_(denominator_main)
-        numerator[-1].div_(denominator_last)
-
-        self.z.copy_(numerator)   
-
     def update_az_interleaved(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list):
         """Orchestrates the interleaved updates of a and z over time using caching.
 
@@ -326,61 +302,6 @@ class ADMM_Spiking:
         new_z_t = self.h.activation_z_unrolled(temporal_forward=temporal_forward, z_minus_forward=z_minus_forward,a_t=self.a[t])  
         self.z[t].copy_(new_z_t)
 
-    def update_z_last_unrolled(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list, jacobi:bool=False):
-        """
-        Urolled z update for the final layer (L).
-        Computes z_L,t = numerator / denominator 
-        where: 
-            numerator = rho * (temporal_forward + delta * (z - forward)) if t<T-1
-                      = rho * (temporal_forward + delta * (z - forward)) + (lamda*delta) if t=T-1
-                      = rho * (temporal_forward) + (2y-lambda) if t=T
-                       
-            numerator = rho + (delta^2 * rho) if t<T
-                      = rho + 2  if t=T
-        Args:
-            a_prev (torch.Tensor): The previous layer's activations.
-            labels (torch.Tensor): The ground truth labels.
-            lambda_lagrange (torch.Tensor): The Lagrange multiplier.
-            time_steps (list): The list of sequence time steps to update.               
-        """
-        T = self.z.size(0)
-        labels = self._broadcast_to_match(labels, self.z[-1]) 
-        lambda_lagrange = self._broadcast_to_match(lambda_lagrange, self.z[-1]) 
-        forward= self.spatial_forward(a_prev)
-        denominator_main =  (self.rho * self.deltas ** 2) + self.rho
-        z_to_use = self.z.clone() if jacobi else self.z
-        buffer = torch.empty_like(self.z[0])
-        for t in time_steps:
-            if t == T - 1:
-                continue
-            buffer.copy_(forward[t])
-            if t >= 1:
-                buffer.add_(z_to_use[t-1], alpha=self.deltas)
-
-            buffer.add_(z_to_use[t+1], alpha=self.deltas)
-            buffer.add_(forward[t+1], alpha=-self.deltas)
-            buffer.mul_(self.rho)
-            if t == T - 2:
-                buffer.add_(lambda_lagrange, alpha=self.deltas)
-                
-            buffer.div_(denominator_main)
-            self.z[t].copy_(buffer)
-        t = T - 1
-        buffer.copy_(forward[t])
-        del forward
-        if t >= 1:
-            buffer.add_(z_to_use[t-1], alpha=self.deltas)
-    
-        buffer.mul_(self.rho)
-        buffer.add_(labels, alpha=2.0)
-        buffer.sub_(lambda_lagrange)
-        buffer.div_(2.0 + self.rho)
-            
-        self.z[t].copy_(buffer)
-        
-        if jacobi:
-            del z_to_use
-    
     def update_z_decoupled(self, a_prev: torch.Tensor, time_steps: list):
         """Decoupled causal sweep for the z update.
 

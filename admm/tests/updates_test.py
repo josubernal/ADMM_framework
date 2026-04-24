@@ -13,6 +13,7 @@ import time
 from types import SimpleNamespace
 from admm.layers import ADMM_SpikingLinear
 from admm.activations import ADMM_Heaviside
+from admm.loss_functions import ADMM_SSE
 
 def test_isolated_temporal_schemes():
     # Force double precision to verify exact mathematical equivalence
@@ -135,10 +136,13 @@ def test_isolated_temporal_schemes():
     
     # Setup test copies
     last_layer_vectorized = copy.deepcopy(last_layer_base)
+    last_layer_vectorized.loss_f = ADMM_SSE()
     last_layer_vectorized.z = z_init.clone()
     last_layer_vectorized.a = a_init.clone()
 
     last_layer_unrolled = copy.deepcopy(last_layer_base)
+    last_layer_unrolled.loss_f = ADMM_SSE()
+    
     last_layer_unrolled.z = z_init.clone()
     last_layer_unrolled.a = a_init.clone()
 

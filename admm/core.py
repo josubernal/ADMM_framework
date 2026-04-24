@@ -46,7 +46,7 @@ class ADMM_Layer(nn.Module):
             setattr(self, key, val)
             
         if is_last_layer and hasattr(self, 'use_reset'):
-            self.use_reset = False
+            self.use_reset = False   
             
         if hasattr(self, 'h') and hasattr(self.h, 'setup'):
             self.h.setup(config)
@@ -94,32 +94,11 @@ class ADMM_Layer(nn.Module):
         return y
    
     def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps=None):
-        """Solves the proximal update for the 'z' variable for the last layer.
-
-        Formula:
-        z_last= numerator / denominator, where
-        numerator = rho * forward(a_prev) + (2*labels - lambda)
-        denominator = 2 + rho
-
-        For spiking networks, this also incorporates temporal penalties into the 
-        numerator and denominator.
-
-        Args:
-            a_prev (torch.Tensor): The previous layer's activations.
-            labels (torch.Tensor): The ground truth labels.
-            lambda_lagrange (torch.Tensor): The Lagrange multiplier.
-            time_steps (list, optional): Time steps for spiking networks. Defaults to None.
-        """
+        """Delegates to loss function."""
         forward = self.vectorized_forward(a_prev) 
         labels = self._broadcast_to_match(labels, forward)
         lambda_lagrange = self._broadcast_to_match(lambda_lagrange, forward)
-
-        forward.mul_(self.rho)
-        forward.add_(labels, alpha=2.0)
-        forward.sub_(lambda_lagrange)
-        forward.div_(2.0 + self.rho)
-        
-        self.z.copy_(forward)        
+        self.z.copy_(self.loss_f.update_z_last_core(forward,self.rho, labels, lambda_lagrange))
         
 
     

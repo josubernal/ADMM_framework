@@ -20,10 +20,20 @@ class ADMM_Metrics:
                 can read its internal states ($z$, $a$, $\lambda$) without modifying them.
         """
         self.model = model
-
-    def mse(self, labels: torch.Tensor):
+        self.metrics = {
+            "loss":[],
+            "lagrangian_cost": [],
+            "primal_residual": [],
+            "preactivation_constraint_sum":[],
+            "activation_constraint_sum": []
+        }
+    
+    def __str__(self):
+        return f" Loss: {self.metrics["loss"][-1]:.4f} | Lagr: {self.metrics["lagrangian_cost"][-1]:10.2f} | Lamb: {self.metrics["primal_residual"][-1]:10.2f}"
+        
+    def loss(self, labels: torch.Tensor):
         final_out = self.model.layers[-1].z[-1] if self.model.is_spiking else self.model.layers[-1].z
-        return torch.norm(final_out - labels).item() ** 2
+        return self.model.loss_f(final_out, labels).item()
     
     def lagrangian_cost(self, inputs: torch.Tensor, labels: torch.Tensor):
         """Calculates the ADMM energy/cost to track convergence.
@@ -164,7 +174,7 @@ class ADMM_Metrics:
         
         return stats
     
-    def get_all_metrics(self, inputs: torch.Tensor, labels: torch.Tensor):
+    def save_metrics(self, inputs: torch.Tensor, labels: torch.Tensor):
         """A smart convergence tracker that conditionally returns applicable metrics.
 
         Args:
@@ -174,12 +184,11 @@ class ADMM_Metrics:
         Returns:
             dict: A dictionary of all computed metrics.
         """
-        metrics = {
-            "mse": self.mse(labels),
-            "lagrangian_cost": self.lagrangian_cost(inputs, labels),
-            "primal_residual": self.primal_residual_norm(inputs),
-            "preactivation_constraint_sum": self.preactivation_constraint_sum(inputs),
-            "activation_constraint_sum": self.activation_constraint_sum()
-        }
-        
-        return metrics
+        self.metrics["loss"].append(self.loss(labels))
+        self.metrics["lagrangian_cost"].append(self.lagrangian_cost(inputs, labels))
+        self.metrics["primal_residual"].append(self.primal_residual_norm(inputs))
+        self.metrics["preactivation_constraint_sum"].append(self.preactivation_constraint_sum(inputs))
+        self.metrics[ "activation_constraint_sum"].append(self.activation_constraint_sum())
+    
+    def get_dic(self):
+        return self.metrics

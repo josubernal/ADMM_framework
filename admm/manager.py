@@ -17,7 +17,7 @@ import torch.nn as nn
 import random
 import warnings
 from .initializers import get_initializer
-from .loss_functions import ADMM_MSE
+from .loss_functions import ADMM_SSE
 
 
 class ADMM(nn.Module):
@@ -32,7 +32,7 @@ class ADMM(nn.Module):
         super().__init__()
         
         self.device = device if device is not None else torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.loss_f = loss_f if loss_f is not None else ADMM_MSE()
+        self.loss_f = loss_f if loss_f is not None else ADMM_SSE()
         self.layers = layers
         self.L = len(self.layers)
         self.initialized = False
@@ -52,7 +52,7 @@ class ADMM(nn.Module):
         self.T = kwargs.get('T', getattr(self, 'T', None))
         self.is_spiking = self.T is not None
         
-        valid_methods = ["vectorized", "unrolled-random", "unrolled-sequential", "decoupled-random", "decoupled-sequential"]
+        valid_methods = ["vectorized", "unrolled-random", "unrolled-sequential", "decoupled-random", "decoupled-sequential", "unrolled-backwards", "decoupled-backwards"]
         if self.train_method not in valid_methods:
             raise ValueError(f"Invalid train_method. Please select from: {valid_methods}")
         
@@ -64,7 +64,7 @@ class ADMM(nn.Module):
             )
             self.train_method = "vectorized"
             
-        config = {'rho': self.rho, 'beta': self.beta, 'init': self.init, 'device':self.device, 'use_cholesky': self.use_cholesky}
+        config = {'rho': self.rho, 'beta': self.beta, 'init': self.init, 'device':self.device, 'loss_f':self.loss_f,'use_cholesky': self.use_cholesky}
         config.update(kwargs)
         self._configure_layers(config)
 
@@ -102,8 +102,9 @@ class ADMM(nn.Module):
             if self.train_method.endswith("random"):
                time_steps = random.sample(range(self.T - 1), self.T - 1)
             elif self.train_method.endswith("sequential"):
-                time_steps = list(range(self.T - 1))                   
-
+                time_steps = list(range(self.T - 1)) 
+            elif self.train_method.endswith("backwards"):                  
+                time_steps = list(range(self.T - 2, -1, -1))
         return time_steps
     
     def _init_states(self, inputs: torch.Tensor):

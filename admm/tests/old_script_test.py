@@ -115,7 +115,7 @@ def test_old_match():
             'z1': model.layers[1].z.detach().clone(),
             'lam': model.lambda_lagrange.detach().clone(),
             'acc': acc, 
-            'mse': current_metrics['mse'], 
+            'loss': current_metrics['loss'], 
             'lagr': current_metrics['lagrangian_cost'], 
             'primal': current_metrics['primal_residual'],
             'pre': current_metrics['preactivation_constraint_sum'], 
@@ -164,7 +164,7 @@ def test_old_match():
                 'a0': model_real.a[0].detach().clone(),
                 'z1': model_real.z[1].detach().clone(),
                 'lam': model_real.lambda_lagrange.detach().clone(),
-                'acc': acc_leg, 'mse': mse_leg, 'lagr': lagr_leg, 'primal': primal_leg,
+                'acc': acc_leg, 'loss': mse_leg, 'lagr': lagr_leg, 'primal': primal_leg,
                 'pre': pre_leg, 'act': act_leg, 'firing_rates': firing_rates_leg, 'lam_sum': lam_sum_leg
             }
 
@@ -185,7 +185,7 @@ def test_old_match():
         diff_z1 = torch.max(torch.abs(oop[epoch]['z1'] - leg[epoch]['z1'])).item()
         
         diff_lam = torch.max(torch.abs(oop[epoch]['lam'] - leg[epoch]['lam'])).item()
-        diff_mse = abs(oop[epoch]['mse'] - leg[epoch]['mse'])
+        diff_mse = abs(oop[epoch]['loss'] - leg[epoch]['loss'])
         diff_acc = abs(oop[epoch]['acc'] - leg[epoch]['acc'])
         diff_lam_sum = abs(oop[epoch]['lam_sum'] - leg[epoch]['lam_sum'])
         diff_lagr = abs(oop[epoch]['lagr'] - leg[epoch]['lagr'])
@@ -206,7 +206,7 @@ def test_old_match():
         
         print("\n")
         print(f"[Metrics] Difference Check:")
-        print(f"| MSE:   {diff_mse:.2e} " + ("✅" if diff_mse < 1e-4 else "❌") + 
+        print(f"| Loss:   {diff_mse:.2e} " + ("✅" if diff_mse < 1e-4 else "❌") + 
               f" | Acc:   {diff_acc:.2e} " + ("✅" if diff_acc < 1e-2 else "❌") + 
               f" | LamSum: {diff_lam_sum:.2e} " + ("✅" if diff_lam_sum < 1e-6 else "❌"))
         print(f"| Lagr:  {diff_lagr:.2e} " + ("✅" if diff_lagr < 1e-1 else "❌") + 
