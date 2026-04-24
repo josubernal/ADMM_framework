@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import datasets, transforms
 import configparser
 import torch.nn.functional as F
 from admm import (
@@ -9,12 +8,9 @@ from admm import (
     ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics
 )
 import snntorch as snn
-import tonic
-from tonic import DiskCachedDataset
-import tonic.transforms as tr
-from torch.utils.data import DataLoader
 import json
 import os
+from utils.dataset import get_data
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 config = configparser.ConfigParser()
@@ -157,35 +153,13 @@ for model_name in model_types:
 
     #########################################
     # DATA
-    if model_name.startswith("spiking"):
-        batch_size = batch_size_spiking
-        sensor_size = tonic.datasets.NMNIST.sensor_size
-        frame_transform = tr.Compose([
-                        tr.Denoise(filter_time=10000),
-                        tr.ToFrame(sensor_size=sensor_size, time_window=1000)
-                    ])
-        trainset = tonic.datasets.NMNIST(save_to='./data', transform=frame_transform, train=True)
-        cached_trainset = DiskCachedDataset(trainset, cache_path='./cache/nmnist/train')
-        train_loader = DataLoader(cached_trainset, batch_size=batch_size,
-                                  collate_fn=tonic.collation.PadTensors(), shuffle=True, drop_last=True, generator=torch.Generator().manual_seed(seed))
-                
-        images, labels = next(iter(train_loader))
-        if images.size(1) > n_timesteps:
-            images = images[:, :n_timesteps, :]
-
-    else: 
-        batch_size = batch_size_static
-        transform = transforms.Compose([
-            transforms.ToTensor(), 
-            transforms.Normalize((0.5,), (0.5,))
-        ])
-
-        mnist_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
-        dataloader = torch.utils.data.DataLoader(mnist_train, batch_size=batch_size, shuffle=True)
-        images, labels = next(iter(dataloader))
-
-    images, labels = images.to(device), labels.to(device)
-    images += 0.01 * torch.randn_like(images)
+    if model_name in ["linear", "conv"]:
+        batch_size= batch_size_static
+        images, labels= get_data(batch_size, spiking=False, device=device)
+    else:
+        batch_size= batch_size_spiking
+        images, labels = get_data(batch_size, spiking=True, device=device, n_timesteps=n_timesteps)
+        
     labels_one_hot = F.one_hot(labels.long(), num_classes=10).float()
 
     #########################################
@@ -251,10 +225,6 @@ for model_name in model_types:
     criterion = nn.CrossEntropyLoss()
     m = ADMM_Metrics(admm_model) 
     admm_model._init_states(images)
-    metrics = {}
-    lagrangians, lambdas = [], []
-    soft_constraints = {"a": [], "z": []}
-    losses = []
     accuracy_list = []
     firing_rate_list = []
 
@@ -267,39 +237,22 @@ for model_name in model_types:
             flat_outputs = raw_outputs.view(batch_size, -1) 
             _, predictions = flat_outputs.max(dim=1)
             accuracy = 100. * (predictions == labels_one_hot.argmax(dim=1)).sum().item() / batch_size
-            current_metrics = m.get_all_metrics(images, labels_one_hot)
-                
-            mse = current_metrics["mse"]
-            lagr = current_metrics["lagrangian_cost"]
-            primal = current_metrics["primal_residual"]
+            m.save_metrics(images, labels_one_hot)
 
-            preactivation_constraint_sum = current_metrics["preactivation_constraint_sum"]
-            activation_constraint_sum = current_metrics["activation_constraint_sum"]
-
-            print(f"Epoch [{epoch:3d}/{epochs}] "
-                          f"| MSE: {mse:.4f} "
-                          f"| Acc: {accuracy:6.2f}% "
-                          f"| Firing rate: {[f'{v:.4f}' for v in firing_rates]} "
-                          f"| Lagr: {lagr:10.2f} "
-                          f"| Lamb: {primal:10.2f}")
-                    
-            losses.append(mse)
+            print(f"Epoch [{epoch:3d}/{epochs}] | Acc: {accuracy:6.2f}%| Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
+               
             accuracy_list.append(accuracy)
             firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
-            soft_constraints["a"].append(activation_constraint_sum)
-            soft_constraints["z"].append(preactivation_constraint_sum)
-            lagrangians.append(lagr)  
-            lambdas.append(primal)
-            
+
             # --- DYNAMIC WARMING LOGIC ---
-            current_primal = current_metrics.get("primal_residual", 0.0)
+            current_primal = m.metrics["primal_residual"][-1]
             primal_residual_delta = abs(prev_primal_residual - current_primal)
             prev_primal_residual = current_primal
 
             if is_warming:
                 hit_accuracy = (accuracy > accuracy_threshold) and (epoch > min_warming_iters)
                 hit_time_limit = epoch >= max_warming_iters
-                
+                 
                 if hit_accuracy or hit_time_limit:
                     if primal_residual_delta < primal_delta_limit or hit_time_limit:
                         reason = "Accuracy/Delta Target Met" if hit_accuracy else "Max Epochs Reached"
@@ -333,16 +286,12 @@ for model_name in model_types:
 
     #########################################
     # SAVING RESULTS AND PLOTTING
-
+    metrics=m.get_dic()
     metrics["architecture"] = model_name
     metrics["batch_size"] = batch_size
     metrics["warming_stop"] = warming_stop
     metrics["epochs"] = epochs
     metrics["seed"] = seed                    
-    metrics["lagrangians"] = lagrangians
-    metrics["lambdas"] = lambdas
-    metrics["soft_constraints"] = soft_constraints
-    metrics["losses"] = losses
     metrics["accuracy_list"] = accuracy_list
     metrics["firing_rate"] = firing_rate_list
     metrics["gd_accuracy"] = gd_accs
@@ -352,7 +301,6 @@ for model_name in model_types:
 
     with open(metrics_filename, "w") as f:
         json.dump(metrics, f, indent=4)
-
 
     # Free up memory before the next model
     if torch.cuda.is_available():

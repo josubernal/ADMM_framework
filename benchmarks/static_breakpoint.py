@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from torchvision import datasets, transforms
 import configparser
 import torch.nn.functional as F
@@ -120,11 +119,6 @@ for model_name in model_types:
         # ADMM TRAINING LOOP
         m = ADMM_Metrics(admm_model) 
         admm_model._init_states(images)
-
-        metrics = {}
-        lagrangians, lambdas = [], []
-        soft_constraints = {"a": [], "z": []}
-        losses = []
         accuracy_list = []            
 
         print("Training model with ADMM...")
@@ -136,35 +130,20 @@ for model_name in model_types:
                 flat_outputs = raw_outputs.view(batch_size, -1) 
                 _, predictions = flat_outputs.max(dim=1)
                 accuracy = 100. * (predictions == labels_one_hot.argmax(dim=1)).sum().item() / batch_size
-                current_metrics = m.get_all_metrics(images, labels_one_hot)
-                    
-                mse = current_metrics["mse"]
-                lagr = current_metrics["lagrangian_cost"]
-                primal = current_metrics["primal_residual"]
-                preactivation_constraint_sum = current_metrics["preactivation_constraint_sum"]
-                activation_constraint_sum = current_metrics["activation_constraint_sum"]
+                m.save_metrics(images, labels_one_hot)
 
-                print(f"Epoch [{epoch:3d}/{epochs}] "
-                          f"| MSE: {mse:.4f} "
-                          f"| Acc: {accuracy:6.2f}% "
-                          f"| Lagr: {lagr:10.2f} "
-                          f"| Lamb: {primal:10.2f}")
-                    
-                losses.append(mse)
+                print(f"Epoch [{epoch:3d}/{epochs}] | Acc: {accuracy:6.2f}% | {m}")
+               
                 accuracy_list.append(accuracy)
-                soft_constraints["a"].append(activation_constraint_sum)
-                soft_constraints["z"].append(preactivation_constraint_sum)
-                lagrangians.append(lagr)  
-                lambdas.append(primal)
                     
-                current_primal = current_metrics.get("primal_residual", 0.0)
+                current_primal = m.metrics["primal_residual"][-1]
                 primal_residual_delta = abs(prev_primal_residual - current_primal)
                 prev_primal_residual = current_primal
 
                 if is_warming:
                     hit_accuracy = (accuracy > accuracy_threshold) and (epoch > min_warming_iters)
                     hit_time_limit = epoch >= max_warming_iters
-                        
+                    
                     if hit_accuracy or hit_time_limit:
                         if primal_residual_delta < primal_delta_limit or hit_time_limit:
                             reason = "Accuracy/Delta Target Met" if hit_accuracy else "Max Epochs Reached"
@@ -174,16 +153,13 @@ for model_name in model_types:
     
         #########################################
         # SAVING RESULTS
+        metrics=m.get_dic()
         metrics["architecture"] = model_name
         metrics["batch_size"] = batch_size
         metrics["layers"]=layers
         metrics["warming_stop"]=warming_stop
         metrics["epochs"] = epochs
         metrics["seed"] = seed                    
-        metrics["lagrangians"] = lagrangians
-        metrics["lambdas"] = lambdas
-        metrics["soft_constraints"] = soft_constraints
-        metrics["losses"] = losses
         metrics["accuracy_list"] = accuracy_list
 
         metrics_filename = f"benchmarks/results/static_breakpoint/{model_name}/{batch_size}/{layers}/results.json"

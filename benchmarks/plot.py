@@ -117,7 +117,9 @@ def main():
         else:
             print(f"Skipping Memory plot: {memory_csv_path} not found.")
 
-        
+    # ==========================================
+    # PLOT 3: Iteration 
+    # ==========================================
     
     if "iteration_methods" in experiment_name:
         all_jsons = list(Path(folder_path).rglob("*.json"))
@@ -126,47 +128,68 @@ def main():
             try:
                 with open(jp, 'r') as f:
                     d = json.load(f)
-                    # Only keep JSONs that have the specific keys from iteration_methods.py
-                    if "method" in d and "architecture" in d and "accuracy_list" in d:
+                    if all(k in d for k in ["method", "architecture", "accuracy_list", "running_time"]):
                         iter_data.append(d)
             except:
                 continue
+
         if iter_data:
-            # Find unique architectures (should be 'linear' and 'conv')
-            archs = list(set([d["architecture"] for d in iter_data]))
-            archs.sort(reverse=True) # Usually puts 'linear' first, then 'conv'
+            archs = sorted(list(set([d["architecture"] for d in iter_data])), reverse=True) # ['linear', 'conv']
             
-            cols = len(archs)
-            if cols > 0:
-                fig_iter, axes_iter = plt.subplots(1, cols, figsize=(7 * cols, 6), squeeze=False)
-                fig_iter.suptitle("Iteration Methods Comparison: Accuracy over Epochs", fontsize=16, fontweight='bold')
+            # Create a 2x2 grid
+            fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+            fig.suptitle(f"ADMM Iteration Methods Benchmark: {experiment_name.replace('_', ' ').upper()}", 
+                         fontsize=20, fontweight='bold', y=0.98)
+
+            # Define a consistent color map for methods across all plots
+            all_methods = sorted(list(set([d["method"] for d in iter_data])))
+            cmap = plt.get_cmap('tab10')
+            method_colors = {method: cmap(i) for i, method in enumerate(all_methods)}
+
+            for i, arch in enumerate(archs):
+                # Filter data for this architecture
+                arch_data = [d for d in iter_data if d["architecture"] == arch]
+                arch_data.sort(key=lambda x: x["method"])
+
+                # --- TOP ROW: Accuracy vs. Epochs ---
+                ax_top = axes[0, i]
+                for d in arch_data:
+                    method = d["method"]
+                    ax_top.plot(range(len(d["accuracy_list"])), d["accuracy_list"], 
+                                label=method, color=method_colors[method], 
+                                linewidth=2.5, marker='o', markersize=4, alpha=0.8)
                 
-                for i, arch in enumerate(archs):
-                    ax = axes_iter[0, i]
-                    # Get all runs for this specific architecture
-                    arch_specific_data = [d for d in iter_data if d["architecture"] == arch]
+                ax_top.set_title(f"Convergence: {arch.upper()}", fontsize=15, pad=10)
+                ax_top.set_ylabel("Accuracy (%)", fontsize=10)
+                ax_top.set_xlabel("Epochs", fontsize=10)
+                ax_top.grid(True, linestyle='--', alpha=0.6)
+                ax_top.legend(fontsize='small', loc='lower right', frameon=True)
+
+                # --- BOTTOM ROW: Time vs. Max Accuracy ---
+                ax_bottom = axes[1, i]
+                for d in arch_data:
+                    method = d["method"]
+                    max_acc = max(d["accuracy_list"])
+                    total_time = d["running_time"]
                     
-                    # Sort alphabetically by method so colors/legend stay consistent
-                    arch_specific_data.sort(key=lambda x: x["method"])
-                    
-                    for d in arch_specific_data:
-                        acc = d["accuracy_list"]
-                        method_name = d["method"]
-                        epochs_list = list(range(len(acc)))
-                        
-                        # Plot the accuracy curve for this method
-                        ax.plot(epochs_list, acc, label=method_name, linewidth=2, marker='o', markersize=4)
-                        
-                    ax.set_title(f"Architecture: {arch.upper()}", fontsize=14)
-                    ax.set_xlabel("Epochs")
-                    ax.set_ylabel("Accuracy (%)")
-                    ax.legend(fontsize='small', loc='lower right')
-                    ax.grid(True, linestyle='--', alpha=0.7)
-                    
-                plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        else:
-            print(f"Skipping Iteration Methods plot: No compatible JSONs found in {folder_path}")
+                    # Plotting points individually to link them to the legend
+                    ax_bottom.scatter(total_time, max_acc, color=method_colors[method], 
+                                      s=150, label=method, edgecolors='black', zorder=3)
+  
+                ax_bottom.set_ylabel("Peak Accuracy (%)", fontsize=10)
+                ax_bottom.set_xlabel("Total Training Time (seconds)", fontsize=10)
+                ax_bottom.grid(True, linestyle=':', alpha=0.6)
+                
+                # Add legend only if there's data
+                if arch_data:
+                    ax_bottom.legend(fontsize='small', title="Methods", loc='best')
+
+            plt.tight_layout(rect=[0, 0.03, 1, 0.95])
             
+            # Optional: Save the figure automatically
+            save_path = os.path.join(folder_path, "iteration_methods_comparison.png")
+            plt.savefig(save_path, dpi=300)
+            print(f"Combined plot saved to: {save_path}")
     
     # ==========================================
     # PLOT 4: Depth Benchmark (Number of Layers)
