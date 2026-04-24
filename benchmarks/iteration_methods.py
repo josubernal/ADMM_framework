@@ -8,7 +8,7 @@ import torch.nn as nn
 import time
 import os       
 import json
-
+from utils.dataset import get_data
 from admm import (
     ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpikingConv2d, 
     ADMM, ADMM_Heaviside, ADMM_Metrics
@@ -57,30 +57,9 @@ if __name__ == "__main__":
     # ==========================================
     # 2. DATASET LOADING (LOADED ONCE)
     # ==========================================
-    print("Loading NMNIST Dataset...")
-    sensor_size = tonic.datasets.NMNIST.sensor_size
-    frame_transform = tr.Compose([
-        tr.Denoise(filter_time=10000),
-        tr.ToFrame(sensor_size=sensor_size, time_window=1000)
-    ])
-    
-    trainset = tonic.datasets.NMNIST(save_to='./data', transform=frame_transform, train=True)
-    cached_trainset = DiskCachedDataset(trainset, cache_path='./cache/nmnist/train')
-    train_loader = DataLoader(
-        cached_trainset, batch_size=batch_size,
-        collate_fn=tonic.collation.PadTensors(), shuffle=True, drop_last=True, 
-        generator=torch.Generator().manual_seed(seed)
-    )
-            
-    raw_data, targets_orig = next(iter(train_loader))
-    raw_data, targets_orig = raw_data.to(device), targets_orig.to(device)
-    targets = torch.nn.functional.one_hot(targets_orig.long(), num_classes=10).float()
 
-    if raw_data.size(1) > n_timesteps:
-        raw_data = raw_data[:, :n_timesteps, :]
-
-    raw_data += 0.01 * torch.randn_like(raw_data) # Symmetry breaking noise
-
+    raw_data, targets = get_data(batch_size, spiking=True, device=device, n_timesteps=n_timesteps)
+    targets = torch.nn.functional.one_hot(targets.long(), num_classes=10).float()
     # ==========================================
     # 3. BENCHMARK LOOPS
     # ==========================================
@@ -88,8 +67,10 @@ if __name__ == "__main__":
     methods = [
         "unrolled-sequential", 
         "unrolled-random", 
+        "unrolled-backwards",
         "decoupled-sequential", 
         "decoupled-random",
+        "decoupled-backwards",
         "vectorized"
     ]
     
@@ -152,10 +133,6 @@ if __name__ == "__main__":
             m = ADMM_Metrics(model)
             model._init_states(arch_data)
             
-            metrics = {}
-            lagrangians, lambdas = [], []
-            soft_constraints = {"a": [], "z": []}
-            losses = []
             accuracy_list = []
             firing_rate_list = []
             
@@ -173,32 +150,16 @@ if __name__ == "__main__":
                 
                     _, preds = flat_outputs.max(dim=1)
                     accuracy = 100. * (preds == targets.argmax(dim=1)).sum().item() / batch_size
-
-                    current_metrics = m.get_all_metrics(arch_data, targets)
                     
-                    mse = current_metrics["mse"]
-                    lagr = current_metrics["lagrangian_cost"]
-                    primal = current_metrics["primal_residual"]
+                    m.save_metrics(arch_data, targets)
 
-                    preactivation_constraint_sum = current_metrics["preactivation_constraint_sum"]
-                    activation_constraint_sum = current_metrics["activation_constraint_sum"]
-
-                    print(f"Epoch [{epoch:3d}/{epochs}] "
-                          f"| MSE: {mse:.4f} "
-                          f"| Acc: {accuracy:6.2f}% "
-                          f"| Firing rate: {[f'{v:.4f}' for v in firing_rates]} "
-                          f"| Lagr: {lagr:10.2f} "
-                          f"| Lamb: {primal:10.2f}")
-                    
-                    losses.append(mse)
+                    print(f"Epoch [{epoch:3d}/{epochs}] | Acc: {accuracy:6.2f}%| Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
+                
                     accuracy_list.append(accuracy)
                     firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
-                    soft_constraints["a"].append(activation_constraint_sum)
-                    soft_constraints["z"].append(preactivation_constraint_sum)
-                    lagrangians.append(lagr)  
-                    lambdas.append(primal)
-                    
-                    current_primal = current_metrics.get("primal_residual", 0.0)
+
+                    # --- DYNAMIC WARMING LOGIC ---
+                    current_primal = m.metrics["primal_residual"][-1]
                     primal_residual_delta = abs(prev_primal_residual - current_primal)
                     prev_primal_residual = current_primal
 
@@ -220,16 +181,13 @@ if __name__ == "__main__":
             # ==========================================
             # 4. SAVING RESULTS TO JSON
             # ==========================================
+            metrics=m.get_dic()
             metrics["running_time"] = running_time
             metrics["architecture"] = arch
             metrics["method"] = method
             metrics["batch_size"] = batch_size
             metrics["epochs"] = epochs
             metrics["seed"] = seed                    
-            metrics["lagrangians"] = lagrangians
-            metrics["lambdas"] = lambdas
-            metrics["soft_constraints"] = soft_constraints
-            metrics["losses"] = losses
             metrics["accuracy_list"] = accuracy_list
             metrics["firing_rate"] = firing_rate_list
 
