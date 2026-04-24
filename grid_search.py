@@ -1,9 +1,5 @@
 import torch
 import configparser
-import tonic
-from tonic import DiskCachedDataset
-import tonic.transforms as tr
-from torch.utils.data import DataLoader
 import random
 import torch.nn as nn
 import matplotlib.pyplot as plt
@@ -11,7 +7,8 @@ import os
 import json
 import itertools
 import time
-from torchvision import datasets, transforms
+from utils.dataset import get_data
+import torch.nn.functional as F
 
 from admm import (
     ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpatialPool, ADMM_SpikingConv2d, 
@@ -22,11 +19,8 @@ def is_valid_combination(params: dict) -> bool:
     is_spiking = params.get('model').split("-")[0]=="spiking"
     print(is_spiking)
     train_method = params.get('train_method', 'vectorized')
-    
     if not is_spiking and train_method != 'vectorized':
-        return False
-        
-
+        return False    
     return True
 
 def parse_value(v):
@@ -122,48 +116,13 @@ if __name__ == "__main__":
         # ---------------------------------------------------------
         # 1. LOAD DATASET
         # ---------------------------------------------------------
-        if model_name.split('-')[0] == "spiking":
-            sensor_size = tonic.datasets.NMNIST.sensor_size
-            frame_transform = tr.Compose([
-                    tr.Denoise(filter_time=10000),
-                    tr.ToFrame(sensor_size=sensor_size, time_window=1000)
-                ])
-            trainset = tonic.datasets.NMNIST(save_to='./data', transform=frame_transform, train=True)
-            cached_trainset = DiskCachedDataset(trainset, cache_path='./cache/nmnist/train')
-            train_loader = DataLoader(cached_trainset, batch_size=batch_size,
-                                        collate_fn=tonic.collation.PadTensors(), shuffle=True, drop_last=True, generator=torch.Generator().manual_seed(seed))
+
+        if model_name in ["linear", "conv"]:
+            data, targets= get_data(batch_size, spiking=False, device=device, seed=seed)
+        else:
+            data, targets = get_data(batch_size, spiking=True, device=device, n_timesteps=n_timesteps, seed=seed)
             
-            data, targets_orig = next(iter(train_loader))
-            data, targets_orig = data.to(device), targets_orig.to(device)
-            targets = torch.nn.functional.one_hot(targets_orig.to(torch.long), num_classes=10).to(current_dtype)
-
-            if data.size(1) > n_timesteps:
-                data = data[:, :n_timesteps, :]
-
-            if "linear" in model_name:
-                data = data.view(data.size(0), data.size(1), -1).permute(1, 0, 2).to(current_dtype)
-            else:
-                data = data.permute(1, 0, 2, 3, 4).to(current_dtype)
-        else: 
-            image_transform = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))
-            ])
-            trainset = datasets.MNIST(root='./data', train=True, download=True, transform=image_transform)
-            train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
-      
-            data, targets_orig = next(iter(train_loader))
-            data, targets_orig = data.to(device), targets_orig.to(device)
-            
-            if "conv" in model_name:
-                data = data.to(current_dtype) 
-            else:
-                data = data.view(data.size(0), -1).to(current_dtype)
-            targets = torch.nn.functional.one_hot(targets_orig, num_classes=10).to(current_dtype)
-
-        # Add minor noise to break symmetry
-        data += 0.01 * torch.randn_like(data) 
-
+        targets = F.one_hot(targets.long(), num_classes=10).float()
         # ---------------------------------------------------------
         # 2. INITIALIZE ARCHITECTURE
         # ---------------------------------------------------------
@@ -308,10 +267,6 @@ if __name__ == "__main__":
 
         print(f"Training...")
 
-        metrics = {}
-        lagrangians, lambdas = [], []
-        soft_constraints = {"a": [], "z": []}
-        losses = []
         accuracy_list = []
         firing_rate_list = []
         
@@ -329,37 +284,20 @@ if __name__ == "__main__":
                     _, preds = flat_outputs.max(dim=1)
                     accuracy = 100. * (preds == targets.argmax(dim=1)).sum().item() / batch_size
 
-                    current_metrics = m.get_all_metrics(data, targets)
-                    
-                    mse = current_metrics["mse"]
-                    lagr = current_metrics["lagrangian_cost"]
-                    primal = current_metrics["primal_residual"]
-                    preactivation_constraint_sum = current_metrics["preactivation_constraint_sum"]
-                    activation_constraint_sum = current_metrics["activation_constraint_sum"]
+                    m.save_metrics(data, targets)
 
-                    print(f"Epoch [{epoch:3d}/{epochs}] "
-                          f"| MSE: {mse:.4f} "
-                          f"| Acc: {accuracy:6.2f}% "
-                          f"| Firing rate: {[f'{v:.4f}' for v in firing_rates]} "
-                          f"| Lagr: {lagr:10.2f} "
-                          f"| Lamb: {primal:10.2f}")
-
-                    losses.append(mse)
+                    print(f"Epoch [{epoch:3d}/{epochs}] | Acc: {accuracy:6.2f}%| Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
+                
                     accuracy_list.append(accuracy)
                     firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
-                    soft_constraints["a"].append(activation_constraint_sum)
-                    soft_constraints["z"].append(preactivation_constraint_sum)
-                    lagrangians.append(lagr)  
-                    lambdas.append(primal)
-         
+
+        #########################################
+        # SAVING RESULTS AND PLOTTING
+
         end_time = time.time()    
         running_time = end_time - start_time
         print(f"Model finished in {end_time - start_time:.2f} seconds.")       
-        
-        metrics["lagrangians"] = lagrangians
-        metrics["lambdas"] = lambdas
-        metrics["soft_constraints"] = soft_constraints
-        metrics["losses"] = losses
+        metrics=m.get_dic()
         metrics["accuracy_list"] = accuracy_list
         metrics["firing_rate"] = firing_rate_list
         metrics["running_time" ]= running_time
@@ -377,17 +315,17 @@ if __name__ == "__main__":
     if is_static_run:
         print("\nRendering training plots for static run...")
         fig, ax = plt.subplots(2, 3, figsize=(30, 5))
-        ax[0, 0].semilogy(final_metrics["lagrangians"])
+        ax[0, 0].semilogy(metrics["lagrangian_cost"])
         ax[0, 0].set_title("Lagrangian")
-        ax[0, 1].semilogy(final_metrics["lambdas"])
+        ax[0, 1].semilogy(metrics["primal_residual"])
         ax[0, 1].set_title("Primal Residual Norm")
-        ax[0, 2].semilogy(final_metrics["soft_constraints"]["a"])
+        ax[0, 2].semilogy(metrics["activation_constraint_sum"])
         ax[0, 2].set_title("Activation Constraint (||a - h(z)||)")
-        ax[1, 0].semilogy(final_metrics["soft_constraints"]["z"])
+        ax[1, 0].semilogy(metrics["preactivation_constraint_sum"])
         ax[1, 0].set_title("Preactivation Constraint") 
-        ax[1, 1].semilogy(final_metrics["losses"])
+        ax[1, 1].semilogy(metrics["loss"])
         ax[1, 1].set_title("Loss")
-        ax[1, 2].plot(final_metrics["accuracy_list"])
+        ax[1, 2].plot(metrics["accuracy_list"])
         ax[1, 2].set_title("Train Accuracy")
         
         plt.tight_layout()

@@ -174,8 +174,9 @@ for model_name in model_types:
         metrics["seed"] = seed                    
         metrics["accuracy_list"] = accuracy_list
         metrics["firing_rate"] = firing_rate_list
+        metrics["loss_function"] = str(loss)
 
-        metrics_filename = f"benchmarks/results/loss_function/{model_name}/{batch_size}/results.json"
+        metrics_filename = f"benchmarks/results/loss_function/{model_name}/{batch_size}/{str(loss)}/results.json"
         os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
         with open(metrics_filename, "w") as f:
