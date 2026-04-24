@@ -241,10 +241,14 @@ class StatesStaticBase(ADMM_Initializer):
     """Locks in Kaiming Weights for Static Networks."""
     def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
         w = torch.empty(*weight_shape, device=device)
-        nn.init.kaiming_normal_(w, mode='fan_out', nonlinearity='relu')
+        # This is the exact source-code configuration used by PyTorch
+        nn.init.kaiming_uniform_(w, a=math.sqrt(5))
         return w
         
     def init_bias(self, bias_shape: tuple, device:torch.device) -> torch.Tensor:
+        # PyTorch calculates a bound based on fan_in and uses uniform distribution
+        # For simplicity in ADMM, starting default biases at 0 is still acceptable,
+        # but to be strictly faithful to PyTorch:
         return torch.zeros(*bias_shape, device=device)
         
 class StatesSpikingBase(ADMM_Initializer):

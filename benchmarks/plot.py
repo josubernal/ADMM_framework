@@ -318,6 +318,81 @@ def main():
             
         else:
             print(f"Skipping Loss Function plot: No compatible JSONs found in {folder_path}")
+    # ==========================================
+    # PLOT 5: Initialization Comparison (2x2 Grid)
+    # ==========================================
+    if "initialization_parameters" in experiment_name:
+        all_jsons = list(Path(folder_path).rglob("*.json"))
+        init_data = []
+        for jp in all_jsons:
+            try:
+                with open(jp, 'r') as f:
+                    d = json.load(f)
+                    if "architecture" in d and "accuracy_list" in d:
+                        # Extract initialization name (fallback to folder name if key is missing)
+                        init_name = d.get("initialization", jp.parent.name)
+                        d["initialization"] = init_name
+                        init_data.append(d)
+            except Exception as e:
+                continue
+
+        if init_data:
+            # Standardize architecture order for a nice 2x2 layout
+            archs = list(set([d["architecture"] for d in init_data]))
+            arch_order = {"linear": 0, "conv": 1, "spiking-linear": 2, "spiking-conv": 3}
+            archs.sort(key=lambda x: arch_order.get(x, 10))
+            
+            # Setup Grid (e.g., 2x2 for 4 models)
+            cols = 2 if len(archs) > 1 else 1
+            rows = (len(archs) + cols - 1) // cols
+            
+            fig_init, axes_init = plt.subplots(rows, cols, figsize=(14, 5 * rows), squeeze=False)
+            fig_init.suptitle("Weight Initialization Comparison: ADMM Convergence", fontsize=16, fontweight='bold')
+            axes_flat = axes_init.flatten()
+
+            # Define a consistent color map for the initializations (tab10 is great for distinct categories)
+            unique_inits = list(set([str(d["initialization"]) for d in init_data]))
+            cmap = plt.get_cmap('tab10')
+            init_colors = {init: cmap(i % 10) for i, init in enumerate(unique_inits)}
+
+            for i, arch in enumerate(archs):
+                ax = axes_flat[i]
+                arch_data = [d for d in init_data if d["architecture"] == arch]
+                
+                # Sort alphabetically by initialization so the legend is consistent
+                arch_data.sort(key=lambda x: str(x["initialization"]))
+                
+                for d in arch_data:
+                    acc = d["accuracy_list"]
+                    init_name = str(d["initialization"])
+                    epochs_list = list(range(len(acc)))
+                    
+                    ax.plot(epochs_list, acc, label=init_name, color=init_colors[init_name], 
+                            linewidth=2.5, marker='o', markersize=4, alpha=0.8)
+                
+                # Formatting the subplot
+                ax.set_title(f"Architecture: {arch.upper()}", fontsize=14)
+                ax.set_xlabel("Epochs")
+                ax.set_ylabel("Accuracy (%)")
+                ax.grid(True, linestyle='--', alpha=0.6)
+                
+                # Only add legend if data exists for this subplot
+                if arch_data:
+                    ax.legend(title="Initialization Method", fontsize='small', loc='lower right')
+
+            # Clean up any empty subplots if you test < 4 architectures
+            for j in range(len(archs), len(axes_flat)):
+                fig_init.delaxes(axes_flat[j])
+
+            plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+            
+            # Save the figure automatically
+            save_path = os.path.join(folder_path, "initialization_comparison.png")
+            plt.savefig(save_path, dpi=300)
+            print(f"Initialization comparison plot saved to: {save_path}")
+            
+        else:
+            print(f"Skipping Initialization plot: No compatible JSONs found in {folder_path}")
             
     plt.show()
 
