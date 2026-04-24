@@ -1,9 +1,5 @@
 import torch
 import configparser
-import tonic
-from tonic import DiskCachedDataset
-import tonic.transforms as tr
-from torch.utils.data import DataLoader
 import torch.nn as nn
 import time
 import os       
@@ -11,7 +7,7 @@ import json
 from utils.dataset import get_data
 from admm import (
     ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpikingConv2d, 
-    ADMM, ADMM_Heaviside, ADMM_Metrics
+    ADMM, ADMM_Heaviside, ADMM_Metrics, ADMM_Hinge
 )
 
 def calc_spatial_out(size_in, k, p, s):
@@ -121,6 +117,7 @@ if __name__ == "__main__":
             model = ADMM(
                 layers, 
                 T=n_timesteps, 
+                loss_f=ADMM_Hinge(),
                 rho=rho, 
                 thetas=thetas, 
                 deltas=deltas, 

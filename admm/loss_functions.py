@@ -26,7 +26,8 @@ class ADMM_Loss(ABC):
 
 class ADMM_SSE(ADMM_Loss):
     """Mean Squared Error (L2) Loss for ADMM."""
-    
+    def __str__(self):
+        return "SSE_Loss"
     def __call__(self, predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         return F.mse_loss(predictions, targets, reduction='sum')
 
@@ -140,6 +141,8 @@ class ADMM_Hinge(ADMM_Loss):
     Hinge Loss for ADMM (Max-Margin Classification).
     Automatically handles both {0, 1} and {-1, 1} label formats.
     """
+    def __str__(self):
+        return "Hinge_Loss"
     
     def _format_labels(self, targets: torch.Tensor) -> torch.Tensor:
         """Converts {0, 1} labels to {-1, 1}. Leaves {-1, 1} alone."""
