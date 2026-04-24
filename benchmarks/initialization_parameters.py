@@ -181,7 +181,7 @@ for model_name in model_types:
         metrics["accuracy_list"] = accuracy_list
         metrics["firing_rate"] = firing_rate_list
 
-        metrics_filename = f"benchmarks/results/initialization_parameters/{model_name}/{batch_size}/results.json"
+        metrics_filename = f"benchmarks/results/initialization_parameters/{model_name}/{batch_size}/{initialization}/results.json"
         os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
         with open(metrics_filename, "w") as f:
