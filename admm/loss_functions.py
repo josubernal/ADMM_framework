@@ -103,7 +103,7 @@ class ADMM_Hinge(ADMM_Loss):
         y = self._format_labels(targets)
         return torch.clamp(1.0 - (y * predictions), min=0.0).sum()
 
-    def _proximal_step_T(self, temporal_forward_T, labels, lambda_lagrange, rho):
+    def _last_timestep_update(self, temporal_forward_T, labels, lambda_lagrange, rho):
         y = self._format_labels(labels)
         v_T = temporal_forward_T.sub(lambda_lagrange / rho)
         cond = y * v_T
@@ -112,7 +112,7 @@ class ADMM_Hinge(ADMM_Loss):
         return y * z_tilde
 
     def update_z_last_core(self, forward, rho, labels, lambda_lagrange):
-        return self._proximal_step_T(forward, labels, lambda_lagrange, rho)
+        return self._last_timestep_update(forward, labels, lambda_lagrange, rho)
 
 class ADMM_CrossEntropy(ADMM_Loss):
     def __str__(self): return "CrossEntropy_Loss"
@@ -126,12 +126,12 @@ class ADMM_CrossEntropy(ADMM_Loss):
         if targets.dim() > 1 and targets.size(1) > 1: targets = torch.argmax(targets, dim=1)
         return F.cross_entropy(predictions, targets.long().view(-1), reduction='sum')
 
-    def _proximal_step_T(self, temporal_forward_T, labels, lambda_lagrange, rho):
+    def _last_timestep_update(self, temporal_forward_T, labels, lambda_lagrange, rho):
         y_one_hot = self._ensure_one_hot(labels, temporal_forward_T.size(-1))
         p = F.softmax(temporal_forward_T, dim=-1)
         grad_ce = p - y_one_hot
         return temporal_forward_T.sub(lambda_lagrange + grad_ce, alpha=1.0/rho)
 
     def update_z_last_core(self, forward, rho, labels, lambda_lagrange):
-        return self._proximal_step_T(forward, labels, lambda_lagrange, rho)
+        return self._last_timestep_update(forward, labels, lambda_lagrange, rho)
  
