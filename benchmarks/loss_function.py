@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from admm import (
     ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpikingConv2d, 
     ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics,
-    ADMM_SSE, ADMM_Hinge, ADMM_CrossEntropy
+    ADMM_SSE, ADMM_Hinge, ADMM_CrossEntropy, ADMM_CrossEntropy_Taylor
 )
 
 import json
@@ -64,7 +64,7 @@ for model_name in model_types:
     print(f"\n{'='*50}")
     print(f"EVALUATING MODEL: {model_name.upper()}")
     print(f"{'='*50}")
-    for loss in [ADMM_SSE(), ADMM_Hinge(), ADMM_CrossEntropy()]:
+    for loss in [ADMM_SSE(), ADMM_Hinge(), ADMM_CrossEntropy(), ADMM_CrossEntropy_Taylor()]:
         print(f"LOSS: {loss}")
         # Reset seeds per model to guarantee identical environments
         torch.manual_seed(seed)

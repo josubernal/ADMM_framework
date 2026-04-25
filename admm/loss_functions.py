@@ -20,11 +20,9 @@ class ADMM_Loss(ABC):
         """
         pass
     
-    @abstractmethod
-    def update_z_last_core(self, forward: torch.Tensor, rho: float, labels: torch.Tensor, lambda_lagrange: torch.Tensor) -> torch.Tensor:
+    def update_z_last_core(self, forward, rho, labels, lambda_lagrange):
         """Non-spiking (static) proximal update."""
-        pass
-
+        return self._last_timestep_update(forward, labels, lambda_lagrange, rho)
     @abstractmethod
     def _last_timestep_update(self, temporal_forward_T: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, rho: float) -> torch.Tensor:
         """The loss-specific calculation for the final time step T."""
@@ -90,9 +88,6 @@ class ADMM_SSE(ADMM_Loss):
         num = temporal_forward_T.mul(rho).add_(labels, alpha=2.0).sub_(lambda_lagrange)
         return num.div_(2.0 + rho)
 
-    def update_z_last_core(self, forward, rho, labels, lambda_lagrange):
-        return self._last_timestep_update(forward, labels, lambda_lagrange, rho)
-
 class ADMM_Hinge(ADMM_Loss):
     def __str__(self): return "Hinge_Loss"
 
@@ -111,11 +106,8 @@ class ADMM_Hinge(ADMM_Loss):
                   torch.where(cond <= (1.0 - 1.0/rho), cond + (1.0/rho), torch.ones_like(cond)))
         return y * z_tilde
 
-    def update_z_last_core(self, forward, rho, labels, lambda_lagrange):
-        return self._last_timestep_update(forward, labels, lambda_lagrange, rho)
-
-class ADMM_CrossEntropy(ADMM_Loss):
-    def __str__(self): return "CrossEntropy_Loss"
+class ADMM_CrossEntropy_Taylor(ADMM_Loss):
+    def __str__(self): return "CrossEntropy_Taylor_Loss"
 
     def _ensure_one_hot(self, labels, num_classes):
         if labels.dim() == 1 or labels.size(1) == 1:
@@ -132,6 +124,56 @@ class ADMM_CrossEntropy(ADMM_Loss):
         grad_ce = p - y_one_hot
         return temporal_forward_T.sub(lambda_lagrange + grad_ce, alpha=1.0/rho)
 
-    def update_z_last_core(self, forward, rho, labels, lambda_lagrange):
-        return self._last_timestep_update(forward, labels, lambda_lagrange, rho)
- 
+
+class ADMM_CrossEntropy(ADMM_Loss):
+    """
+    Cross-Entropy Loss for ADMM.
+    Uses the Newton-Raphson method to find the EXACT analytical minimizer 
+    for the non-linear z-update.
+    """
+    def __str__(self): return "CrossEntropy_Loss"
+
+    def _ensure_one_hot(self, labels, num_classes):
+        if labels.dim() == 1 or labels.size(1) == 1:
+            return F.one_hot(labels.view(-1).long(), num_classes=num_classes).to(torch.float32)
+        return labels.to(torch.float32)
+
+    def __call__(self, predictions, targets):
+        if targets.dim() > 1 and targets.size(1) > 1: 
+            targets = torch.argmax(targets, dim=1)
+        return F.cross_entropy(predictions, targets.long().view(-1), reduction='sum')
+
+    def _last_timestep_update(self, temporal_forward_T, labels, lambda_lagrange, rho, max_iter=15, tol=1e-5):
+        y_one_hot = self._ensure_one_hot(labels, temporal_forward_T.size(-1))
+        
+        # The target 'v' that the ADMM consensus wants us to reach
+        v = temporal_forward_T.sub(lambda_lagrange / rho)
+        
+        # Start our guess using the forward pass (usually very close to the answer)
+        z = temporal_forward_T.clone()
+        
+        # Identity matrix for the Hessian (shape: [1, Classes, Classes])
+        I = torch.eye(z.size(-1), device=z.device, dtype=z.dtype).unsqueeze(0)
+        
+        for i in range(max_iter):
+            p = F.softmax(z, dim=-1)
+            
+            # 1. First Derivative (Gradient): g(z) = p - y + rho * (z - v)
+            g = p - y_one_hot + rho * (z - v)
+            
+            # Check if we have converged to the exact answer
+            if torch.max(torch.abs(g)) < tol:
+                break
+                
+            # 2. Second Derivative (Hessian matrix): H(z) = rho*I + diag(p) - p*p^T
+            p_diag = torch.diag_embed(p) # Shape: [Batch, Classes, Classes]
+            p_outer = torch.bmm(p.unsqueeze(2), p.unsqueeze(1)) # Shape: [Batch, Classes, Classes]
+            H = rho * I + p_diag - p_outer
+            
+            # 3. Newton-Raphson Step: z_new = z_old - H^{-1} * g
+            # We use torch.linalg.solve to compute H^{-1} * g safely and fully vectorized
+            delta = torch.linalg.solve(H, g.unsqueeze(2)).squeeze(2)
+            z = z - delta
+            
+        return z
+
