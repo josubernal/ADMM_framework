@@ -58,9 +58,8 @@ def calc_spatial_out(size_in, k, p, s):
 # AUTOMATED ITERATION OVER MODELS
 #########################################
 # Un-commented array to loop through all models
-model_types = ["spiking-linear", "spiking-conv"]
-initializations = [ "wzeros","wpytorch","wdata","wthreshold","sfrandom","srelaxed"]
-
+model_types = ["linear", "conv", "spiking-linear", "spiking-conv"]
+initializations = [ "zeros","xavier","pytorch","threshold","z-uniform","s-uniform","relaxed"]
 for model_name in model_types:
     print(f"\n{'='*50}")
     print(f"EVALUATING MODEL: {model_name.upper()}")
