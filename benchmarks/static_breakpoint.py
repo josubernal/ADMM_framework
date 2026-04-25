@@ -125,9 +125,6 @@ for model_name in model_types:
             admm_model.fit(images, labels_one_hot, warming=is_warming)             
             
             with torch.no_grad():
-                raw_outputs, _ = admm_model.forward_model(images)
-                flat_outputs = raw_outputs.view(batch_size, -1) 
-                _, predictions = flat_outputs.max(dim=1)
 
                 m.save_metrics(images, labels_one_hot)
 

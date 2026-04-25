@@ -267,8 +267,6 @@ if __name__ == "__main__":
 
         print(f"Training...")
 
-        firing_rate_list = []
-        
         # ---------------------------------------------------------
         # 4. TRAINING LOOP
         # ---------------------------------------------------------
@@ -284,9 +282,7 @@ if __name__ == "__main__":
                     
                     m.save_metrics(data, targets)
 
-                    print(f"Epoch [{epoch:3d}/{epochs}] | Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
-
-                    firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
+                    print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
 
         #########################################
         # SAVING RESULTS AND PLOTTING
@@ -295,7 +291,6 @@ if __name__ == "__main__":
         running_time = end_time - start_time
         print(f"Model finished in {end_time - start_time:.2f} seconds.")       
         metrics=m.get_dic()
-        metrics["firing_rate"] = firing_rate_list
         metrics["running_time" ]= running_time
         
         # Store for plotting if static

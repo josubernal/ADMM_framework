@@ -110,7 +110,7 @@ if __name__ == "__main__":
                 spatial = int(calc_spatial_out(34, k, p, s))
                 lin_in = hidden_channels_spiking * spatial * spatial
                 layers = nn.ModuleList([ 
-                     ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels_spiking, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init="zeros", bias=False, use_fft=False,  padding_mode="zeros"),
+                     ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels_spiking, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init="s-uniform", bias=False, use_fft=False,  padding_mode="zeros"),
                     ADMM_SpikingLinear(in_f=lin_in, pool_op=ADMM_Flatten(), out_f=10, h=None, init="s-uniform", bias=False)
            ])
 
@@ -130,8 +130,6 @@ if __name__ == "__main__":
             m = ADMM_Metrics(model)
             model._init_states(arch_data)
             
-            firing_rate_list = []
-            
             # ---------------------------------------------------------
             # TRAINING LOOP
             # ---------------------------------------------------------
@@ -140,17 +138,10 @@ if __name__ == "__main__":
             for epoch in range(epochs + 1):
                 model.fit(arch_data, targets, warming=is_warming)            
                 
-                with torch.no_grad():
-                    outputs, firing_rates = model.forward_model(arch_data)
-                    flat_outputs = outputs.view(batch_size, -1)
-                
-                    _, preds = flat_outputs.max(dim=1)
-                    
+                with torch.no_grad():                    
                     m.save_metrics(arch_data, targets)
 
-                    print(f"Epoch [{epoch:3d}/{epochs}] | Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
-                
-                    firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
+                    print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
 
                     # --- DYNAMIC WARMING LOGIC ---
                     current_primal = m.metrics["primal_residual"][-1]
@@ -183,7 +174,6 @@ if __name__ == "__main__":
             metrics["batch_size"] = batch_size
             metrics["epochs"] = epochs
             metrics["seed"] = seed                    
-            metrics["firing_rate"] = firing_rate_list
 
             save_dir = f"benchmarks/results/iteration_methods/{arch}/{method}"
             os.makedirs(save_dir, exist_ok=True)

@@ -161,7 +161,7 @@ class ADMM_Metrics:
         raw_outputs, firing_rates = self.model.forward_model(inputs)
         
         # Standardize missing firing rates to a true mathematical NaN
-        if firing_rates is None or firing_rates == ['nan']:
+        if not self.model.is_spiking:
             firing_rates = float('nan')
             
         # FIX 2: Get batch size from labels to safely avoid the Spiking Time dimension!

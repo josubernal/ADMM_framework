@@ -129,22 +129,16 @@ for model_name in model_types:
         criterion = nn.CrossEntropyLoss()
         m = ADMM_Metrics(admm_model) 
         admm_model._init_states(images)
-        firing_rate_list = []
-
+        
         print("Training model with ADMM...")
         for epoch in range(epochs):
             admm_model.fit(images, labels_one_hot, warming=is_warming)             
             
             with torch.no_grad():
-                raw_outputs, firing_rates = admm_model.forward_model(images)
-                flat_outputs = raw_outputs.view(batch_size, -1) 
-                _, predictions = flat_outputs.max(dim=1)
                 m.save_metrics(images, labels_one_hot)
 
-                print(f"Epoch [{epoch:3d}/{epochs}] |  Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
+                print(f"Epoch [{epoch:3d}/{epochs}] |  {m}")
                
-                firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
-
                 # --- DYNAMIC WARMING LOGIC ---
                 current_primal = m.metrics["primal_residual"][-1]
                 accuracy  = m.metrics["accuracy"][-1]
@@ -171,7 +165,6 @@ for model_name in model_types:
         metrics["warming_stop"] = warming_stop
         metrics["epochs"] = epochs
         metrics["seed"] = seed                    
-        metrics["firing_rate"] = firing_rate_list
 
         metrics_filename = f"benchmarks/results/initialization_states/{model_name}/{batch_size}/{initialization}/results.json"
         os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)

@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from admm import (
     ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpikingConv2d, 
     ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics,
-    ADMM_Hinge    
+    ADMM_Hinge, ADMM_CrossEntropy, ADMM_SSE    
 )
 import snntorch as snn
 import json
@@ -172,12 +172,7 @@ for model_name in model_types:
                 ADMM_Linear(in_f=input_size, out_f=hidden_size_static, h=ADMM_ReLU(), init="pytorch", bias=True),
                 ADMM_Linear(in_f=hidden_size_static, out_f=10, h=ADMM_ReLU(), init="pytorch", bias=True)
             ])
-            admm_model = ADMM(linear_layers,loss_f=ADMM_Hinge(), rho=linear_rho, beta=linear_beta, init="pytorch", bias=True, train_method='vectorized').to(device)
-#            with torch.no_grad():
-#                linear_layers[0].W.copy_(model.fc1.weight)
-#                linear_layers[0].b.copy_(model.fc1.bias)
-#                linear_layers[1].W.copy_(model.fc2.weight)
-#                linear_layers[1].b.copy_(model.fc2.bias)
+            admm_model = ADMM(linear_layers,loss_f=ADMM_SSE(), rho=linear_rho, beta=linear_beta, init="pytorch", bias=True, train_method='vectorized').to(device)
             images = images.view(images.size(0), -1)
 
         case "conv":
@@ -188,12 +183,7 @@ for model_name in model_types:
                 ADMM_Conv2d(in_c=1, out_c=hidden_channels_static, k=k, p=p, s=s, h=ADMM_ReLU(), init="pytorch", bias=True, use_fft=False, padding_mode='zeros'),
                 ADMM_Linear(in_f=lin_in_dim, out_f=10, h=ADMM_ReLU(),pool_op=ADMM_Flatten(), init="pytorch", bias=True)
             ])
-            admm_model = ADMM(conv_layers, loss_f=ADMM_Hinge(),rho=conv_rho, beta=conv_beta, init="pytorch", bias=True, train_method='vectorized').to(device) 
-#            with torch.no_grad():
-#                conv_layers[0].W.copy_(model.conv.weight)
-#                conv_layers[0].b.copy_(model.conv.bias)
-#                conv_layers[1].W.copy_(model.fc2.weight)
-#                conv_layers[1].b.copy_(model.fc2.bias)  
+            admm_model = ADMM(conv_layers, loss_f=ADMM_SSE(),rho=conv_rho, beta=conv_beta, init="pytorch", bias=True, train_method='vectorized').to(device) 
 
         case "spiking-linear":
             model = GDSpLinearNet().to(device)
@@ -201,12 +191,9 @@ for model_name in model_types:
                 ADMM_SpikingLinear(in_f=34*34*2, out_f=hidden_size_spiking, h=ADMM_Heaviside(thetas=thetas), init="s-uniform", bias=False),
                 ADMM_SpikingLinear(in_f=hidden_size_spiking, out_f=10, h=None, init="s-uniform", bias=False)
             ])
-            admm_model = ADMM(splinear_layers,loss_f=ADMM_Hinge(), T=n_timesteps, rho=splinear_rho, thetas=thetas, deltas=deltas, beta=splinear_beta, init="s-uniform", bias=False, train_method='decoupled-backwards').to(device)
+            admm_model = ADMM(splinear_layers,loss_f=ADMM_CrossEntropy(), T=n_timesteps, rho=splinear_rho, thetas=thetas, deltas=deltas, beta=splinear_beta, init="s-uniform", bias=False, train_method='decoupled-backwards').to(device)
             images = images.view(images.size(0), images.size(1), -1).permute(1, 0, 2)
-#            with torch.no_grad():
-#                splinear_layers[0].W.copy_(model.fc1.weight)
-#                splinear_layers[1].W.copy_(model.fc2.weight)
-
+            
         case "spiking-conv":
             model = GDSpConvNet().to(device)
             spatial_dim = int(calc_spatial_out(34, k, p, s))
@@ -215,34 +202,22 @@ for model_name in model_types:
                 ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels_spiking, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init="s-uniform", bias=False, use_fft=False,  padding_mode="zeros"),
                 ADMM_SpikingLinear(in_f=lin_in_dim, pool_op=ADMM_Flatten(), out_f=10, h=None, init="s-uniform", bias=False)
             ])
-            admm_model = ADMM(spconv_layers,loss_f=ADMM_Hinge(), T=n_timesteps, rho=spconv_rho, thetas=thetas, deltas=deltas, beta=spconv_beta, init="s-uniform", bias=False, train_method='decoupled-backwards').to(device)
+            admm_model = ADMM(spconv_layers,loss_f=ADMM_CrossEntropy(), T=n_timesteps, rho=spconv_rho, thetas=thetas, deltas=deltas, beta=spconv_beta, init="s-uniform", bias=False, train_method='decoupled-backwards').to(device)
             images = images.permute(1, 0, 2, 3, 4)
-#            with torch.no_grad():
-#                spconv_layers[0].W.copy_(model.conv.weight)
-#                spconv_layers[1].W.copy_(model.fc2.weight)
 
     #########################################
     # ADMM TRAINING LOOP
     criterion = nn.CrossEntropyLoss()
     m = ADMM_Metrics(admm_model) 
     admm_model._init_states(images)
-    firing_rate_list = []
-
+    
     print("\nTraining model with ADMM...")
     for epoch in range(epochs):
         admm_model.fit(images, labels_one_hot, warming=is_warming)             
         
         with torch.no_grad():
-            raw_outputs, firing_rates = admm_model.forward_model(images)
-            flat_outputs = raw_outputs.view(batch_size, -1) 
-            _, predictions = flat_outputs.max(dim=1)
-            
             m.save_metrics(images, labels_one_hot)
-
-            print(f"Epoch [{epoch:3d}/{epochs}] | Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
-               
-            firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
-
+            print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
             # --- DYNAMIC WARMING LOGIC ---
             current_primal = m.metrics["primal_residual"][-1]
             accuracy  = m.metrics["accuracy"][-1]
@@ -292,7 +267,6 @@ for model_name in model_types:
     metrics["warming_stop"] = warming_stop
     metrics["epochs"] = epochs
     metrics["seed"] = seed                    
-    metrics["firing_rate"] = firing_rate_list
     metrics["gd_accuracy"] = gd_accs
 
     metrics_filename = f"benchmarks/results/gd_comparation/{model_name}/{batch_size}/results.json"
