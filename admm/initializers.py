@@ -82,29 +82,6 @@ class WeightsPytorchDefaultInitializer(ADMM_Initializer):
         nn.init.kaiming_uniform_(w, a=math.sqrt(5))
         return w
               
-class WeightsSNNThresholdInitializer(ADMM_Initializer):
-    """
-    Threshold-scaled Normal weights. 
-    Gold standard for Spiking networks (SNNs).
-    """
-    def __init__(self, threshold=1.0):
-        super().__init__()
-        self.threshold = threshold
-
-    def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
-        w = torch.empty(*weight_shape, device=device)
-        if len(weight_shape) == 4:
-            fan_in = weight_shape[1] * weight_shape[2] * weight_shape[3]
-        elif len(weight_shape) == 2:
-            fan_in = weight_shape[1]
-        else:
-            fan_in = weight_shape[0]
-            
-        # Scale std dev so membrane potentials gently reach the threshold
-        std = (self.threshold / math.sqrt(fan_in)) * 0.5 
-        nn.init.normal_(w, mean=0.0, std=std)
-        return w
-
 class ZUniform(ADMM_Initializer):
     """
     Pure Random Initialization. 
@@ -180,7 +157,6 @@ def get_initializer(init_type: str) -> ADMM_Initializer:
         "xavier": WeightsXavierInitializer(),
         "wrandom": WeightsRandomInitializer(),
         "pytorch": WeightsPytorchDefaultInitializer(),
-        "threshold": WeightsSNNThresholdInitializer(),
         "z-uniform": ZUniform(),
         "s-uniform": StatesUniform(),
         "relaxed":  RelaxedSpikeInitializer(),

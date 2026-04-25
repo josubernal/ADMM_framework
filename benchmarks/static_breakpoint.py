@@ -84,36 +84,36 @@ for model_name in model_types:
         match model_name:
            
             case "linear":
-                layer_list.append(ADMM_Linear(in_f=input_size, out_f=hidden_size_static, h=ADMM_ReLU(), init="s-uniform", bias=True))
+                layer_list.append(ADMM_Linear(in_f=input_size, out_f=hidden_size_static, h=ADMM_ReLU(), init="pytorch", bias=True))
                 for _ in range(layers - 1):
                     layer_list.append(
                         ADMM_Linear(in_f=hidden_size_static, out_f=hidden_size_static, h=ADMM_ReLU(), init="zeros", bias=True)
                     )
 
-                layer_list.append(ADMM_Linear(in_f=hidden_size_static, out_f=10, h=ADMM_ReLU(), init="s-uniform", bias=True))
+                layer_list.append(ADMM_Linear(in_f=hidden_size_static, out_f=10, h=ADMM_ReLU(), init="pytorch", bias=True))
 
                 linear_layers = nn.ModuleList(layer_list)
 
-                admm_model = ADMM(linear_layers, rho=linear_rho, beta=linear_beta, init="s-uniform", bias=True, train_method='vectorized').to(device)
+                admm_model = ADMM(linear_layers, rho=linear_rho, beta=linear_beta, init="pytorch", bias=True, train_method='vectorized').to(device)
                 images = images.view(images.size(0), -1)
 
             case "conv":
                 current_spatial = 28
                 
-                layer_list.append(ADMM_Conv2d(in_c=1, out_c=hidden_channels_static, k=k, p=p, s=s, h=ADMM_ReLU(), init="s-uniform", bias=True, use_fft=False, padding_mode='zeros'))
+                layer_list.append(ADMM_Conv2d(in_c=1, out_c=hidden_channels_static, k=k, p=p, s=s, h=ADMM_ReLU(), init="pytorch", bias=True, use_fft=False, padding_mode='zeros'))
                 current_spatial = int(calc_spatial_out(current_spatial, k, p, s))
                 
                 for _ in range(layers - 1):
                     layer_list.append(
-                        ADMM_Conv2d(in_c=hidden_channels_static, out_c=hidden_channels_static, k=k, p=p, s=s, h=ADMM_ReLU(), init="s-uniform", bias=True, use_fft=False, padding_mode='zeros')
+                        ADMM_Conv2d(in_c=hidden_channels_static, out_c=hidden_channels_static, k=k, p=p, s=s, h=ADMM_ReLU(), init="pytorch", bias=True, use_fft=False, padding_mode='zeros')
                     )
                     current_spatial = int(calc_spatial_out(current_spatial, k, p, s))
 
                 lin_in_dim = hidden_channels_static * current_spatial * current_spatial
-                layer_list.append(ADMM_Linear(in_f=lin_in_dim, out_f=10, h=ADMM_ReLU(), pool_op=ADMM_Flatten(), init="s-uniform", bias=True))
+                layer_list.append(ADMM_Linear(in_f=lin_in_dim, out_f=10, h=ADMM_ReLU(), pool_op=ADMM_Flatten(), init="pytorch", bias=True))
                 conv_layers = nn.ModuleList(layer_list)
 
-                admm_model = ADMM(conv_layers, rho=conv_rho, beta=conv_beta, init="s-uniform", bias=True, train_method='vectorized').to(device) 
+                admm_model = ADMM(conv_layers, rho=conv_rho, beta=conv_beta, init="pytorch", bias=True, train_method='vectorized').to(device) 
    
         #########################################
         # ADMM TRAINING LOOP

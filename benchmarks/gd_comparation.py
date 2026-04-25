@@ -169,10 +169,10 @@ for model_name in model_types:
         case "linear":
             model  = GDLinearNet().to(device)
             linear_layers = nn.ModuleList([
-                ADMM_Linear(in_f=input_size, out_f=hidden_size_static, h=ADMM_ReLU(), init="s-uniform", bias=True),
-                ADMM_Linear(in_f=hidden_size_static, out_f=10, h=ADMM_ReLU(), init="s-uniform", bias=True)
+                ADMM_Linear(in_f=input_size, out_f=hidden_size_static, h=ADMM_ReLU(), init="pytorch", bias=True),
+                ADMM_Linear(in_f=hidden_size_static, out_f=10, h=ADMM_ReLU(), init="pytorch", bias=True)
             ])
-            admm_model = ADMM(linear_layers,loss_f=ADMM_Hinge(), rho=linear_rho, beta=linear_beta, init="s-uniform", bias=True, train_method='vectorized').to(device)
+            admm_model = ADMM(linear_layers,loss_f=ADMM_Hinge(), rho=linear_rho, beta=linear_beta, init="pytorch", bias=True, train_method='vectorized').to(device)
 #            with torch.no_grad():
 #                linear_layers[0].W.copy_(model.fc1.weight)
 #                linear_layers[0].b.copy_(model.fc1.bias)
@@ -185,10 +185,10 @@ for model_name in model_types:
             spatial_dim = int(calc_spatial_out(28, k, p, s))
             lin_in_dim = hidden_channels_static * spatial_dim * spatial_dim
             conv_layers = nn.ModuleList([
-                ADMM_Conv2d(in_c=1, out_c=hidden_channels_static, k=k, p=p, s=s, h=ADMM_ReLU(), init="s-uniform", bias=True, use_fft=False, padding_mode='zeros'),
-                ADMM_Linear(in_f=lin_in_dim, out_f=10, h=ADMM_ReLU(),pool_op=ADMM_Flatten(), init="s-uniform", bias=True)
+                ADMM_Conv2d(in_c=1, out_c=hidden_channels_static, k=k, p=p, s=s, h=ADMM_ReLU(), init="pytorch", bias=True, use_fft=False, padding_mode='zeros'),
+                ADMM_Linear(in_f=lin_in_dim, out_f=10, h=ADMM_ReLU(),pool_op=ADMM_Flatten(), init="pytorch", bias=True)
             ])
-            admm_model = ADMM(conv_layers, loss_f=ADMM_Hinge(),rho=conv_rho, beta=conv_beta, init="s-uniform", bias=True, train_method='vectorized').to(device) 
+            admm_model = ADMM(conv_layers, loss_f=ADMM_Hinge(),rho=conv_rho, beta=conv_beta, init="pytorch", bias=True, train_method='vectorized').to(device) 
 #            with torch.no_grad():
 #                conv_layers[0].W.copy_(model.conv.weight)
 #                conv_layers[0].b.copy_(model.conv.bias)
