@@ -188,14 +188,12 @@ class ADMM_Heaviside(ADMMActivationBase):
                 
             total_delta.add_(d3)
 
-        # Mask 1: z = theta if z > theta and total_delta > 0
         mask1 = (z > self.thetas).logical_and_(total_delta > 0)
-        z.masked_fill_(mask1, self.thetas)
         
-        # Mask 2: z = theta + eps if z <= theta and (total_delta - 2*delta1) > 0
-        # Note: (d1+d2+d3) - 2*d1 = d2+d3-d1
         total_delta.add_(delta1, alpha=-2.0) 
         mask2 = (z <= self.thetas).logical_and_(total_delta > 0)
+
+        z.masked_fill_(mask1, self.thetas)
         z.masked_fill_(mask2, self.thetas + 1e-5)
         return z
 
