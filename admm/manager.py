@@ -28,7 +28,7 @@ class ADMM(nn.Module):
     """   
     def __init__(self, layers: nn.ModuleList, rho: float = 1.0, beta: float = 1.0, 
                  init: str = "s-uniform", bias: bool = False, device=None, loss_f=None,
-                 train_method: str = "decoupled-random", use_cholesky=True, **kwargs):
+                 train_method: str = "decoupled-backwards", layer_order:str="random-last", use_cholesky=True, **kwargs):
         super().__init__()
         
         self.device = device if device is not None else torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -40,9 +40,11 @@ class ADMM(nn.Module):
         self.lambda_lagrange = None
         self.init = init
         self.train_method = train_method
+        self.layer_order = layer_order
         self.rho = rho
         self.beta = beta
         self.bias = bias
+        
         
         self.use_cholesky=use_cholesky
         
@@ -106,6 +108,26 @@ class ADMM(nn.Module):
             elif self.train_method.endswith("backwards"):                  
                 time_steps = list(range(self.T - 2, -1, -1))
         return time_steps
+    
+    def _get_layers(self):
+        """Helper that returns layer order depending on the selected method.
+
+        Returns:
+            list or None: A list of time steps if applicable, otherwise None.
+        """
+        if self.layer_order== "backwards":
+            layer_indices = list(range(self.L - 1, -1, -1))
+        elif self.layer_order=="random-last":
+            layer_indices = random.sample(range(self.L - 1), self.L - 1)
+            layer_indices.append(self.L - 1)
+        elif self.layer_order == "random":
+            layer_indices = list(range(self.L))
+            random.shuffle(layer_indices)
+        elif self.layer_order == "sequential":                  
+            layer_indices = list(range(self.L))
+        else: 
+            raise ValueError(f"Invalid layer order. Selected method {self.layer_order} does not exist, please read the documentation.")
+        return layer_indices
     
     def _init_states(self, inputs: torch.Tensor):
         """Warm-starts the ADMM auxiliary variables 'z' and 'a'.
@@ -240,24 +262,24 @@ class ADMM(nn.Module):
                 self._init_states(inputs)
             
             time_steps= self._get_time_steps()
-            random_layers = random.sample(range(self.L - 1), self.L - 1)
-            
-            for l in random_layers:  
-                    layer = self.layers[l]
+            layer_indices = self._get_layers()
+            print(layer_indices)
+            for l in layer_indices:  
+                layer = self.layers[l]
+                a_prev = inputs if l == 0 else self.layers[l - 1].a
+                if l < self.L - 1:
                     next_layer = self.layers[l+1]
-                    a_prev = inputs if l == 0 else self.layers[l - 1].a
                     cache_pinv= True if l == 0 else False
                     lagrange = self.lambda_lagrange if l == self.L - 2 else None
                     self._optimize_w_and_b(layer, a_prev, cache_pinv=cache_pinv)
                     self._optimize_a_and_z(layer, next_layer, a_prev, lagrange, time_steps)
                     del a_prev
                     del lagrange
+                elif l==self.L-1:
+                    self._optimize_w_and_b(layer, a_prev, self.lambda_lagrange)
+                    self._optimize_z_last(layer, a_prev, labels, time_steps)
             
-            # Update last layer
             last_layer = self.layers[-1]
             a_prev_L = self.layers[-2].a if len(self.layers) > 1 else inputs
-            self._optimize_w_and_b(last_layer, a_prev_L, self.lambda_lagrange)
-            self._optimize_z_last(last_layer, a_prev_L, labels, time_steps)
-
             if not warming:
                 self._lambda_update(last_layer, a_prev_L)
