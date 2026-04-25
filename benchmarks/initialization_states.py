@@ -59,7 +59,7 @@ def calc_spatial_out(size_in, k, p, s):
 #########################################
 # Un-commented array to loop through all models
 model_types = ["spiking-linear", "spiking-conv"]
-initializations = [ "wzeros","wxavier","wrandom","wpytorch","wdata","wthreshold","szeros","srandom","sfrandom"]
+initializations = [ "wzeros","wpytorch","wdata","wthreshold","sfrandom","srelaxed"]
 
 for model_name in model_types:
     print(f"\n{'='*50}")
