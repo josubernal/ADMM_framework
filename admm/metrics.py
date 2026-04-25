@@ -29,15 +29,17 @@ class ADMM_Metrics:
             "lagrangian": [],
             "primal_residual": [],
             "preactivation_constraint_sum":[],
-            "activation_constraint_sum": []
+            "activation_constraint_sum": [],
+            "firing_rate": []
         }
-    
+
     def __str__(self):
         if not self.metrics["loss"]:
             return "Metrics not yet initialized."
+            
         def format_metric(val):
             if isinstance(val, list):
-                return "[" + ",".join([f"{v:8.2f}" for v in val]) + "]"
+                return "[" + ",".join([f"{v:8.2f}" for v in val if isinstance(v, (int, float))]) + "]"
             return f"{val:10.2f}"
 
         loss = self.metrics["loss"][-1]
@@ -46,7 +48,13 @@ class ADMM_Metrics:
         pre  = format_metric(self.metrics["preactivation_constraint_sum"][-1])
         act  = format_metric(self.metrics["activation_constraint_sum"][-1])
         acc  = format_metric(self.metrics["accuracy"][-1])
-        return f" Loss: {loss:.4f} | Acc:{acc} | Lagr: {lagr} | Lamb: {lamb} | Pre: {pre} | Act: {act}"
+        
+        # Safely format firing rate
+        raw_fr = self.metrics["firing_rate"][-1]
+        fr_str = format_metric(raw_fr) if raw_fr is not None else "N/A"
+
+        return f"Loss: {loss:.4f} | Acc:{acc} | FR: {fr_str} | Lagr: {lagr} | Lamb: {lamb} | Pre: {pre} | Act: {act}"
+    
     @torch.no_grad()
     def loss(self, labels: torch.Tensor):
         final_out = self.model.layers[-1].z[-1] if self.model.is_spiking else self.model.layers[-1].z
@@ -146,16 +154,15 @@ class ADMM_Metrics:
         return constraints_residuals
 
     @torch.no_grad()
-    def accuracy(self, inputs: torch.Tensor, labels: torch.Tensor):
-        """Calculates the true classification accuracy as a percentage (0-100) 
-        by executing a full sequential forward pass through the network."""
+    def evaluate_performance(self, inputs: torch.Tensor, labels: torch.Tensor):
+        """Calculates accuracy and extracts firing rates in a single forward pass."""
         
         # 1. Perform the full, strict forward pass
-        raw_outputs, _ = self.model.forward_model(inputs)
+        raw_outputs, firing_rates = self.model.forward_model(inputs)
         
         batch_size = inputs.size(0)
         if batch_size == 0:
-            return 0.0
+            return 0.0, firing_rates
             
         # 2. Flatten outputs and get predictions
         flat_outputs = raw_outputs.view(batch_size, -1) 
@@ -168,8 +175,9 @@ class ADMM_Metrics:
             targets = labels.view(-1)
             
         # 4. Calculate percentage
-        return 100. * (predictions == targets).sum().item() / batch_size
-    
+        acc = 100. * (predictions == targets).sum().item() / batch_size
+        
+        return acc, firing_rates
     def network_size_statistics(self):
         """Calculates the footprint of parameters and auxiliary states.
 
@@ -225,7 +233,9 @@ class ADMM_Metrics:
             dict: A dictionary of all computed metrics.
         """
         self.metrics["loss"].append(self.loss(labels))
-        self.metrics["accuracy"].append(self.accuracy(inputs, labels))
+        acc, fr = self.evaluate_performance(inputs, labels)
+        self.metrics["accuracy"].append(acc)
+        self.metrics["firing_rate"].append(fr)
         self.metrics["lagrangian"].append(self.lagrangian(inputs, labels))
         self.metrics["primal_residual"].append(self.primal_residual_norm(inputs))
         self.metrics["preactivation_constraint_sum"].append(self.preactivation_constraint_sum(inputs))
