@@ -141,13 +141,6 @@ class WeightsZerosInitializer(BaseTester):
     def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
         return torch.zeros(*weight_shape, device=device)
     
-class WeightsKaimingInitializer(BaseTester):
-    """Kaiming (He) weights. Gold standard for Static ReLU networks."""
-    def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
-        w = torch.empty(*weight_shape, device=device)
-        nn.init.kaiming_normal_(w, mode='fan_out', nonlinearity='relu')
-        return w
-
 class WeightsXavierInitializer(BaseTester):
     """Xavier weights."""
     def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
@@ -171,11 +164,6 @@ class WeightsPytorchDefaultInitializer(BaseTester):
         nn.init.kaiming_uniform_(w, a=math.sqrt(5))
         return w
         
-    def init_bias(self, bias_shape: tuple, device:torch.device) -> torch.Tensor:
-        # PyTorch calculates a bound based on fan_in and uses uniform distribution
-        # For simplicity in ADMM, starting default biases at 0 is still acceptable,
-        # but to be strictly faithful to PyTorch:
-        return torch.zeros(*bias_shape, device=device)
     
 class WeightsDataDrivenInitializer(BaseTester):
     """
@@ -275,6 +263,28 @@ class StatesRandom(BaseTester):
                 layer.a = a_pred.clone()
                 
                 x = layer.a 
+class StatesFullyRandom(BaseTester):
+    """
+    Pure Random Initialization. 
+    Forces a massive, chaotic constraint violation on the ADMM solver.
+    """
+    def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
+        """Warm-starts the auxiliary variables 'z' and 'a' with random values.
+
+        Args:
+            layers (nn.ModuleList): The list of layers in the network.
+            inputs (torch.Tensor): The initial input tensor to the network.
+            device (torch.device): The device on which the tensors should be allocated.
+        """
+        x = inputs.to(device)
+        with torch.no_grad():
+            for layer in layers:
+                z_pred = layer.forward(x)
+                a_pred = layer.h(z_pred)     
+                layer.z = torch.rand_like(z_pred)
+                layer.a = torch.rand_like(a_pred)
+                x = a_pred 
+
     
 
 def get_initializer(init_type: str) -> ADMM_Initializer:
@@ -294,14 +304,14 @@ def get_initializer(init_type: str) -> ADMM_Initializer:
         "zeros-pass": ZerosPassInitializer(),
         "xavier": XavierInitializer(),
         "wzeros": WeightsZerosInitializer(),
-        "wkaiming": WeightsKaimingInitializer(),
         "wxavier": WeightsXavierInitializer(),
         "wrandom": WeightsRandomInitializer(),
         "wpytorch": WeightsPytorchDefaultInitializer(),
         "wdata": WeightsDataDrivenInitializer(),
         "wthreshold": WeightsSNNThresholdInitializer(),
         "szeros": StatesZeros(),
-        "srandom": StatesRandom()     
+        "srandom": StatesRandom(),
+        "sfrandom": StatesFullyRandom()   
     }
     if init_type not in strategies:
         raise ValueError(f"Initialization method '{init_type}' not defined. Options: {list(strategies.keys())}")
