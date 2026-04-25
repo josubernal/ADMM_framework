@@ -212,7 +212,7 @@ class ADMM_Spiking:
         self.b.copy_(new_bias)
 
         
-    def update_az_interleaved(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list):
+    def update_az_interleaved(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list, update_z_first:bool):
         """Orchestrates the interleaved updates of a and z over time using caching.
 
         Args:
@@ -224,8 +224,12 @@ class ADMM_Spiking:
         cache = self._create_cache(next_layer, a_prev, lambda_lagrange)
         
         for t in time_steps:
-            self.update_a_unrolled(t, cache, next_layer)
-            self.update_z_unrolled(t, cache)
+            if update_z_first:
+                self.update_z_unrolled(t, cache)
+                self.update_a_unrolled(t, cache, next_layer)
+            else:
+                self.update_a_unrolled(t, cache, next_layer)
+                self.update_z_unrolled(t, cache)
          
     def update_a_unrolled(self, t: int, cache: TemporalCache, next_layer: nn.Module):
         """Manages the unrolled activation (a) update for a specific timestep.

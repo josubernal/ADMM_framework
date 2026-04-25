@@ -59,7 +59,7 @@ if __name__ == "__main__":
     # ==========================================
     # 3. BENCHMARK LOOPS
     # ==========================================
-    architectures = ["linear", "conv"]
+    architectures = ["spiking-linear", "spiking-conv"]
     methods = [
         "unrolled-sequential", 
         "unrolled-random", 
@@ -96,7 +96,7 @@ if __name__ == "__main__":
             warming_stop = None
             print(f"\n---> Testing Method: {method.upper()}")
             
-            if arch == "linear":
+            if arch == "spiking-linear":
                 # 34 * 34 * 2 = 2312
                 rho=linear_rho
                 beta=linear_beta

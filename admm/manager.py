@@ -28,7 +28,7 @@ class ADMM(nn.Module):
     """   
     def __init__(self, layers: nn.ModuleList, rho: float = 1.0, beta: float = 1.0, 
                  init: str = "s-uniform", bias: bool = False, device=None, loss_f=None,
-                 train_method: str = "decoupled-backwards", layer_order:str="backwards", use_cholesky=True, **kwargs):
+                 train_method: str = "decoupled-backwards", layer_order:str="backwards", update_z_first:bool=False, use_cholesky=True, **kwargs):
         super().__init__()
         
         self.device = device if device is not None else torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -41,6 +41,7 @@ class ADMM(nn.Module):
         self.init = init
         self.train_method = train_method
         self.layer_order = layer_order
+        self.update_z_first=update_z_first
         self.rho = rho
         self.beta = beta
         self.bias = bias
@@ -226,13 +227,21 @@ class ADMM(nn.Module):
             time_steps (list, optional): Time steps for spiking networks. Defaults to None.
         """
         if self.train_method.startswith("unrolled") and getattr(layer, 'spiking', False):
-            layer.update_az_interleaved(next_layer, a_prev, lagrange, time_steps)
+            layer.update_az_interleaved(next_layer, a_prev, lagrange, time_steps, self.update_z_first)
         elif self.train_method.startswith("decoupled") and getattr(layer, 'spiking', False):
-            layer.update_a(next_layer, a_prev, lagrange)
-            layer.update_z_decoupled(a_prev, time_steps)
-        else:
-            layer.update_a(next_layer, a_prev, lagrange)
-            layer.update_z(a_prev)
+            if self.update_z_first:
+                layer.update_z_decoupled(a_prev, time_steps)
+                layer.update_a(next_layer, a_prev, lagrange)
+            else:
+                layer.update_a(next_layer, a_prev, lagrange)
+                layer.update_z_decoupled(a_prev, time_steps)        
+        else: 
+            if self.update_z_first:
+                layer.update_z(a_prev)
+                layer.update_a(next_layer, a_prev, lagrange)
+            else:
+                layer.update_a(next_layer, a_prev, lagrange)
+                layer.update_z(a_prev)
 
     def _optimize_z_last(self, layer: nn.Module, a_prev: torch.Tensor, labels: torch.Tensor, time_steps=None):
         """Default static state optimization for the final layer's pre-activations.
