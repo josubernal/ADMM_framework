@@ -55,8 +55,9 @@ def main():
                 gd_steps = list(range(1, len(gd_accs) + 1))
                 admm_steps = list(range(1, len(admm_accs) + 1))
                 
+        
                 warming_stop = data.get('warming_stop', None) 
-                model_name = data.get('model_name', 'Model')
+                model_name = data.get('architecture', None)
                 batch_size = data.get('batch_size', 'N/A')
 
                 # Plotting
