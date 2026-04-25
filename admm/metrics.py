@@ -45,8 +45,8 @@ class ADMM_Metrics:
         lamb = format_metric(self.metrics["primal_residual"][-1])
         pre  = format_metric(self.metrics["preactivation_constraint_sum"][-1])
         act  = format_metric(self.metrics["activation_constraint_sum"][-1])
-
-        return f" Loss: {loss:.4f} | Acc:{self.accuracy} | Lagr: {lagr} | Lamb: {lamb} | Pre: {pre} | Act: {act}"
+        acc  = format_metric(self.metrics["accuracy"][-1])
+        return f" Loss: {loss:.4f} | Acc:{acc} | Lagr: {lagr} | Lamb: {lamb} | Pre: {pre} | Act: {act}"
     @torch.no_grad()
     def loss(self, labels: torch.Tensor):
         final_out = self.model.layers[-1].z[-1] if self.model.is_spiking else self.model.layers[-1].z
@@ -146,32 +146,30 @@ class ADMM_Metrics:
         return constraints_residuals
 
     @torch.no_grad()
-    def accuracy(self, labels: torch.Tensor):
-        """Calculates the classification accuracy.
+    def accuracy(self, inputs: torch.Tensor, labels: torch.Tensor):
+        """Calculates the true classification accuracy as a percentage (0-100) 
+        by executing a full sequential forward pass through the network."""
         
-        Args:
-            labels (torch.Tensor): Ground truth labels (can be class indices or one-hot).
+        # 1. Perform the full, strict forward pass
+        raw_outputs, _ = self.model.forward_model(inputs)
+        
+        batch_size = inputs.size(0)
+        if batch_size == 0:
+            return 0.0
             
-        Returns:
-            float: The accuracy as a percentage [0.0, 1.0].
-        """
-        last_layer = self.model.layers[-1]
-        final_out = last_layer.z[-1] if self.model.is_spiking else last_layer.z
+        # 2. Flatten outputs and get predictions
+        flat_outputs = raw_outputs.view(batch_size, -1) 
+        _, predictions = flat_outputs.max(dim=1)
         
-        # Handle 1D (class indices) vs 2D (one-hot encoded) labels
+        # 3. Get target labels
         if labels.dim() > 1 and labels.size(1) > 1:
-            targets = torch.argmax(labels, dim=1)
+            targets = labels.argmax(dim=1)
         else:
             targets = labels.view(-1)
             
-        preds = torch.argmax(final_out, dim=1)
-        
-        correct = (preds == targets).sum().item()
-        total = targets.size(0)
-        
-        return correct / total if total > 0 else 0.0
-
-
+        # 4. Calculate percentage
+        return 100. * (predictions == targets).sum().item() / batch_size
+    
     def network_size_statistics(self):
         """Calculates the footprint of parameters and auxiliary states.
 
@@ -227,7 +225,7 @@ class ADMM_Metrics:
             dict: A dictionary of all computed metrics.
         """
         self.metrics["loss"].append(self.loss(labels))
-        self.metrics["accuracy"].append(self.accuracy(labels))
+        self.metrics["accuracy"].append(self.accuracy(inputs, labels))
         self.metrics["lagrangian"].append(self.lagrangian(inputs, labels))
         self.metrics["primal_residual"].append(self.primal_residual_norm(inputs))
         self.metrics["preactivation_constraint_sum"].append(self.preactivation_constraint_sum(inputs))
