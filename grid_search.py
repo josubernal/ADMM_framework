@@ -94,7 +94,7 @@ if __name__ == "__main__":
         epochs = cfg.get('epochs', 20)
         warming_iters = cfg.get('warming_iters', 6)
         batch_size = cfg.get('batch_size', 50)
-        init = cfg.get('init', 'zeros')
+        init = cfg.get('init', 's-uniform')
         bias = cfg.get('bias', False)
         train_method = cfg.get('train_method', 'unrolled-sequential')
         rho = cfg.get('rho', 1.0)

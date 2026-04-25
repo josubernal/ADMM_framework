@@ -27,7 +27,7 @@ class ADMM(nn.Module):
     layer-wise optimization loops.
     """   
     def __init__(self, layers: nn.ModuleList, rho: float = 1.0, beta: float = 1.0, 
-                 init: str = "zeros", bias: bool = False, device=None, loss_f=None,
+                 init: str = "s-uniform", bias: bool = False, device=None, loss_f=None,
                  train_method: str = "decoupled-random", use_cholesky=True, **kwargs):
         super().__init__()
         

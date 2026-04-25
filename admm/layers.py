@@ -35,7 +35,7 @@ class ADMM_Linear(ADMM_AffineLayer):
     - Forward: Applies a linear transformation (y = xW^T + b) to the input.
     - Adjoint: Maps the target vector back to the input space using the transpose of the weights.
     """
-    def __init__(self, in_f, out_f, h: nn.Module=None, bias: bool=False, init: str="zeros", pool_op=None):
+    def __init__(self, in_f, out_f, h: nn.Module=None, bias: bool=False, init: str="s-uniform", pool_op=None):
         super().__init__(h=h, bias=bias, pool_op=pool_op) 
         self.init = init
         self.channel_dim = -1 # Targets the [B, C] dimension
@@ -73,7 +73,7 @@ class ADMM_Conv2d( ADMM_Convolution, ADMM_AffineLayer):
     - Compute P: Uses `unfold` (im2col) to extract sliding local blocks from the image 
       into a flat patch matrix for the weight update step.
     """
-    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, bias: bool=False, init: str="zeros",  pool_op=None, use_fft=True, padding_mode="circular"):
+    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, bias: bool=False, init: str="s-uniform",  pool_op=None, use_fft=True, padding_mode="circular"):
         super().__init__(h=h, bias=bias,  pool_op=pool_op, use_fft=use_fft, padding_mode=padding_mode)
         self.init = init
         self.p = p
@@ -135,7 +135,7 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
     - Folds the Time and Batch dimensions together to process the entire sequence as 
       a standard 2D matrix operation, then unfolds it back to the temporal sequence.
     """
-    def __init__(self, in_f, out_f, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="zeros", pool_op=None):
+    def __init__(self, in_f, out_f, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="s-uniform", pool_op=None):
         super().__init__(h=h, bias=bias, pool_op=pool_op)
         self.init = init
         self.T = None
@@ -183,7 +183,7 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
     - Includes a chunked covariance computation to prevent Out-Of-Memory (OOM) errors 
       during the ADMM weight update step.
     """
-    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="zeros", pool_op=None, use_fft=True, padding_mode="circular"):
+    def __init__(self, in_c, out_c, k, p, s, h: nn.Module=None, use_reset: bool=True, bias: bool=False, init: str="s-uniform", pool_op=None, use_fft=True, padding_mode="circular"):
         super().__init__(h=h, bias=bias, pool_op=pool_op, use_fft=use_fft, padding_mode=padding_mode) 
         self.init = init
         self.T = None

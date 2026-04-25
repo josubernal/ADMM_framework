@@ -14,7 +14,6 @@ import math
 
 class ADMM_Initializer(ABC):
     """Abstract Base class for ADMM Initialization Strategies."""
-    @abstractmethod
     def init_weights(self, weight_shape: tuple, device:torch.device) -> torch.Tensor:
         """Initializes the weights for a layer.
 

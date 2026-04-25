@@ -101,8 +101,8 @@ if __name__ == "__main__":
                 rho=linear_rho
                 beta=linear_beta
                 layers = nn.ModuleList([ 
-                    ADMM_SpikingLinear(in_f=2312, out_f=hidden_size_spiking, h=ADMM_Heaviside(thetas=thetas), init='zeros', bias=False),
-                    ADMM_SpikingLinear(in_f=hidden_size_spiking, out_f=10, h=None, init='zeros', bias=False)
+                    ADMM_SpikingLinear(in_f=2312, out_f=hidden_size_spiking, h=ADMM_Heaviside(thetas=thetas), init="s-uniform", bias=False),
+                    ADMM_SpikingLinear(in_f=hidden_size_spiking, out_f=10, h=None, init="s-uniform", bias=False)
                 ])
             else:
                 rho=conv_rho
@@ -111,7 +111,7 @@ if __name__ == "__main__":
                 lin_in = hidden_channels_spiking * spatial * spatial
                 layers = nn.ModuleList([ 
                      ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels_spiking, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init="zeros", bias=False, use_fft=False,  padding_mode="zeros"),
-                    ADMM_SpikingLinear(in_f=lin_in, pool_op=ADMM_Flatten(), out_f=10, h=None, init='zeros', bias=False)
+                    ADMM_SpikingLinear(in_f=lin_in, pool_op=ADMM_Flatten(), out_f=10, h=None, init="s-uniform", bias=False)
            ])
 
             model = ADMM(
@@ -122,7 +122,7 @@ if __name__ == "__main__":
                 thetas=thetas, 
                 deltas=deltas, 
                 beta=beta, 
-                init='zeros', 
+                init="s-uniform", 
                 bias=False, 
                 train_method=method
             ).to(device)
