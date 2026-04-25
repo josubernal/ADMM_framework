@@ -28,7 +28,7 @@ class ADMM(nn.Module):
     """   
     def __init__(self, layers: nn.ModuleList, rho: float = 1.0, beta: float = 1.0, 
                  init: str = "s-uniform", bias: bool = False, device=None, loss_f=None,
-                 train_method: str = "decoupled-backwards", layer_order:str="random-last", use_cholesky=True, **kwargs):
+                 train_method: str = "decoupled-backwards", layer_order:str="backwards", use_cholesky=True, **kwargs):
         super().__init__()
         
         self.device = device if device is not None else torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -102,11 +102,11 @@ class ADMM(nn.Module):
         time_steps = None
         if self.is_spiking:
             if self.train_method.endswith("random"):
-               time_steps = random.sample(range(self.T - 1), self.T - 1)
+               time_steps = random.sample(range(self.T), self.T)
             elif self.train_method.endswith("sequential"):
-                time_steps = list(range(self.T - 1)) 
+                time_steps = list(range(self.T)) 
             elif self.train_method.endswith("backwards"):                  
-                time_steps = list(range(self.T - 2, -1, -1))
+                time_steps = list(range(self.T - 1, -1, -1))
         return time_steps
     
     def _get_layers(self):
@@ -116,7 +116,7 @@ class ADMM(nn.Module):
             list or None: A list of time steps if applicable, otherwise None.
         """
         if self.layer_order== "backwards":
-            layer_indices = list(range(self.L - 1, -1, -1))
+            layer_indices = list(range(self.L -1, -1, -1))
         elif self.layer_order=="random-last":
             layer_indices = random.sample(range(self.L - 1), self.L - 1)
             layer_indices.append(self.L - 1)

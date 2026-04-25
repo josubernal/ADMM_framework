@@ -226,11 +226,6 @@ class ADMM_Spiking:
         for t in time_steps:
             self.update_a_unrolled(t, cache, next_layer)
             self.update_z_unrolled(t, cache)
-            
-        # The final timestep is always updated last
-        t_final = self.z.size(0) - 1
-        self.update_a_unrolled(t_final, cache, next_layer)
-        self.update_z_unrolled(t_final, cache)
          
     def update_a_unrolled(self, t: int, cache: TemporalCache, next_layer: nn.Module):
         """Manages the unrolled activation (a) update for a specific timestep.
@@ -316,8 +311,6 @@ class ADMM_Spiking:
         mock_cache = SimpleNamespace(forward_pass=forward_pass)
         for t in time_steps:
             self.update_z_unrolled(t, mock_cache)
-        t_final = self.z.size(0) - 1
-        self.update_z_unrolled(t_final, mock_cache)
         del forward_pass
         del mock_cache
 
