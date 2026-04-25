@@ -20,7 +20,7 @@ class ADMM_Metrics:
 
         Args:
             model (ADMM): The ADMM manager instance. Passed by reference so the tracker 
-                can read its internal states ($z$, $a$, $\lambda$) without modifying them.
+                can read its internal states (z, a, lambda) without modifying them.
         """
         self.model = model
         self.metrics = {
@@ -160,7 +160,13 @@ class ADMM_Metrics:
         # 1. Perform the full, strict forward pass
         raw_outputs, firing_rates = self.model.forward_model(inputs)
         
-        batch_size = inputs.size(0)
+        # Standardize missing firing rates to a true mathematical NaN
+        if firing_rates is None or firing_rates == ['nan']:
+            firing_rates = float('nan')
+            
+        # FIX 2: Get batch size from labels to safely avoid the Spiking Time dimension!
+        batch_size = labels.size(0) 
+        
         if batch_size == 0:
             return 0.0, firing_rates
             
