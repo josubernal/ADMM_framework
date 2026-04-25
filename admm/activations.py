@@ -111,7 +111,7 @@ class ADMM_ReLU(ADMMActivationBase):
             torch.Tensor: The updated z tensor.
         """
         z = (self.beta * a + self.rho * res) / (self.beta + self.rho)
-        return torch.where(z > 0, z, res)
+        return torch.relu(z)
 
 
 class ADMM_Heaviside(ADMMActivationBase):
