@@ -29,8 +29,19 @@ class ADMM_Metrics:
         }
     
     def __str__(self):
-        return f" Loss: {self.metrics["loss"][-1]:.4f} | Lagr: {self.metrics["lagrangian_cost"][-1]:10.2f} | Lamb: {self.metrics["primal_residual"][-1]:10.2f}"
-        
+        # Helper function to format either a single float or a list of floats
+        def format_metric(val):
+            if isinstance(val, list):
+                return "[" + ",".join([f"{v:8.2f}" for v in val]) + "]"
+            return f"{val:10.2f}"
+
+        loss = self.metrics["loss"][-1]
+        lagr = format_metric(self.metrics["lagrangian_cost"][-1])
+        lamb = format_metric(self.metrics["primal_residual"][-1])
+        pre  = format_metric(self.metrics["preactivation_constraint_sum"][-1])
+        act  = format_metric(self.metrics["activation_constraint_sum"][-1])
+
+        return f" Loss: {loss:.4f} | Lagr: {lagr} | Lamb: {lamb} | Pre: {pre} | Act: {act}"
     def loss(self, labels: torch.Tensor):
         final_out = self.model.layers[-1].z[-1] if self.model.is_spiking else self.model.layers[-1].z
         return self.model.loss_f(final_out, labels).item()

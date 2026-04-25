@@ -131,10 +131,9 @@ class BaseTester(ADMM_Initializer):
         with torch.no_grad():
             for layer in layers:
                 z_pred = layer.forward(x)
-                a_pred = layer.h(z_pred) if layer.h is not None else z_pred
                 layer.z = z_pred.clone()
-                layer.a = a_pred.clone()
-                x = a_pred
+                layer.a = z_pred.clone()
+                x = layer.a
 
 class WeightsZerosInitializer(BaseTester):
     """Zero weights (Baseline)."""  
@@ -285,7 +284,33 @@ class StatesFullyRandom(BaseTester):
                 layer.a = torch.rand_like(a_pred)
                 x = a_pred 
 
-    
+class RelaxedSpikeInitializer(BaseTester):
+    """
+    Capitalizes on the 'Energy Shock' discovery. 
+    Weights are initialized to zero to allow algebraic overwriting.
+    Pre-activations (z) are given Gaussian noise to simulate membrane potential variance.
+    Activations (a) are forced into a dense Bernoulli distribution (p=0.5) to provide 
+    maximum information density to the first ADMM weight projection.
+    """
+    def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
+        x = inputs.to(device)
+        with torch.no_grad():
+            for layer in layers:
+                # 1. Do a forward pass just to get the exact tensor geometries
+                z_pred = layer.forward(x)
+                a_pred = layer.h(z_pred) if layer.h is not None else z_pred
+                
+                # 2. Inject Gaussian noise into membrane potentials (z)
+                # This breaks symmetry and gives the solver a rich landscape
+                layer.z = torch.randn_like(z_pred)
+                
+                # 3. The Secret Weapon: High-Entropy Binary Spikes
+                # We force 50% of the neurons to fire randomly at step 0.
+                # This prevents singular matrices and dead zones, giving W a massive target.
+                layer.a = torch.randint(0, 2, size=a_pred.shape, dtype=a_pred.dtype, device=device)
+                
+                # 4. Pass the true geometric shape down the line
+                x = a_pred
 
 def get_initializer(init_type: str) -> ADMM_Initializer:
     """Factory function to retrieve the correct initializer strategy.
@@ -311,7 +336,8 @@ def get_initializer(init_type: str) -> ADMM_Initializer:
         "wthreshold": WeightsSNNThresholdInitializer(),
         "szeros": StatesZeros(),
         "srandom": StatesRandom(),
-        "sfrandom": StatesFullyRandom()   
+        "sfrandom": StatesFullyRandom(),
+        "srelaxed":  RelaxedSpikeInitializer(),
     }
     if init_type not in strategies:
         raise ValueError(f"Initialization method '{init_type}' not defined. Options: {list(strategies.keys())}")
