@@ -116,13 +116,14 @@ class ZerosRNGInitializer(ZerosInitializer):
                     layer.a = torch.zeros_like(a_preds[i])                   
 
 #ABLATION STUDY INITS
-class BaseWeightTester(ADMM_Initializer):
+class BaseTester(ADMM_Initializer):
     """
-    Base class for Phase 1 testing. 
-    Forces the Exact Warm Start for states so ADMM starts with 0 error.
+    Base class for 1 testing. 
     """
+    def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
+        return torch.zeros(*weight_shape, device=device)
+    
     def init_bias(self, bias_shape: tuple, device:torch.device) -> torch.Tensor:
-        # Fixed: Bias is 1D and cannot use Kaiming/Xavier. Zero is standard.
         return torch.zeros(*bias_shape, device=device)
 
     def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
@@ -135,31 +136,31 @@ class BaseWeightTester(ADMM_Initializer):
                 layer.a = a_pred.clone()
                 x = a_pred
 
-class WeightsZerosInitializer(BaseWeightTester):
+class WeightsZerosInitializer(BaseTester):
     """Zero weights (Baseline)."""  
     def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
         return torch.zeros(*weight_shape, device=device)
     
-class WeightsKaimingInitializer(BaseWeightTester):
+class WeightsKaimingInitializer(BaseTester):
     """Kaiming (He) weights. Gold standard for Static ReLU networks."""
     def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
         w = torch.empty(*weight_shape, device=device)
         nn.init.kaiming_normal_(w, mode='fan_out', nonlinearity='relu')
         return w
 
-class WeightsXavierInitializer(BaseWeightTester):
+class WeightsXavierInitializer(BaseTester):
     """Xavier weights."""
     def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
         w = torch.empty(*weight_shape, device=device)
         nn.init.xavier_normal_(w)
         return w
 
-class WeightsRandomInitializer(BaseWeightTester):
+class WeightsRandomInitializer(BaseTester):
     """Standard Normal Random weights."""
     def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
         return torch.randn(*weight_shape, device=device)
 
-class WeightsPytorchDefaultInitializer(BaseWeightTester):
+class WeightsPytorchDefaultInitializer(BaseTester):
     """
     Exact replication of PyTorch's default initialization 
     for nn.Linear and nn.Conv2d.
@@ -176,7 +177,7 @@ class WeightsPytorchDefaultInitializer(BaseWeightTester):
         # but to be strictly faithful to PyTorch:
         return torch.zeros(*bias_shape, device=device)
     
-class WeightsDataDrivenInitializer(BaseWeightTester):
+class WeightsDataDrivenInitializer(BaseTester):
     """
     Data-Driven Initialization (LSUV).
     Dynamically scales weights based on the first batch of data 
@@ -210,7 +211,7 @@ class WeightsDataDrivenInitializer(BaseWeightTester):
                 layer.a = a_pred.clone()
                 x = a_pred
                 
-class WeightsSNNThresholdInitializer(BaseWeightTester):
+class WeightsSNNThresholdInitializer(BaseTester):
     """
     Threshold-scaled Normal weights. 
     Gold standard for Spiking networks (SNNs).
@@ -237,67 +238,8 @@ class WeightsSNNThresholdInitializer(BaseWeightTester):
         nn.init.normal_(w, mean=0.0, std=std)
         return w
 
-class StatesStaticBase(ADMM_Initializer):
-    """Locks in Kaiming Weights for Static Networks."""
-    def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
-        w = torch.empty(*weight_shape, device=device)
-        # This is the exact source-code configuration used by PyTorch
-        nn.init.kaiming_uniform_(w, a=math.sqrt(5))
-        return w
-        
-    def init_bias(self, bias_shape: tuple, device:torch.device) -> torch.Tensor:
-        # PyTorch calculates a bound based on fan_in and uses uniform distribution
-        # For simplicity in ADMM, starting default biases at 0 is still acceptable,
-        # but to be strictly faithful to PyTorch:
-        return torch.zeros(*bias_shape, device=device)
-        
-class StatesSpikingBase(ADMM_Initializer):
-    """Locks in Threshold Weights for Spiking Networks."""
-    def __init__(self, threshold=1.0):
-        super().__init__()
-        self.threshold = threshold
-
-    def init_weights(self, weight_shape: tuple, device:torch.device=None) -> torch.Tensor:
-        w = torch.empty(*weight_shape, device=device)
-        if len(weight_shape) == 4:
-            fan_in = weight_shape[1] * weight_shape[2] * weight_shape[3]
-        elif len(weight_shape) == 2:
-            fan_in = weight_shape[1]
-        else:
-            fan_in = weight_shape[0]
-            
-        std = (self.threshold / math.sqrt(fan_in)) * 0.5 
-        nn.init.normal_(w, mean=0.0, std=std)
-        return w
-
-    def init_bias(self, bias_shape: tuple, device:torch.device) -> torch.Tensor:
-        return torch.zeros(*bias_shape, device=device)
-
-class StaticStateWarmStart(StatesStaticBase):
-    def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
-        x = inputs.to(device)
-        with torch.no_grad():
-            for layer in layers:
-                z_pred = layer.forward(x)
-                a_pred = layer.h(z_pred) if layer.h is not None else z_pred
-                layer.z = z_pred.clone()
-                layer.a = a_pred.clone()
-                x = a_pred
-
-class SpikingStateWarmStart(StatesSpikingBase):
-    def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
-        x = inputs.to(device)
-        with torch.no_grad():
-            for layer in layers:
-                z_pred = layer.forward(x)
-                a_pred = layer.h(z_pred) if layer.h is not None else z_pred
-                layer.z = z_pred.clone()
-                layer.a = a_pred.clone()
-                x = a_pred
-
-class StaticStateZeros(StatesStaticBase):
+class StatesZeros(BaseTester):
     """
-    Weights are Kaiming. 
     States are forced to 0, creating maximum ADMM constraint shock.
     """
     def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
@@ -315,64 +257,7 @@ class StaticStateZeros(StatesStaticBase):
                 # We must pass the zeroed 'a' to the next layer to simulate the dead signal
                 x = layer.a 
 
-class SpikingStateZeros(StatesSpikingBase):
-    """
-    Weights are Threshold-Scaled. 
-    States are forced to 0, simulating a completely dead SNN.
-    """
-    def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
-        x = inputs.to(device)
-        with torch.no_grad():
-            for layer in layers:
-                z_pred = layer.forward(x)
-                a_pred = layer.h(z_pred) if layer.h is not None else z_pred
-
-                layer.z = torch.zeros_like(z_pred)
-                layer.a = torch.zeros_like(a_pred)
-                
-                x = layer.a
-     
-class StaticStateNoisy(StatesStaticBase):
-    """
-    Adds 5% Gaussian noise to the forward pass to break symmetry 
-    and encourage ADMM exploration.
-    """
-    def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
-        x = inputs.to(device)
-        with torch.no_grad():
-            for layer in layers:
-                z_pred = layer.forward(x)
-                
-                # Add 5% noise relative to the standard deviation
-                noise_scale = z_pred.std() * 0.05
-                layer.z = z_pred + (torch.randn_like(z_pred) * noise_scale)
-                
-                # Calculate 'a' from the noisy 'z'
-                a_pred = layer.h(layer.z) if layer.h is not None else layer.z
-                layer.a = a_pred.clone()
-                
-                x = a_pred
-
-class SpikingStateNoisy(StatesSpikingBase):
-    """
-    Adds 5% Gaussian noise to the forward pass. 
-    Maintains strict SNN binary constraints via Heaviside.
-    """
-    def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
-        x = inputs.to(device)
-        with torch.no_grad():
-            for layer in layers:
-                z_pred = layer.forward(x)
-                
-                noise_scale = z_pred.std() * 0.05
-                layer.z = z_pred + (torch.randn_like(z_pred) * noise_scale)
-                
-                a_pred = layer.h(layer.z) if layer.h is not None else layer.z
-                layer.a = a_pred.clone()
-                
-                x = a_pred   
-                
-class StaticStateRandom(StatesStaticBase):
+class StatesRandom(BaseTester):
     """
     Pure Random Initialization. 
     Forces a massive, chaotic constraint violation on the ADMM solver.
@@ -390,24 +275,7 @@ class StaticStateRandom(StatesStaticBase):
                 layer.a = a_pred.clone()
                 
                 x = layer.a 
-
-class SpikingStateRandom(StatesSpikingBase):
-    """
-    Pure Random Initialization.
-    Tests if the SNN can recover from chaotic, unscaled binary spikes.
-    """
-    def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
-        x = inputs.to(device)
-        with torch.no_grad():
-            for layer in layers:
-                z_pred = layer.forward(x)
-                
-                layer.z = torch.randn_like(z_pred)
-                
-                a_pred = layer.h(layer.z) if layer.h is not None else layer.z
-                layer.a = a_pred.clone()
-                
-                x = layer.a        
+    
 
 def get_initializer(init_type: str) -> ADMM_Initializer:
     """Factory function to retrieve the correct initializer strategy.
@@ -432,14 +300,8 @@ def get_initializer(init_type: str) -> ADMM_Initializer:
         "wpytorch": WeightsPytorchDefaultInitializer(),
         "wdata": WeightsDataDrivenInitializer(),
         "wthreshold": WeightsSNNThresholdInitializer(),
-        "szeros": StaticStateZeros(),
-        "swarm": StaticStateWarmStart(),
-        "snoisy":StaticStateNoisy(),
-        "srandom": StaticStateRandom(),
-        "spiking-szeros": SpikingStateZeros(),
-        "spiking-swarm": SpikingStateWarmStart(),
-        "spiking-snoisy":SpikingStateNoisy(),
-        "spiking-srandom": SpikingStateRandom()        
+        "szeros": StatesZeros(),
+        "srandom": StatesRandom()     
     }
     if init_type not in strategies:
         raise ValueError(f"Initialization method '{init_type}' not defined. Options: {list(strategies.keys())}")

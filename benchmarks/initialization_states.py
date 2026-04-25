@@ -59,17 +59,16 @@ def calc_spatial_out(size_in, k, p, s):
 #########################################
 # Un-commented array to loop through all models
 model_types = ["linear", "conv", "spiking-linear", "spiking-conv"]
-initializations = ["szeros","swarm","snoisy","srandom","spiking-szeros","spiking-swarm","spiking-snoisy","spiking-srandom"]
+initializations = [ "wzeros","wkaiming","wxavier","wrandom","wpytorch","wdata","wthreshold","szeros","srandom"]
 
 for model_name in model_types:
     print(f"\n{'='*50}")
     print(f"EVALUATING MODEL: {model_name.upper()}")
     print(f"{'='*50}")
     for initialization in initializations:
-        if model_name in ["linear", "conv"] and initialization in ["wthreshold","spiking-szeros","spiking-swarm","spiking-snoisy","spiking-srandom"]:
+        if model_name in ["linear", "conv"] and initialization in ["wthreshold"]:
             continue
-        if model_name in ["spiking-linear", "spiking-conv"] and initialization in ["wxavier", "wkaiming","wdata","wpytorch","szeros","swarm","snoisy","srandom"]:
-            continue
+
         print(f"\nINITIALIZATION: {initialization}")
         # Reset seeds per model to guarantee identical environments
         torch.manual_seed(seed)

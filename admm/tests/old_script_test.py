@@ -12,7 +12,7 @@ import os
 from admm import  ADMM_SpikingLinear, ADMM, ADMM_Heaviside, ADMM_Metrics
 from admm.tests.old_script.admm_snn import ADMM_SNN
 
-def test_old_match():
+def old_match():
     seed = 8281003564
     def reset_seed(s):
         random.seed(s)
