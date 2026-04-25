@@ -181,7 +181,6 @@ class ADMM(nn.Module):
             self.lambda_lagrange.add_(last_layer.z, alpha=self.rho)
             self.lambda_lagrange.add_(forward, alpha=-self.rho)
 
-
     def _optimize_w_and_b(self, layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None, cache_pinv: bool = False):
         """Unified interface for updating all trainable parameters (W, b).
 

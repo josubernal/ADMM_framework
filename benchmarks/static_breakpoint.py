@@ -118,8 +118,7 @@ for model_name in model_types:
         #########################################
         # ADMM TRAINING LOOP
         m = ADMM_Metrics(admm_model) 
-        admm_model._init_states(images)
-        accuracy_list = []            
+        admm_model._init_states(images)     
 
         print("Training model with ADMM...")
         for epoch in range(epochs):
@@ -129,14 +128,13 @@ for model_name in model_types:
                 raw_outputs, _ = admm_model.forward_model(images)
                 flat_outputs = raw_outputs.view(batch_size, -1) 
                 _, predictions = flat_outputs.max(dim=1)
-                accuracy = 100. * (predictions == labels_one_hot.argmax(dim=1)).sum().item() / batch_size
+
                 m.save_metrics(images, labels_one_hot)
 
-                print(f"Epoch [{epoch:3d}/{epochs}] | Acc: {accuracy:6.2f}% | {m}")
-               
-                accuracy_list.append(accuracy)
+                print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
                     
                 current_primal = m.metrics["primal_residual"][-1]
+                accuracy  = m.metrics["accuracy"][-1]
                 primal_residual_delta = abs(prev_primal_residual - current_primal)
                 prev_primal_residual = current_primal
 
@@ -160,7 +158,6 @@ for model_name in model_types:
         metrics["warming_stop"]=warming_stop
         metrics["epochs"] = epochs
         metrics["seed"] = seed                    
-        metrics["accuracy_list"] = accuracy_list
 
         metrics_filename = f"benchmarks/results/static_breakpoint/{model_name}/{batch_size}/{layers}/results.json"
         os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)

@@ -129,7 +129,6 @@ for model_name in model_types:
         criterion = nn.CrossEntropyLoss()
         m = ADMM_Metrics(admm_model) 
         admm_model._init_states(images)
-        accuracy_list = []
         firing_rate_list = []
 
         print("Training model with ADMM...")
@@ -140,16 +139,15 @@ for model_name in model_types:
                 raw_outputs, firing_rates = admm_model.forward_model(images)
                 flat_outputs = raw_outputs.view(batch_size, -1) 
                 _, predictions = flat_outputs.max(dim=1)
-                accuracy = 100. * (predictions == labels_one_hot.argmax(dim=1)).sum().item() / batch_size
                 m.save_metrics(images, labels_one_hot)
 
-                print(f"Epoch [{epoch:3d}/{epochs}] | Acc: {accuracy:6.2f}%| Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
+                print(f"Epoch [{epoch:3d}/{epochs}] |  Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
                
-                accuracy_list.append(accuracy)
                 firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
 
                 # --- DYNAMIC WARMING LOGIC ---
                 current_primal = m.metrics["primal_residual"][-1]
+                accuracy  = m.metrics["accuracy"][-1]
                 primal_residual_delta = abs(prev_primal_residual - current_primal)
                 prev_primal_residual = current_primal
 
@@ -173,7 +171,6 @@ for model_name in model_types:
         metrics["warming_stop"] = warming_stop
         metrics["epochs"] = epochs
         metrics["seed"] = seed                    
-        metrics["accuracy_list"] = accuracy_list
         metrics["firing_rate"] = firing_rate_list
 
         metrics_filename = f"benchmarks/results/initialization_states/{model_name}/{batch_size}/{initialization}/results.json"

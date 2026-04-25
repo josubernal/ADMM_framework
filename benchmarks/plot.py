@@ -49,7 +49,7 @@ def main():
 
                 ax = axes_flat[i]
                 gd_accs = data.get('gd_accuracy', [])
-                admm_accs = data.get('accuracy_list', [])
+                admm_accs = data.get('accuracy', [])
                 
                 # Generate steps if not present
                 gd_steps = list(range(1, len(gd_accs) + 1))
@@ -129,7 +129,7 @@ def main():
             try:
                 with open(jp, 'r') as f:
                     d = json.load(f)
-                    if all(k in d for k in ["method", "architecture", "accuracy_list", "running_time"]):
+                    if all(k in d for k in ["method", "architecture", "accuracy", "running_time"]):
                         iter_data.append(d)
             except:
                 continue
@@ -156,7 +156,7 @@ def main():
                 ax_top = axes[0, i]
                 for d in arch_data:
                     method = d["method"]
-                    ax_top.plot(range(len(d["accuracy_list"])), d["accuracy_list"], 
+                    ax_top.plot(range(len(d["accuracy"])), d["accuracy"], 
                                 label=method, color=method_colors[method], 
                                 linewidth=2.5, marker='o', markersize=4, alpha=0.8)
                 
@@ -170,7 +170,7 @@ def main():
                 ax_bottom = axes[1, i]
                 for d in arch_data:
                     method = d["method"]
-                    max_acc = max(d["accuracy_list"])
+                    max_acc = max(d["accuracy"])
                     total_time = d["running_time"]
                     
                     # Plotting points individually to link them to the legend
@@ -203,7 +203,7 @@ def main():
                 with open(jp, 'r') as f:
                     d = json.load(f)
                     # Check for the keys saved by your static breakpoint script
-                    if "architecture" in d and "layers" in d and "accuracy_list" in d:
+                    if "architecture" in d and "layers" in d and "accuracy" in d:
                         static_data.append(d)
             except:
                 continue
@@ -227,7 +227,7 @@ def main():
                     arch_specific_data.sort(key=lambda x: int(x["layers"]))
                     
                     for d in arch_specific_data:
-                        acc = d["accuracy_list"]
+                        acc = d["accuracy"]
                         num_layers = d["layers"]
                         epochs_list = list(range(1, len(acc) + 1)) # Start at Epoch 1
                         
@@ -254,7 +254,7 @@ def main():
             try:
                 with open(jp, 'r') as f:
                     d = json.load(f)
-                    if "architecture" in d and "accuracy_list" in d:
+                    if "architecture" in d and "accuracy" in d:
                         # Extract loss function name (fallback to folder name if key is missing)
                         loss_name = d.get("loss_function", jp.parent.name)
                         d["loss_function"] = loss_name
@@ -289,7 +289,7 @@ def main():
                 arch_data.sort(key=lambda x: str(x["loss_function"]))
                 
                 for d in arch_data:
-                    acc = d["accuracy_list"]
+                    acc = d["accuracy"]
                     loss_name = str(d["loss_function"])
                     epochs_list = list(range(len(acc)))
                     
@@ -329,7 +329,7 @@ def main():
             try:
                 with open(jp, 'r') as f:
                     d = json.load(f)
-                    if "architecture" in d and "accuracy_list" in d:
+                    if "architecture" in d and "accuracy" in d:
                         # Extract initialization name (fallback to folder name if key is missing)
                         init_name = d.get("initialization", jp.parent.name)
                         d["initialization"] = init_name
@@ -364,7 +364,7 @@ def main():
                 arch_data.sort(key=lambda x: str(x["initialization"]))
                 
                 for d in arch_data:
-                    acc = d["accuracy_list"]
+                    acc = d["accuracy"]
                     init_name = str(d["initialization"])
                     epochs_list = list(range(len(acc)))
                     
@@ -402,7 +402,7 @@ def main():
             try:
                 with open(jp, 'r') as f:
                     d = json.load(f)
-                    if "architecture" in d and "accuracy_list" in d:
+                    if "architecture" in d and "accuracy" in d:
                         # Extract initialization name (fallback to folder name if key is missing)
                         init_name = d.get("initialization", jp.parent.name)
                         d["initialization"] = init_name
@@ -437,7 +437,7 @@ def main():
                 arch_data.sort(key=lambda x: str(x["initialization"]))
                 
                 for d in arch_data:
-                    acc = d["accuracy_list"]
+                    acc = d["accuracy"]
                     init_name = str(d["initialization"])
                     epochs_list = list(range(len(acc)))
                     

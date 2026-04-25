@@ -1,5 +1,0 @@
-results/spiking-linear/200/layers-3_train_method-decoupled-random/8281003564/metrics.json
-results/spiking-linear/200/layers-3_train_method-decoupled-sequential/8281003564/metrics.json
-results/spiking-linear/200/layers-3_train_method-unrolled-random/8281003564/metrics.json
-results/spiking-linear/200/layers-3_train_method-vectorized/8281003564/metrics.json
-

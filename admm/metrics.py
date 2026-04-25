@@ -9,10 +9,13 @@ training logic.
 """
 
 import torch
+import json
+import os
+import matplotlib.pyplot as plt
 
 class ADMM_Metrics:
     """Observer class that computes performance and convergence metrics for an ADMM model."""
-    def __init__(self, model):
+    def __init__(self, model=None):
         """Initializes the metrics tracker.
 
         Args:
@@ -22,31 +25,34 @@ class ADMM_Metrics:
         self.model = model
         self.metrics = {
             "loss":[],
-            "lagrangian_cost": [],
+            "accuracy": [],
+            "lagrangian": [],
             "primal_residual": [],
             "preactivation_constraint_sum":[],
             "activation_constraint_sum": []
         }
     
     def __str__(self):
-        # Helper function to format either a single float or a list of floats
+        if not self.metrics["loss"]:
+            return "Metrics not yet initialized."
         def format_metric(val):
             if isinstance(val, list):
                 return "[" + ",".join([f"{v:8.2f}" for v in val]) + "]"
             return f"{val:10.2f}"
 
         loss = self.metrics["loss"][-1]
-        lagr = format_metric(self.metrics["lagrangian_cost"][-1])
+        lagr = format_metric(self.metrics["lagrangian"][-1])
         lamb = format_metric(self.metrics["primal_residual"][-1])
         pre  = format_metric(self.metrics["preactivation_constraint_sum"][-1])
         act  = format_metric(self.metrics["activation_constraint_sum"][-1])
 
-        return f" Loss: {loss:.4f} | Lagr: {lagr} | Lamb: {lamb} | Pre: {pre} | Act: {act}"
+        return f" Loss: {loss:.4f} | Acc:{self.accuracy} | Lagr: {lagr} | Lamb: {lamb} | Pre: {pre} | Act: {act}"
+    @torch.no_grad()
     def loss(self, labels: torch.Tensor):
         final_out = self.model.layers[-1].z[-1] if self.model.is_spiking else self.model.layers[-1].z
         return self.model.loss_f(final_out, labels).item()
-    
-    def lagrangian_cost(self, inputs: torch.Tensor, labels: torch.Tensor):
+    @torch.no_grad()
+    def lagrangian(self, inputs: torch.Tensor, labels: torch.Tensor):
         """Calculates the ADMM energy/cost to track convergence.
 
         Args:
@@ -57,11 +63,10 @@ class ADMM_Metrics:
             float: The calculated Lagrangian cost.
         """
         cost = 0.0
-        batch_size = self.model._get_batchsize(inputs)
         last_layer = self.model.layers[-1]
         
-        z_last_flat = last_layer.z[-1].view(batch_size, -1) if self.model.is_spiking else last_layer.z.view(batch_size, -1)
-        cost += torch.norm(z_last_flat - labels)**2 
+        final_out = last_layer.z[-1] if self.model.is_spiking else last_layer.z
+        cost += self.model.loss_f(final_out, labels)
         
         a_prev_L = self.model.layers[-2].a if self.model.L > 1 else inputs
         last_out = last_layer.vectorized_forward(a_prev_L)
@@ -81,7 +86,7 @@ class ADMM_Metrics:
             cost += (self.model.beta / 2.0) * torch.norm(layer.a - layer.h(layer.z)) ** 2
             
         return cost.item()
-    
+    @torch.no_grad()
     def primal_residual_norm(self, inputs: torch.Tensor):
         """Calculates the normalized norm of the primal residual for the final layer.
 
@@ -99,7 +104,7 @@ class ADMM_Metrics:
         norm_factor = r.numel() ** 0.5
         
         return (torch.norm(r) / norm_factor).item()
-
+    @torch.no_grad()
     def preactivation_constraint_sum(self, inputs: torch.Tensor):
         """Calculates the normalized L2 norm of the pre-activation constraint (z vs Wx).
 
@@ -121,7 +126,7 @@ class ADMM_Metrics:
                 constraints_residuals.append(val)
                 
         return constraints_residuals
-  
+    @torch.no_grad()
     def activation_constraint_sum(self):
         """Calculates the normalized L2 norm of the activation constraint (a vs h(z)).
 
@@ -139,6 +144,32 @@ class ADMM_Metrics:
                 constraints_residuals.append(val)
                 
         return constraints_residuals
+
+    @torch.no_grad()
+    def accuracy(self, labels: torch.Tensor):
+        """Calculates the classification accuracy.
+        
+        Args:
+            labels (torch.Tensor): Ground truth labels (can be class indices or one-hot).
+            
+        Returns:
+            float: The accuracy as a percentage [0.0, 1.0].
+        """
+        last_layer = self.model.layers[-1]
+        final_out = last_layer.z[-1] if self.model.is_spiking else last_layer.z
+        
+        # Handle 1D (class indices) vs 2D (one-hot encoded) labels
+        if labels.dim() > 1 and labels.size(1) > 1:
+            targets = torch.argmax(labels, dim=1)
+        else:
+            targets = labels.view(-1)
+            
+        preds = torch.argmax(final_out, dim=1)
+        
+        correct = (preds == targets).sum().item()
+        total = targets.size(0)
+        
+        return correct / total if total > 0 else 0.0
 
 
     def network_size_statistics(self):
@@ -196,10 +227,39 @@ class ADMM_Metrics:
             dict: A dictionary of all computed metrics.
         """
         self.metrics["loss"].append(self.loss(labels))
-        self.metrics["lagrangian_cost"].append(self.lagrangian_cost(inputs, labels))
+        self.metrics["accuracy"].append(self.accuracy(labels))
+        self.metrics["lagrangian"].append(self.lagrangian(inputs, labels))
         self.metrics["primal_residual"].append(self.primal_residual_norm(inputs))
         self.metrics["preactivation_constraint_sum"].append(self.preactivation_constraint_sum(inputs))
         self.metrics[ "activation_constraint_sum"].append(self.activation_constraint_sum())
     
     def get_dic(self):
         return self.metrics
+    
+    def load(self, filepath: str):
+        """Loads a previously saved metrics dictionary into self.metrics."""
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Metrics file not found at: {filepath}")
+        with open(filepath, 'r') as f:
+            # CORRECTED: Load directly into the class attribute
+            self.metrics = json.load(f)
+            print(f"Metrics successfully loaded from {filepath}")
+    
+    def plot(self):
+        """Generates plots for the requested metrics."""
+        fig, ax = plt.subplots(2, 3, figsize=(30, 5))
+        ax[0, 0].semilogy(self.metrics["lagrangian"])
+        ax[0, 0].set_title("Lagrangian")
+        ax[0, 1].semilogy(self.metrics["primal_residual"])
+        ax[0, 1].set_title("Primal Residual Norm")
+        ax[0, 2].semilogy(self.metrics["preactivation_constraint_sum"])
+        ax[0, 2].set_title("Preactivation Constraint (||z - F(a)||)")
+        ax[1, 0].semilogy(self.metrics["activation_constraint_sum"]) 
+        ax[1, 0].set_title("Activation Constraint (||a - h(z)||)") 
+        ax[1, 1].semilogy(self.metrics["loss"])
+        ax[1, 1].set_title("Loss")
+        ax[1, 2].plot(self.metrics["accuracy"])
+        ax[1, 2].set_title("Train Accuracy")
+            
+        plt.tight_layout()
+        plt.show()

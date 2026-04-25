@@ -130,7 +130,6 @@ if __name__ == "__main__":
             m = ADMM_Metrics(model)
             model._init_states(arch_data)
             
-            accuracy_list = []
             firing_rate_list = []
             
             # ---------------------------------------------------------
@@ -146,17 +145,16 @@ if __name__ == "__main__":
                     flat_outputs = outputs.view(batch_size, -1)
                 
                     _, preds = flat_outputs.max(dim=1)
-                    accuracy = 100. * (preds == targets.argmax(dim=1)).sum().item() / batch_size
                     
                     m.save_metrics(arch_data, targets)
 
-                    print(f"Epoch [{epoch:3d}/{epochs}] | Acc: {accuracy:6.2f}%| Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
+                    print(f"Epoch [{epoch:3d}/{epochs}] | Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
                 
-                    accuracy_list.append(accuracy)
                     firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
 
                     # --- DYNAMIC WARMING LOGIC ---
                     current_primal = m.metrics["primal_residual"][-1]
+                    accuracy  = m.metrics["accuracy"][-1]
                     primal_residual_delta = abs(prev_primal_residual - current_primal)
                     prev_primal_residual = current_primal
 
@@ -185,7 +183,6 @@ if __name__ == "__main__":
             metrics["batch_size"] = batch_size
             metrics["epochs"] = epochs
             metrics["seed"] = seed                    
-            metrics["accuracy_list"] = accuracy_list
             metrics["firing_rate"] = firing_rate_list
 
             save_dir = f"benchmarks/results/iteration_methods/{arch}/{method}"

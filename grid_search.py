@@ -267,7 +267,6 @@ if __name__ == "__main__":
 
         print(f"Training...")
 
-        accuracy_list = []
         firing_rate_list = []
         
         # ---------------------------------------------------------
@@ -282,13 +281,11 @@ if __name__ == "__main__":
                     flat_outputs = raw_outputs.view(batch_size, -1)
                 
                     _, preds = flat_outputs.max(dim=1)
-                    accuracy = 100. * (preds == targets.argmax(dim=1)).sum().item() / batch_size
-
+                    
                     m.save_metrics(data, targets)
 
-                    print(f"Epoch [{epoch:3d}/{epochs}] | Acc: {accuracy:6.2f}%| Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
-                
-                    accuracy_list.append(accuracy)
+                    print(f"Epoch [{epoch:3d}/{epochs}] | Firing rate: {[f'{v:.4f}' for v in firing_rates]} | {m}")
+
                     firing_rate_list.append([f'{v:.4f}' for v in firing_rates])
 
         #########################################
@@ -298,7 +295,6 @@ if __name__ == "__main__":
         running_time = end_time - start_time
         print(f"Model finished in {end_time - start_time:.2f} seconds.")       
         metrics=m.get_dic()
-        metrics["accuracy_list"] = accuracy_list
         metrics["firing_rate"] = firing_rate_list
         metrics["running_time" ]= running_time
         
@@ -325,7 +321,7 @@ if __name__ == "__main__":
         ax[1, 0].set_title("Preactivation Constraint") 
         ax[1, 1].semilogy(metrics["loss"])
         ax[1, 1].set_title("Loss")
-        ax[1, 2].plot(metrics["accuracy_list"])
+        ax[1, 2].plot(metrics["accuracy"])
         ax[1, 2].set_title("Train Accuracy")
         
         plt.tight_layout()
