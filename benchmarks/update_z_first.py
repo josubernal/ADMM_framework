@@ -165,7 +165,7 @@ for model_name in model_types:
         metrics["epochs"] = epochs
         metrics["seed"] = seed                    
 
-        metrics_filename = f"benchmarks/results/layer_order/{model_name}/{batch_size}/{z_first}/results.json"
+        metrics_filename = f"benchmarks/results/update_z_first/{model_name}/{batch_size}/{z_first}/results.json"
         os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
         with open(metrics_filename, "w") as f:
