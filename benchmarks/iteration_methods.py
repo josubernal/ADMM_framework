@@ -73,11 +73,6 @@ if __name__ == "__main__":
         print(f"### EVALUATING ARCHITECTURE: {arch.upper()}")
         print(f"{'#'*60}")
         
-        if arch == "linear":
-            arch_data = raw_data.view(raw_data.size(0), raw_data.size(1), -1).permute(1, 0, 2)
-        else:
-            arch_data = raw_data.permute(1, 0, 2, 3, 4)
-            
         for method in methods:
             # 1. Reset seeds
             torch.manual_seed(seed)
