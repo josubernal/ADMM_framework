@@ -7,7 +7,7 @@ import json
 from utils.dataset import get_data
 from admm import (
     ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpikingConv2d, 
-    ADMM, ADMM_Heaviside, ADMM_Metrics, ADMM_Hinge
+    ADMM, ADMM_Heaviside, ADMM_Metrics, ADMM_CrossEntropy_Taylor
 )
 
 def calc_spatial_out(size_in, k, p, s):
@@ -117,7 +117,7 @@ if __name__ == "__main__":
             model = ADMM(
                 layers, 
                 T=n_timesteps, 
-                loss_f=ADMM_Hinge(),
+                loss_f=ADMM_CrossEntropy_Taylor(),
                 rho=rho, 
                 thetas=thetas, 
                 deltas=deltas, 
@@ -175,15 +175,12 @@ if __name__ == "__main__":
             metrics["epochs"] = epochs
             metrics["seed"] = seed                    
 
-            save_dir = f"benchmarks/results/iteration_methods/{arch}/{method}"
-            os.makedirs(save_dir, exist_ok=True)
+            metrics_filename = f"benchmarks/results/iteration_methods/{arch}/{batch_size}/{method}/results.json"
+            os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
-            save_path = os.path.join(save_dir, f"batch_{batch_size}_seed_{seed}.json")
-
-            with open(save_path, "w") as f:
+            with open(metrics_filename, "w") as f:
                 json.dump(metrics, f, indent=4)
-                
-            print(f"--> Saved results to: {save_path}\n")
 
+            # Free up memory before the next model
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
