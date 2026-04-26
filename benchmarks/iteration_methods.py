@@ -51,12 +51,6 @@ if __name__ == "__main__":
     thetas = config.getfloat('config', 'thetas')
     
     # ==========================================
-    # 2. DATASET LOADING (LOADED ONCE)
-    # ==========================================
-
-    raw_data, targets = get_data(batch_size, spiking=True, device=device, n_timesteps=n_timesteps)
-    targets = torch.nn.functional.one_hot(targets.long(), num_classes=10).float()
-    # ==========================================
     # 3. BENCHMARK LOOPS
     # ==========================================
     architectures = ["spiking-linear", "spiking-conv"]
@@ -85,11 +79,20 @@ if __name__ == "__main__":
             arch_data = raw_data.permute(1, 0, 2, 3, 4)
             
         for method in methods:
+            # 1. Reset seeds
             torch.manual_seed(seed)
             torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
             torch.backends.cudnn.deterministic = True 
             torch.backends.cudnn.benchmark = False
+            
+            raw_data, targets = get_data(batch_size, spiking=True, device=device, n_timesteps=n_timesteps, seed=seed)
+            targets = torch.nn.functional.one_hot(targets.long(), num_classes=10).float()
+            
+            if arch == "spiking-linear":
+                arch_data = raw_data.view(raw_data.size(0), raw_data.size(1), -1).permute(1, 0, 2)
+            else:
+                arch_data = raw_data.permute(1, 0, 2, 3, 4)
     
             is_warming = True       
             prev_primal_residual = float('inf')
