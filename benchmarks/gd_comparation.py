@@ -156,10 +156,10 @@ for model_name in model_types:
     # DATA
     if model_name in ["linear", "conv"]:
         batch_size= batch_size_static
-        images, labels= get_data(batch_size, spiking=False, device=device)
+        images, labels= get_data(batch_size, spiking=False, device=device, seed=seed)
     else:
         batch_size= batch_size_spiking
-        images, labels = get_data(batch_size, spiking=True, device=device, n_timesteps=n_timesteps)
+        images, labels = get_data(batch_size, spiking=True, device=device, n_timesteps=n_timesteps,seed=seed)
         
     labels_one_hot = F.one_hot(labels.long(), num_classes=10).float()
 
