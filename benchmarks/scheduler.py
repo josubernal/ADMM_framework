@@ -197,7 +197,7 @@ for model_name in model_types:
     #########################################
     m2 = ADMM_Metrics(admm_model) 
     admm_model._init_states(images)
-    balancer = ADMM_Scheduler(admm_model, mu=10.0, tau=2.0, verbose=True, offload_to_cpu=False)
+    balancer = ADMM_Scheduler(admm_model, mu=10.0, tau=2.0)
 
     print("\nTraining model with ADMM (WITH SCHEDULER)...")
     for epoch in range(epochs): 
