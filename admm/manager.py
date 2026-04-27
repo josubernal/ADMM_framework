@@ -272,7 +272,6 @@ class ADMM(nn.Module):
             
             time_steps= self._get_time_steps()
             layer_indices = self._get_layers()
-            print(layer_indices)
             for l in layer_indices:  
                 layer = self.layers[l]
                 a_prev = inputs if l == 0 else self.layers[l - 1].a

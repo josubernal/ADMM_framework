@@ -305,20 +305,4 @@ if __name__ == "__main__":
     # VISUALIZATION (Static Run Only)
     # ==========================================
     if is_static_run:
-        print("\nRendering training plots for static run...")
-        fig, ax = plt.subplots(2, 3, figsize=(30, 5))
-        ax[0, 0].semilogy(metrics["lagrangian_cost"])
-        ax[0, 0].set_title("Lagrangian")
-        ax[0, 1].semilogy(metrics["primal_residual"])
-        ax[0, 1].set_title("Primal Residual Norm")
-        ax[0, 2].semilogy(metrics["activation_constraint_sum"])
-        ax[0, 2].set_title("Activation Constraint (||a - h(z)||)")
-        ax[1, 0].semilogy(metrics["preactivation_constraint_sum"])
-        ax[1, 0].set_title("Preactivation Constraint") 
-        ax[1, 1].semilogy(metrics["loss"])
-        ax[1, 1].set_title("Loss")
-        ax[1, 2].plot(metrics["accuracy"])
-        ax[1, 2].set_title("Train Accuracy")
-        
-        plt.tight_layout()
-        plt.show()
+        m.plot()
