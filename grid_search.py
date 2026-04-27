@@ -12,7 +12,8 @@ import torch.nn.functional as F
 
 from admm import (
     ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpatialPool, ADMM_SpikingConv2d, 
-    ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics, ADMM_GAP
+    ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics, ADMM_GAP,
+    ADMM_CrossEntropy_Taylor, ADMM_SSE
 )
 
 def is_valid_combination(params: dict) -> bool:    
@@ -242,9 +243,9 @@ if __name__ == "__main__":
         # 3. INITIALIZE MODEL & METRICS
         # ---------------------------------------------------------
         if model_name.split('-')[0] == "spiking":
-            model = ADMM(layers, T=n_timesteps, rho=rho, thetas=thetas, deltas=deltas, beta=beta, init=init, bias=bias, train_method=train_method).to(device)
+            model = ADMM(layers,loss_f=ADMM_CrossEntropy_Taylor(), T=n_timesteps, rho=rho, thetas=thetas, deltas=deltas, beta=beta, init=init, bias=bias, train_method=train_method).to(device)
         else: 
-            model = ADMM(layers, rho=rho, beta=beta, init=init, bias=bias, train_method=train_method).to(device)
+            model = ADMM(layers,loss_f=ADMM_SSE(), rho=rho, beta=beta, init=init, bias=bias, train_method=train_method).to(device)
         
         m = ADMM_Metrics(model)
         model._init_states(data)
