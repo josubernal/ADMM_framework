@@ -56,6 +56,4 @@ class ADMM_Scheduler:
         self.a_old = None
     
     def _scale_lambda_lagrage(self, scale_factor):
-        for layer in self.layers:
-            if hasattr(layer, 'lambda_z'):
-                self.model.lambda_lagrange.mul_(scale_factor)
+        self.model.lambda_lagrange.mul_(scale_factor)
