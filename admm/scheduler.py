@@ -39,11 +39,11 @@ class ADMM_Scheduler:
         # 2. Balance RHO (Pre-activations)
         if primal_rho > self.mu * dual_rho:
             self.model.rho *= self.tau         
-            self.model.scale_z_multipliers(1.0 / self.tau)
+            self._scale_lambda_lagrage(1.0 / self.tau)
             
         elif dual_rho > self.mu * primal_rho:
             self.model.rho /= self.tau         
-            self.model.scale_z_multipliers(self.tau)
+            self._scale_lambda_lagrageself.tau)
             
         # 3. Balance BETA (Activations)
         if primal_beta > self.mu * dual_beta:
