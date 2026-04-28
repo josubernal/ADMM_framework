@@ -43,7 +43,7 @@ class ADMM_Scheduler:
             
         elif dual_rho > self.mu * primal_rho:
             self.model.rho /= self.tau         
-            self._scale_lambda_lagrageself.tau)
+            self._scale_lambda_lagrage(self.tau)
             
         # 3. Balance BETA (Activations)
         if primal_beta > self.mu * dual_beta:
