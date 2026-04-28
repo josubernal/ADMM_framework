@@ -153,7 +153,7 @@ for model_name in model_types:
                         is_warming = False
                         warming_stop = epoch
                     
-   #########################################
+#########################################
     # 2ND MODEL INSTANTIATION (SCHEDULER RUN)
     #########################################
     
@@ -167,7 +167,8 @@ for model_name in model_types:
                 ADMM_Linear(in_f=input_size, out_f=hidden_size_static, h=ADMM_ReLU(), init="pytorch", bias=True),
                 ADMM_Linear(in_f=hidden_size_static, out_f=10, h=ADMM_ReLU(), init="pytorch", bias=True)
             ])
-            admm_model = ADMM(linear_layers,loss_f=ADMM_SSE(), rho=1, beta=1, init="pytorch", bias=True, train_method='vectorized').to(device)
+            # FIXED: Restored linear_rho and linear_beta
+            admm_model = ADMM(linear_layers,loss_f=ADMM_SSE(), rho=linear_rho, beta=linear_beta, init="pytorch", bias=True, train_method='vectorized').to(device)
 
         case "conv":
             spatial_dim = int(calc_spatial_out(28, k, p, s))
@@ -176,14 +177,16 @@ for model_name in model_types:
                 ADMM_Conv2d(in_c=1, out_c=hidden_channels_static, k=k, p=p, s=s, h=ADMM_ReLU(), init="pytorch", bias=True, use_fft=False, padding_mode='zeros'),
                 ADMM_Linear(in_f=lin_in_dim, out_f=10, h=ADMM_ReLU(),pool_op=ADMM_Flatten(), init="pytorch", bias=True)
             ])
-            admm_model = ADMM(conv_layers, loss_f=ADMM_SSE(),rho=1, beta=1, init="pytorch", bias=True, train_method='vectorized').to(device) 
+            # FIXED: Restored conv_rho and conv_beta
+            admm_model = ADMM(conv_layers, loss_f=ADMM_SSE(), rho=conv_rho, beta=conv_beta, init="pytorch", bias=True, train_method='vectorized').to(device) 
 
         case "spiking-linear":
             splinear_layers = nn.ModuleList([ 
                 ADMM_SpikingLinear(in_f=34*34*2, out_f=hidden_size_spiking, h=ADMM_Heaviside(thetas=thetas), init="s-uniform", bias=False),
                 ADMM_SpikingLinear(in_f=hidden_size_spiking, out_f=10, h=None, init="s-uniform", bias=False)
             ])
-            admm_model = ADMM(splinear_layers,loss_f=ADMM_CrossEntropy_Taylor(), T=n_timesteps, rho=1, thetas=thetas, deltas=deltas, beta=1, init="s-uniform", bias=False, train_method='decoupled-backwards').to(device)
+            # FIXED: Restored splinear_rho and splinear_beta
+            admm_model = ADMM(splinear_layers,loss_f=ADMM_CrossEntropy_Taylor(), T=n_timesteps, rho=splinear_rho, thetas=thetas, deltas=deltas, beta=splinear_beta, init="s-uniform", bias=False, train_method='decoupled-backwards').to(device)
 
         case "spiking-conv":
             spatial_dim = int(calc_spatial_out(34, k, p, s))
@@ -192,29 +195,17 @@ for model_name in model_types:
                 ADMM_SpikingConv2d(in_c=2, out_c=hidden_channels_spiking, k=k, p=p, s=s, h=ADMM_Heaviside(thetas=thetas), init="s-uniform", bias=False, use_fft=False,  padding_mode="zeros"),
                 ADMM_SpikingLinear(in_f=lin_in_dim, pool_op=ADMM_Flatten(), out_f=10, h=None, init="s-uniform", bias=False)
             ])
-            admm_model = ADMM(spconv_layers,loss_f=ADMM_CrossEntropy_Taylor(), T=n_timesteps, rho=1, thetas=thetas, deltas=deltas, beta=1, init="s-uniform", bias=False, train_method='decoupled-backwards').to(device)
+            # FIXED: Restored spconv_rho and spconv_beta
+            admm_model = ADMM(spconv_layers,loss_f=ADMM_CrossEntropy_Taylor(), T=n_timesteps, rho=spconv_rho, thetas=thetas, deltas=deltas, beta=spconv_beta, init="s-uniform", bias=False, train_method='decoupled-backwards').to(device)
 
     #########################################
     m2 = ADMM_Metrics(admm_model) 
     admm_model._init_states(images)
-    balancer = ADMM_Scheduler(admm_model, mu=10.0, tau=2.0)
+    
+    # FIXED: Added the Deep Learning anti-oscillation parameters!
+    balancer = ADMM_Scheduler(admm_model, mu=10.0, tau=2.0, balance_freq=5, stop_epoch=int(epochs*0.75))
 
     print("\nTraining model with ADMM (WITH SCHEDULER)...")
-    for epoch in range(epochs): 
-        
-        balancer.capture_state()
-        admm_model.fit(images, labels_one_hot, warming=False)            
-        
-        with torch.no_grad():                    
-            m2.save_metrics(images, labels_one_hot) 
-            print(f"Epoch [{epoch:3d}/{epochs}] | {m2}") 
-            
-           # 3. Read the Primal Residuals (These are LISTS of per-layer residuals)
-            primal_rho_list = m2.metrics["preactivation_constraint_sum"][-1]
-            primal_beta_list = m2.metrics["activation_constraint_sum"][-1]
-
-            # 4. Balance the network and automatically free memory!
-            balancer.step(primal_rho_list, primal_beta_list)
             
     #########################################
     # SAVING RESULTS AND PLOTTING
