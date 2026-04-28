@@ -71,28 +71,28 @@ class ADMM_Metrics:
             float: The calculated Lagrangian cost.
         """
         cost = 0.0
-        last_layer = self.model.layers[-1]
         
+        last_layer = self.model.layers[-1]
         final_out = last_layer.z[-1] if self.model.is_spiking else last_layer.z
         cost += self.model.loss_f(final_out, labels)
-        
-        a_prev_L = self.model.layers[-2].a if self.model.L > 1 else inputs
-        last_out = last_layer.vectorized_forward(a_prev_L)
-        last_layer_cost = last_layer.z - last_out
-        
-        lambda_term = last_layer_cost[-1] if self.model.is_spiking else last_layer_cost
-
-        cost += torch.sum(self.model.lambda_lagrange * lambda_term)
-        cost += (self.model.rho / 2.0) * torch.norm(last_layer_cost)**2
-        
-        for l in range(self.model.L - 1):
+     
+        for l, layer in enumerate(self.model.layers):
             a_prev = inputs if l == 0 else self.model.layers[l - 1].a
-            layer = self.model.layers[l]
+
+            predicted_z = layer.vectorized_forward(a_prev)
+            residual = layer.z - predicted_z
             
-            physical_out = layer.vectorized_forward(a_prev)
-            cost += (self.model.rho / 2.0) * torch.norm(layer.z - physical_out)**2
-            cost += (self.model.beta / 2.0) * torch.norm(layer.a - layer.h(layer.z)) ** 2
+            cost += (layer.rho / 2.0) * torch.norm(residual)**2
             
+            if l < self.model.L - 1:
+                cost += (layer.beta / 2.0) * torch.norm(layer.a - layer.h(layer.z)) ** 2
+                
+            if getattr(layer, 'use_lagrange', False) and layer.lambda_lagrange is not None:
+                if self.model.is_spiking:
+                    cost += torch.sum(layer.lambda_lagrange * residual[-1])
+                else:
+                    cost += torch.sum(layer.lambda_lagrange * residual)
+                    
         return cost.item()
     @torch.no_grad()
     def primal_residual_norm(self, inputs: torch.Tensor):

@@ -164,7 +164,7 @@ def get_spiking_a_denominator(WtW, in_features, beta_current, rho_next, temporal
     return denominator_main, denominator_last, in_features
 
 
-def get_spiking_a_adjoint(layer, next_layer, lambda_lagrange): #forward_pass):DEPRECATED
+def get_spiking_a_adjoint(layer, next_layer): #forward_pass):DEPRECATED
     """
         Computes the linear components of the ADMM numerator for activation updates.
 
@@ -181,7 +181,7 @@ def get_spiking_a_adjoint(layer, next_layer, lambda_lagrange): #forward_pass):DE
         Returns:
             torch.Tensor: A tensor shaped like `layer.z`.
     """
-    v = next_layer._get_v(include_reset=False, lambda_lagrange=lambda_lagrange)     
+    v = next_layer._get_v(include_reset=False)     
     adjoint = next_layer.adjoint_operator(v, original_input_shape=layer.a.shape)
     # temporal_penalty = torch.zeros_like(layer.z)
     # temporal_penalty[:-1] = -layer.thetas * layer.rho * (layer.z[1:] - layer.deltas * layer.z[:-1] - forward_pass[1:]) DEPRECATED

@@ -37,7 +37,6 @@ class ADMM(nn.Module):
         self.L = len(self.layers)
         self.initialized = False
         
-        self.lambda_lagrange = None
         self.init = init
         self.train_method = train_method
         self.layer_order = layer_order
@@ -143,10 +142,10 @@ class ADMM(nn.Module):
 
         initializer.init_states(self.layers, inputs, self.device)
         
-        # Initialize the Lagrange multiplier
-        last_z = self.layers[-1].z
-        target_shape = last_z[-1] if self.is_spiking else last_z
-        self.lambda_lagrange = torch.zeros_like(target_shape, device=self.device)
+        for layer in self.layers:
+            if getattr(layer, 'use_lagrange', False):
+                shape = layer.z[-1].shape if self.is_spiking else layer.z.shape
+                layer.lambda_lagrange = torch.zeros(shape, device=inputs.device)
         
     def forward_model(self, inputs: torch.Tensor):
         """Standard Feed-Forward pass used strictly for inference/evaluation.
@@ -183,64 +182,42 @@ class ADMM(nn.Module):
 
         return final_out, firing_rates
     
-    def _lambda_update(self, last_layer, a_prev_L):
-        """Updates the Lagrange multiplier (lambda) based on the final layer constraint.
-
-        Formula: lambda_new = lambda_old + rho * (z - forward(a_prev_L))
-
-        Args:
-            last_layer (nn.Module): The final layer of the network.
-            a_prev_L (torch.Tensor): The activations from the penultimate layer or inputs.
-        """
-        if self.is_spiking:
-            z_T = last_layer.z[-1]
-            z_T_minus_1 = last_layer.z[-2]
-            forward = last_layer.spatial_forward(a_prev_L[-1].unsqueeze(0)).squeeze(0)
-            self.lambda_lagrange.add_(z_T, alpha=self.rho)
-            self.lambda_lagrange.add_(z_T_minus_1, alpha=-self.rho*last_layer.deltas)
-            self.lambda_lagrange.add_(forward, alpha=-self.rho)
-        else:
-            forward = last_layer.spatial_forward(a_prev_L)
-            self.lambda_lagrange.add_(last_layer.z, alpha=self.rho)
-            self.lambda_lagrange.add_(forward, alpha=-self.rho)
-
-    def _optimize_w_and_b(self, layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None, cache_pinv: bool = False):
+            
+    def _optimize_w_and_b(self, layer: nn.Module, a_prev: torch.Tensor,  cache_pinv: bool = False):
         """Unified interface for updating all trainable parameters (W, b).
 
         Args:
             layer (nn.Module): The layer to update.
             a_prev (torch.Tensor): The previous layer's activations.
-            lambda_lagrange (torch.Tensor, optional): The Lagrange multiplier. Defaults to None.
             cache_pinv (bool, optional): Whether to cache the pseudoinverse. Defaults to False.
         """
-        layer.update_weights(a_prev, cache_pinv=cache_pinv, lambda_lagrange=lambda_lagrange)
-        if self.bias: layer.update_bias(a_prev, lambda_lagrange)
+        layer.update_weights(a_prev, cache_pinv=cache_pinv)
+        if self.bias: layer.update_bias(a_prev)
 
-    def _optimize_a_and_z(self, layer: nn.Module, next_layer: nn.Module, a_prev: torch.Tensor, lagrange: torch.Tensor = None, time_steps=None):
+    def _optimize_a_and_z(self, layer: nn.Module, next_layer: nn.Module, a_prev: torch.Tensor, time_steps=None):
         """Unified interface for updating activations and pre-activations variables (a, z).
 
         Args:
             layer (nn.Module): The current layer being optimized.
             next_layer (nn.Module): The subsequent layer in the network.
             a_prev (torch.Tensor): The previous layer's activations.
-            lagrange (torch.Tensor, optional): The Lagrange multiplier. Defaults to None.
             time_steps (list, optional): Time steps for spiking networks. Defaults to None.
         """
         if self.train_method.startswith("unrolled") and getattr(layer, 'spiking', False):
-            layer.update_az_interleaved(next_layer, a_prev, lagrange, time_steps, self.update_z_first)
+            layer.update_az_interleaved(next_layer, a_prev, time_steps, self.update_z_first)
         elif self.train_method.startswith("decoupled") and getattr(layer, 'spiking', False):
             if self.update_z_first:
                 layer.update_z_decoupled(a_prev, time_steps)
-                layer.update_a(next_layer, a_prev, lagrange)
+                layer.update_a(next_layer, a_prev)
             else:
-                layer.update_a(next_layer, a_prev, lagrange)
+                layer.update_a(next_layer, a_prev)
                 layer.update_z_decoupled(a_prev, time_steps)        
         else: 
             if self.update_z_first:
                 layer.update_z(a_prev)
-                layer.update_a(next_layer, a_prev, lagrange)
+                layer.update_a(next_layer, a_prev)
             else:
-                layer.update_a(next_layer, a_prev, lagrange)
+                layer.update_a(next_layer, a_prev)
                 layer.update_z(a_prev)
 
     def _optimize_z_last(self, layer: nn.Module, a_prev: torch.Tensor, labels: torch.Tensor, time_steps=None):
@@ -253,9 +230,9 @@ class ADMM(nn.Module):
             time_steps (list, optional): Time steps for spiking networks. Defaults to None.
         """
         if self.train_method != 'vectorized':
-            layer.update_z_last_unrolled(a_prev, labels, self.lambda_lagrange, time_steps)
+            layer.update_z_last_unrolled(a_prev, labels, time_steps)
         else:
-            layer.update_z_last(a_prev, labels, self.lambda_lagrange)
+            layer.update_z_last(a_prev, labels)
    
     @torch.no_grad()
     def fit(self, inputs: torch.Tensor, labels: torch.Tensor, warming: bool = False):
@@ -267,7 +244,7 @@ class ADMM(nn.Module):
             warming (bool, optional): If True, bypasses the lambda update. Defaults to False.
         """
         with torch.no_grad():
-            if self.lambda_lagrange is None or self.lambda_lagrange.shape[0] != self._get_batchsize(inputs):
+            if not self.initialized:
                 self._init_states(inputs)
             
             time_steps= self._get_time_steps()
@@ -278,16 +255,15 @@ class ADMM(nn.Module):
                 if l < self.L - 1:
                     next_layer = self.layers[l+1]
                     cache_pinv= True if l == 0 else False
-                    lagrange = self.lambda_lagrange if l == self.L - 2 else None
                     self._optimize_w_and_b(layer, a_prev, cache_pinv=cache_pinv)
-                    self._optimize_a_and_z(layer, next_layer, a_prev, lagrange, time_steps)
+                    self._optimize_a_and_z(layer, next_layer, a_prev, time_steps)
+                    if not warming:
+                        layer.update_lambda(a_prev)
                     del a_prev
-                    del lagrange
                 elif l==self.L-1:
-                    self._optimize_w_and_b(layer, a_prev, self.lambda_lagrange)
+                    self._optimize_w_and_b(layer, a_prev)
                     self._optimize_z_last(layer, a_prev, labels, time_steps)
-            
-            last_layer = self.layers[-1]
-            a_prev_L = self.layers[-2].a if len(self.layers) > 1 else inputs
-            if not warming:
-                self._lambda_update(last_layer, a_prev_L)
+                    if not warming:
+                        layer.update_lambda(a_prev)
+                
+

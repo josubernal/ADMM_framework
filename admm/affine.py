@@ -82,7 +82,7 @@ class ADMM_AffineLayer(ADMM_Layer):
         return numerator, denominator
     
     
-    def _get_v(self, lambda_lagrange: torch.Tensor = None, **kwargs) -> torch.Tensor:
+    def _get_v(self, **kwargs) -> torch.Tensor:
         """Returns v for parameter updates.
         Formula:
         v = z-b if l<L
@@ -95,8 +95,8 @@ class ADMM_AffineLayer(ADMM_Layer):
         bias_formatted = self._format_bias()
         if isinstance(bias_formatted, torch.Tensor):
             v.sub_(bias_formatted)
-        if lambda_lagrange is not None:
-            lambda_lagrange = self._broadcast_to_match(lambda_lagrange, v)
+        if self.lambda_lagrange is not None:
+            lambda_lagrange = self._broadcast_to_match(self.lambda_lagrange, v)
             v.add_(lambda_lagrange, alpha=1.0 / self.rho)
         return v
 
@@ -116,8 +116,8 @@ class ADMM_AffineLayer(ADMM_Layer):
             
         return self.W.view(self.W.size(0), -1)
     
-    def _get_a_numerator(self, beta_current, a_shape, h_z:torch.Tensor, lambda_lagrange: torch.Tensor= None):
-        inside_adjoint = self._get_v(lambda_lagrange=lambda_lagrange)
+    def _get_a_numerator(self, beta_current, a_shape, h_z:torch.Tensor):
+        inside_adjoint = self._get_v()
         adjoint = self.adjoint_operator(inside_adjoint, original_input_shape=a_shape)
         numerator = h_z.clone().mul_(beta_current)
         numerator.add_(adjoint, alpha=self.rho)
@@ -162,17 +162,13 @@ class ADMM_AffineLayer(ADMM_Layer):
          dic= {'W':W, 'beta':beta_current, 'rho': self.rho}
          return dic,dic, in_features
           
-    def update_weights(self, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None, cache_pinv: bool = False):
+    def update_weights(self, a_prev: torch.Tensor, cache_pinv: bool = False):
         """Maneges th update for the layer's weights by solving a regularized least-squares problem.
 
         Args:
             a_prev (torch.Tensor): The activations from the previous layer. For 
                 standard layers, this is a 4D tensor [B, C, H, W]; for spiking 
                 layers, it is a 5D tensor [T, B, C, H, W].
-            lambda_lagrange (torch.Tensor, optional): The Lagrange multiplier used 
-                to enforce the ADMM consensus constraint. If provided, it is 
-                incorporated into the target 'v' to penalize constraint violations. 
-                Defaults to None.
             cache_pinv (bool, optional): If True, reuses the previously computed 
                 pseudoinverse (self.pinv) to solve the system, significantly 
                 accelerating updates.
@@ -181,7 +177,7 @@ class ADMM_AffineLayer(ADMM_Layer):
         Returns:
             None: The weights (self.W) are updated in-place.
         """
-        v = self._get_v(lambda_lagrange=lambda_lagrange) 
+        v = self._get_v() 
         numerator, denominator = self._compute_covariances(v, a_prev)
         new_W, temp_pinv = solve_least_squares_weights(
             numerator, 
@@ -195,7 +191,7 @@ class ADMM_AffineLayer(ADMM_Layer):
         else:
             self.pinv = None
           
-    def update_bias(self, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None):
+    def update_bias(self, a_prev: torch.Tensor):
         """Averages the residual errors to update the bias vector.
         
         Formula:
@@ -203,13 +199,12 @@ class ADMM_AffineLayer(ADMM_Layer):
         
         Args:
             a_prev (torch.Tensor): The previous layer's activations.
-            lambda_lagrange (torch.Tensor, optional): The Lagrange multiplier. Defaults to None.
         """
         in_mean = self.spatial_forward(a_prev, use_bias=False)
         in_mean.neg_().add_(self.z)
         
-        if lambda_lagrange is not None:
-            lam_spatial = self._broadcast_to_match(lambda_lagrange, self.z)
+        if self.lambda_lagrange is not None:
+            lam_spatial = self._broadcast_to_match(self.lambda_lagrange, self.z)
             in_mean.add_(lam_spatial, alpha=1.0 / self.rho)
                 
         new_bias = torch.mean(in_mean, dim=self._get_bias_reduction_dims())
@@ -223,19 +218,22 @@ class ADMM_AffineLayer(ADMM_Layer):
             a_prev (torch.Tensor): The previous layer's activations.
             time_steps (list, optional): Time steps for spiking networks. Defaults to None.
         """
-        res = self.spatial_forward(a_prev)
-        new_z = self.h.activation_z_update(a=self.a, res=res, z=self.z, time_steps=time_steps)
+        forward = self.spatial_forward(a_prev)
+        if getattr(self, 'use_lagrange', False) and self.lambda_lagrange is not None:
+            lam = self._broadcast_to_match(self.lambda_lagrange, forward)
+            forward.sub_(lam, alpha=1.0 / self.rho)
+        new_z = self.h.activation_z_update(a=self.a, forward=forward, z=self.z, time_steps=time_steps)
         self.z.data.copy_(new_z)  
 
-    def update_a(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None):
+    def update_a(self, next_layer: nn.Module, a_prev: torch.Tensor):
         """Manages the activation (a) update for standard spatial layers.
         
         Args:
             next_layer (nn.Module): The subsequent layer in the network.
             a_prev (torch.Tensor): The previous layer's activations.
-            lambda_lagrange (torch.Tensor, optional): The Lagrange multiplier. Defaults to None.
+
         """
-        numerator = next_layer._get_a_numerator(beta_current=self.beta, a_shape=self.a.shape, h_z=self.h(self.z), lambda_lagrange=lambda_lagrange)
+        numerator = next_layer._get_a_numerator(beta_current=self.beta, a_shape=self.a.shape, h_z=self.h(self.z))
         denominator_main, denominator_last , in_features = next_layer._get_a_denominator(beta_current=self.beta, a_shape=self.a.shape)
         new_a = next_layer.solve_activation_system(
             numerator=numerator,

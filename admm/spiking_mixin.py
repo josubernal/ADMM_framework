@@ -33,14 +33,14 @@ class ADMM_Spiking:
             getattr(self, 'use_reset', False), include_reset
         )
     
-    def _get_v(self, include_reset: bool = True, lambda_lagrange: torch.Tensor = None) -> torch.Tensor:
+    def _get_v(self, include_reset: bool = True) -> torch.Tensor:
         """Delegates to temporal_helpers.get_spiking_v."""
         return get_spiking_v(
             z=self.z,
             bias=self._format_bias(),
             temporal_dependencies=self._compute_temporal_dependencies(include_reset),
             rho=self.rho,
-            lambda_lagrange=lambda_lagrange,
+            lambda_lagrange=self.lambda_lagrange,
             broadcast_func=self._broadcast_to_match
         )
     
@@ -67,42 +67,65 @@ class ADMM_Spiking:
             unrolled=unrolled
         )
     
-    def _get_a_adjoint(self, next_layer: nn.Module, lambda_lagrange: torch.Tensor) -> torch.Tensor: # forward_pass:torch.Tensor DEPRECATED
+    def _get_a_adjoint(self, next_layer: nn.Module) -> torch.Tensor: # forward_pass:torch.Tensor DEPRECATED
         """Delegates to temporal_helpers.get_spiking_a_adjoint."""
         return get_spiking_a_adjoint(
             layer=self,
             next_layer=next_layer,
-            lambda_lagrange=lambda_lagrange
             #forward_pass=forward_pass DEPRECATED
         )
     
-    def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor):
+    def update_lambda(self,  a_prev: torch.Tensor):
+        """Updates the Lagrange multiplier (lambda) based for the layer constraint.
+
+        Formula: lambda_new = lambda_old + rho * (z - forward(a_prev_L))
+
+        Args:
+            last_layer (nn.Module): The final layer of the network.
+            a_prev_L (torch.Tensor): The activations from the penultimate layer or inputs.
+        """
+        if not self.use_lagrange or self.lambda_lagrange is None:
+            return
+ 
+        z_T = self.z[-1]
+        z_T_minus_1 = self.z[-2]
+        forward = self.spatial_forward(a_prev[-1].unsqueeze(0)).squeeze(0)
+        self.lambda_lagrange.add_(z_T, alpha=self.rho)
+        self.lambda_lagrange.add_(z_T_minus_1, alpha=-self.rho*self.deltas)
+        self.lambda_lagrange.add_(forward, alpha=-self.rho)
+       
+    def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor):
         """Delegates to loss function"""
         forward = self.spatial_forward(a_prev)
         temporal_forward = self.vectorized_forward(a_prev)
         shape = self.z[-1]  
         labels = self._broadcast_to_match(labels, shape)
-        lambda_lagrange = self._broadcast_to_match(lambda_lagrange, shape)
-        self.z.copy_( self.loss_f.update_z_last_spiking(forward=forward, temporal_forward=temporal_forward, labels=labels, lambda_lagrange=lambda_lagrange, z=self.z, rho=self.rho, deltas=self.deltas))
+        if self.use_lagrange and self.lambda_lagrange is not None:
+            lam = self._broadcast_to_match(self.lambda_lagrange, shape)
+        else:
+            lam = torch.zeros_like(shape)
+        self.z.copy_( self.loss_f.update_z_last_spiking(forward=forward, temporal_forward=temporal_forward, labels=labels, lambda_lagrange=lam, z=self.z, rho=self.rho, deltas=self.deltas))
         
-    def update_z_last_unrolled(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list, jacobi:bool=False):
+    def update_z_last_unrolled(self, a_prev: torch.Tensor, labels: torch.Tensor, time_steps: list, jacobi:bool=False):
         """Delegates to loss function"""
         labels = self._broadcast_to_match(labels, self.z[-1]) 
-        lambda_lagrange = self._broadcast_to_match(lambda_lagrange, self.z[-1]) 
+        if self.use_lagrange and self.lambda_lagrange is not None:
+            lam = self._broadcast_to_match(self.lambda_lagrange, self.z[-1])
+        else:
+            lam = torch.zeros_like(self.z[-1])
         forward= self.spatial_forward(a_prev)
-        self.z.copy_(self.loss_f.update_z_last_unrolled_spiking(forward=forward, labels=labels,lambda_lagrange=lambda_lagrange,z=self.z, rho=self.rho, deltas=self.deltas, time_steps=time_steps, jacobi=jacobi))
+        self.z.copy_(self.loss_f.update_z_last_unrolled_spiking(forward=forward, labels=labels,lambda_lagrange=lam ,z=self.z, rho=self.rho, deltas=self.deltas, time_steps=time_steps, jacobi=jacobi))
         
-    def _create_cache(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor):
+    def _create_cache(self, next_layer: nn.Module, a_prev: torch.Tensor):
         """Delegates cache construction to the TemporalCache factory.
             
         Args:
             next_layer (nn.Module): The subsequent layer in the network.
             a_prev (torch.Tensor): The previous layer's activations.
-            lambda_lagrange (torch.Tensor): The Lagrange multiplier.
 
         Returns:
             TemporalCache: A typed data class containing the precomputed matrices."""
-        return TemporalCache.build(self, next_layer, a_prev, lambda_lagrange)
+        return TemporalCache.build(self, next_layer, a_prev, self.lambda_lagrange)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:    
         """Standard sequential pass for initialization or inference.
@@ -139,20 +162,16 @@ class ADMM_Spiking:
         z = self.spatial_forward(a_prev) + self._compute_temporal_dependencies()
         return z
 
-    def update_a(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None):
+    def update_a(self, next_layer: nn.Module, a_prev: torch.Tensor):
         """Manages the vectorized activation (a) update for a specific timestep.
 
         Args:
             next_layer (nn.Module): The subsequent layer in the network.
             a_prev (torch.Tensor): The previous layer's activations.
-            lambda_lagrange (torch.Tensor, optional): The Lagrange multiplier. Defaults to None.
         """
         
         # self.beta * self.h(self.z) + adjoint + temporal penalty
-        numerator = self._get_a_adjoint(
-            next_layer=next_layer,
-            lambda_lagrange=lambda_lagrange
-        )
+        numerator = self._get_a_adjoint(next_layer=next_layer)
         numerator.add_(self.h(self.z), alpha=self.beta)
         
         #Temporal penalty  =  -rho*thetas(z_t+1 -forward_t+1 -delta*z)
@@ -191,7 +210,7 @@ class ADMM_Spiking:
             T=numerator.size(0) 
         )
         
-    def update_bias(self, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor = None):
+    def update_bias(self, a_prev: torch.Tensor):
         """Averages the residual errors across spatial and temporal dimensions to update the bias vector.
 
         Formula:
@@ -204,15 +223,15 @@ class ADMM_Spiking:
         in_mean.add_(self._compute_temporal_dependencies())
         in_mean.neg_().add_(self.z)
         
-        if lambda_lagrange is not None:
-            lambda_lagrange= self._broadcast_to_match(lambda_lagrange, self.z[-1])
+        if self.lambda_lagrange is not None:
+            lambda_lagrange= self._broadcast_to_match(self.lambda_lagrange, self.z[-1])
             in_mean[-1].add_(lambda_lagrange, alpha=1.0 / self.rho)
             
         new_bias = torch.mean(in_mean, dim=self._get_bias_reduction_dims())
         self.b.copy_(new_bias)
 
         
-    def update_az_interleaved(self, next_layer: nn.Module, a_prev: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps: list, update_z_first:bool):
+    def update_az_interleaved(self, next_layer: nn.Module, a_prev: torch.Tensor, time_steps: list, update_z_first:bool):
         """Orchestrates the interleaved updates of a and z over time using caching.
 
         Args:
@@ -221,7 +240,7 @@ class ADMM_Spiking:
             lambda_lagrange (torch.Tensor): The Lagrange multiplier.
             time_steps (list): The list of sequence time steps to update.
         """
-        cache = self._create_cache(next_layer, a_prev, lambda_lagrange)
+        cache = self._create_cache(next_layer, a_prev)
         
         for t in time_steps:
             if update_z_first:
@@ -294,6 +313,10 @@ class ADMM_Spiking:
             temporal_forward.add_(z_to_use[t-1], alpha=self.deltas)
             temporal_forward.add_(self.a[t-1], alpha=-self.thetas)
         
+        if t == T - 1 and getattr(self, 'use_lagrange', False) and self.lambda_lagrange is not None:
+            lam = self._broadcast_to_match(self.lambda_lagrange, temporal_forward)
+            temporal_forward.sub_(lam, alpha=1.0 / self.rho)
+            
         if t < T - 1:
             z_minus_forward = z_to_use[t+1].sub(cache.forward_pass[t+1])
         else:

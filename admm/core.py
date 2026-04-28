@@ -29,6 +29,7 @@ class ADMM_Layer(nn.Module):
         self.beta = None
         self.deltas = None
         self.thetas = None
+        self.lambda_lagrange = None
         
         self.z = None
         self.a = None
@@ -44,7 +45,9 @@ class ADMM_Layer(nn.Module):
         """
         for key, val in config.items():
             setattr(self, key, val)
-            
+        
+        self.use_lagrange = config.get('use_lagrange', False)
+          
         if is_last_layer and hasattr(self, 'use_reset'):
             self.use_reset = False   
             
@@ -93,12 +96,29 @@ class ADMM_Layer(nn.Module):
         y = self.spatial_forward(x)             
         return y
    
-    def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor, lambda_lagrange: torch.Tensor, time_steps=None):
+    def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor, time_steps=None):
         """Delegates to loss function."""
         forward = self.vectorized_forward(a_prev) 
         labels = self._broadcast_to_match(labels, forward)
-        lambda_lagrange = self._broadcast_to_match(lambda_lagrange, forward)
-        self.z.copy_(self.loss_f.update_z_last_core(forward,self.rho, labels, lambda_lagrange))
+        if self.use_lagrange and self.lambda_lagrange is not None:
+            lam = self._broadcast_to_match(self.lambda_lagrange, forward)
+        else:
+            lam = torch.zeros_like(forward)
+        self.z.copy_(self.loss_f.update_z_last_core(forward,self.rho, labels, lam))
         
+    
+    def update_lambda(self, a_prev: torch.Tensor):
+        """Updates the Lagrange multiplier (lambda) based for the layer constraint.
+
+        Formula: lambda_new = lambda_old + rho * (z - forward(a_prev_L))
+
+        Args:
+            a_prev_L (torch.Tensor): The activations from the penultimate layer or inputs.
+        """
+        if not self.use_lagrange or self.lambda_lagrange is None:
+            return
+        forward = self.spatial_forward(a_prev)
+        self.lambda_lagrange.add_(self.z, alpha=self.rho)
+        self.lambda_lagrange.add_(forward, alpha=-self.rho)
 
     

@@ -73,8 +73,8 @@ class ADMM_Identity(ADMMActivationBase):
     def forward(self, x):
         return x 
    
-    def activation_z_update(self, a, res, **kwargs):
-        return res 
+    def activation_z_update(self, a, forward, **kwargs):
+        return forward
     
 class ADMM_ReLU(ADMMActivationBase):
     """ADMM implementation of the Rectified Linear Unit (ReLU).
@@ -103,21 +103,21 @@ class ADMM_ReLU(ADMMActivationBase):
     def forward(self, x):
         return torch.relu(x)
    
-    def activation_z_update(self, a, res, **kwargs):
+    def activation_z_update(self, a, forward, **kwargs):
         """Calculates the proximal update for ReLU.
 
-        Formula: z = max(0, (beta * a + rho * res) / (beta + rho))
+        Formula: z = max(0, (beta * a + rho * forward) / (beta + rho))
 
         Args:
             a (torch.Tensor): The pre-activation tensor.
-            res (torch.Tensor): The residual tensor.
+            forward (torch.Tensor): The residual tensor.
             **kwargs: Additional keyword arguments.
 
         Returns:
             torch.Tensor: The updated z tensor.
         """
-        z = (self.beta * a + self.rho * res) / (self.beta + self.rho)
-        return torch.where(z > 0, z, res)
+        z = (self.beta * a + self.rho * forward) / (self.beta + self.rho)
+        return torch.where(z > 0, z, forward)
 
 
 class ADMM_Heaviside(ADMMActivationBase):
@@ -232,7 +232,7 @@ class ADMM_Heaviside(ADMMActivationBase):
             z_res = temporal_forward.clone()
         return self.check_entries(z=z_res, temporal_forward=temporal_forward, a= a_t,  z_minus_forward= z_minus_forward, is_vectorized=False)
     
-    def activation_z_update(self, res, z, a, **kwargs):
+    def activation_z_update(self, forward, z, a, **kwargs):
         """Executes a Pure Vectorized (Jacobi) block of the z-update.
 
         Args:
@@ -245,19 +245,19 @@ class ADMM_Heaviside(ADMMActivationBase):
             torch.Tensor: The updated $z$ tensor.
         """
 
-        q = res.clone()
+        q = forward.clone()
         q[1:].add_(z[:-1], alpha= self.deltas)
         q[1:].add_(a[:-1], alpha=-self.thetas)
 
         r = torch.zeros_like(z)
-        r[:-1].copy_(z[1:]).sub_(res[1:])
+        r[:-1].copy_(z[1:]).sub_(forward[1:])
             
         numerator = q.mul(self.rho)
         denominator = torch.full_like(numerator, self.rho)
 
         num_slice = numerator[:-1]
         # temp_term = (z_next - res_next) + thetas * a_curr
-        temp_term = z[1:].sub(res[1:]).add_(a[:-1], alpha=self.thetas)
+        temp_term = z[1:].sub(forward[1:]).add_(a[:-1], alpha=self.thetas)
         num_slice.add_(temp_term, alpha=self.deltas * self.rho)
         
         denominator[:-1].add_( (self.deltas**2) * self.rho )
