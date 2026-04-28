@@ -34,24 +34,23 @@ class ADMM_Scheduler:
             
         dual_beta = 0.0
         for an, ao in zip(a_new, self.a_old):
-            if self.offload_to_cpu: an = an.cpu()
             dual_beta += self.model.beta * torch.norm(an - ao).item()
 
         # 2. Balance RHO (Pre-activations)
         if primal_rho > self.mu * dual_rho:
-            self.model.rho *= self.tau
+            self.model.rho.mul_(self.tau)
             self.model.scale_z_multipliers(1.0 / self.tau)
             
         elif dual_rho > self.mu * primal_rho:
-            self.model.rho /= self.tau
+            self.model.rho.div_(self.tau)
             self.model.scale_z_multipliers(self.tau)
             
         # 3. Balance BETA (Activations)
         if primal_beta > self.mu * dual_beta:
-            self.model.beta *= self.tau
+            self.model.beta.mul_(self.tau)
           
         elif dual_beta > self.mu * primal_beta:
-            self.model.beta /= self.tau
+            self.model.beta.div_(self.tau)
             
         self.z_old = None
         self.a_old = None
