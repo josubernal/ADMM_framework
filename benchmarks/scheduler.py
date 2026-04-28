@@ -213,13 +213,9 @@ for model_name in model_types:
            # 3. Read the Primal Residuals (These are LISTS of per-layer residuals)
             primal_rho_list = m2.metrics["preactivation_constraint_sum"][-1]
             primal_beta_list = m2.metrics["activation_constraint_sum"][-1]
-            
-            # Sum them up to get a single float for the whole network
-            primal_rho = sum(primal_rho_list)
-            primal_beta = sum(primal_beta_list)
-            
+
             # 4. Balance the network and automatically free memory!
-            balancer.step(primal_rho, primal_beta)
+            balancer.step(primal_rho_list, primal_beta_list)
             
     #########################################
     # SAVING RESULTS AND PLOTTING
