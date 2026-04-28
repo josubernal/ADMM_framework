@@ -46,13 +46,13 @@ class ADMM_Initializer(ABC):
         """
         x = inputs.to(device)
         with torch.no_grad():
-            for layer in layers:
-                z_pred = layer.forward(x)
-                
+            for layer in layers[:-1]:
+                z_pred = layer.forward(x)     
                 layer.z = z_pred.clone()
                 layer.a = z_pred.clone() 
-
                 x = layer.a
+            z_pred = layers[-1].forward(x)     
+            layers[-1].z = z_pred.clone()
 
 class WeightsZerosInitializer(ADMM_Initializer):
     """Zero weights (Baseline)."""  
@@ -90,13 +90,16 @@ class ZUniform(ADMM_Initializer):
     def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
         x = inputs.to(device)
         with torch.no_grad():
-            for layer in layers:
+            for layer in layers[:-1]:
                 z_pred = layer.forward(x) 
                 layer.z = torch.randn_like(z_pred)
                 a_pred = layer.h(layer.z) if layer.h is not None else layer.z
                 layer.a = a_pred.clone()
                 
                 x = layer.a 
+            z_pred = layers[-1].forward(x) 
+            layer[-1].z = torch.randn_like(z_pred)
+                
 
 class StatesUniform(ADMM_Initializer):
     """
@@ -113,13 +116,16 @@ class StatesUniform(ADMM_Initializer):
         """
         x = inputs.to(device)
         with torch.no_grad():
-            for layer in layers:
+            for layer in layers[:-1]:
                 z_pred = layer.forward(x)
                 a_pred = layer.h(z_pred)     
                 layer.z = torch.rand_like(z_pred)
+                
                 layer.a = torch.rand_like(a_pred)
                 x = a_pred 
-
+            z_pred = layers[-1].forward(x)  
+            layers[-1].z = torch.rand_like(z_pred)
+             
 class RelaxedSpikeInitializer(ADMM_Initializer):
     """
     Capitalizes on the 'Energy Shock' discovery. 
@@ -131,7 +137,7 @@ class RelaxedSpikeInitializer(ADMM_Initializer):
     def init_states(self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device):
         x = inputs.to(device)
         with torch.no_grad():
-            for layer in layers:
+            for layer in layers[:-1]:
                 # 1. Do a forward pass just to get the exact tensor geometries
                 z_pred = layer.forward(x)
                 a_pred = layer.h(z_pred) if layer.h is not None else z_pred
@@ -140,6 +146,9 @@ class RelaxedSpikeInitializer(ADMM_Initializer):
                 layer.a = torch.randint(0, 2, size=a_pred.shape, dtype=a_pred.dtype, device=device)
                 
                 x = a_pred
+            z_pred = layers[-1].forward(x)
+            layers[-1].z = torch.randn_like(z_pred)
+               
 
 def get_initializer(init_type: str) -> ADMM_Initializer:
     """Factory function to retrieve the correct initializer strategy.

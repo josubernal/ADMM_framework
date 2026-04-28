@@ -16,7 +16,7 @@ class ADMM_Scheduler:
     def capture_state(self):
         """Called BEFORE the epoch starts to snapshot the network state."""
         self.z_old = [layer.z.detach().clone() for layer in self.model.layers if hasattr(layer, 'z')]
-        self.a_old = [layer.a.detach().clone() for layer in self.model.layers if hasattr(layer, 'a')]
+        self.a_old = [layer.a.detach().clone() for layer in self.model.layers[:-1] if hasattr(layer, 'a')]
 
     def step(self, primal_rho: float, primal_beta: float):
         """Called AFTER the epoch ends to compute duals and balance penalties."""
@@ -26,34 +26,40 @@ class ADMM_Scheduler:
 
         # 1. Compute Dual Residuals on the fly
         z_new = [layer.z.detach() for layer in self.model.layers if hasattr(layer, 'z')]
-        a_new = [layer.a.detach() for layer in self.model.layers if hasattr(layer, 'a')]
+        a_new = [layer.a.detach() for layer in self.model.layers[:-1] if hasattr(layer, 'a')]
         
         dual_rho = 0.0
-        for zn, zo in zip(z_new, self.z_old):
-            dual_rho += self.model.rho * torch.norm(zn - zo).item()
+        for layer, zn, zo in zip(self.model.layers, z_new, self.z_old):
+            norm_factor = zn.numel() ** 0.5
+            dual_rho += layer.rho * (torch.norm(zn - zo).item() / norm_factor)
             
         dual_beta = 0.0
-        for an, ao in zip(a_new, self.a_old):
-            dual_beta += self.model.beta * torch.norm(an - ao).item()
+        for layer, an, ao in zip(self.model.layers[:-1], a_new, self.a_old):
+            norm_factor = an.numel() ** 0.5
+            dual_beta += layer.beta * (torch.norm(an - ao).item() / norm_factor)
 
         # 2. Balance RHO (Pre-activations)
         if primal_rho > self.mu * dual_rho:
-            self.model.rho *= self.tau         
-            self._scale_lambda_lagrage(1.0 / self.tau)
+            for layer in self.model.layers:
+                layer.rho *= self.tau         
+            if hasattr(self.model, 'lambda_lagrange'):
+                self.model.lambda_lagrange /= self.tau
             
         elif dual_rho > self.mu * primal_rho:
-            self.model.rho /= self.tau         
-            self._scale_lambda_lagrage(self.tau)
+            for layer in self.model.layers:
+                layer.rho /= self.tau         
+            if hasattr(self.model, 'lambda_lagrange'):
+                self.model.lambda_lagrange *= self.tau
             
         # 3. Balance BETA (Activations)
         if primal_beta > self.mu * dual_beta:
-            self.model.beta *= self.tau          
+            for layer in self.model.layers[:-1]:
+                layer.beta *= self.tau          
           
         elif dual_beta > self.mu * primal_beta:
-            self.model.beta /= self.tau         
+            for layer in self.model.layers[:-1]:
+                layer.beta /= self.tau         
             
         self.z_old = None
         self.a_old = None
     
-    def _scale_lambda_lagrage(self, scale_factor):
-        self.model.lambda_lagrange.mul_(scale_factor)

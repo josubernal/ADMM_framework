@@ -546,7 +546,86 @@ def main():
             
         else:
             print(f"Skipping Initialization plot: No compatible JSONs found in {folder_path}")
+    
+    # ==========================================
+    # PLOT: Scheduler Comparison (2x2 Grid)
+    # ==========================================
+    if "scheduler" in experiment_name:
+        all_jsons = list(Path(folder_path).rglob("*.json"))
+        scheduler_data = []
+        for jp in all_jsons:
+            try:
+                with open(jp, 'r') as f:
+                    d = json.load(f)
+                    if "architecture" in d and "accuracy" in d:
+                        # Extract whether it used a scheduler based on the folder name
+                        # Path structure: .../scheduler/{model_name}/{batch_size}/{folder_name}/results.json
+                        sched_status = jp.parent.name 
+                        
+                        # Format it nicely for the plot legend
+                        d["scheduler_status"] = "With Scheduler" if sched_status == "scheduler" else "No Scheduler"
+                        scheduler_data.append(d)
+            except Exception as e:
+                continue
+
+        if scheduler_data:
+            # Standardize architecture order for a nice 2x2 layout
+            archs = list(set([d["architecture"] for d in scheduler_data]))
+            arch_order = {"linear": 0, "conv": 1, "spiking-linear": 2, "spiking-conv": 3}
+            archs.sort(key=lambda x: arch_order.get(x, 10))
             
+            # Setup Grid (2x2 for 4 models)
+            cols = 2 if len(archs) > 1 else 1
+            rows = (len(archs) + cols - 1) // cols
+            
+            fig_sched, axes_sched = plt.subplots(rows, cols, figsize=(14, 5 * rows), squeeze=False)
+            fig_sched.suptitle("ADMM Scheduler vs Fixed Penalties", fontsize=16, fontweight='bold')
+            axes_flat = axes_sched.flatten()
+
+            # Define colors: Blue for No Scheduler, Orange for Scheduler
+            status_colors = {
+                "No Scheduler": "#1f77b4", 
+                "With Scheduler": "#ff7f0e"
+            }
+
+            for i, arch in enumerate(archs):
+                ax = axes_flat[i]
+                arch_data = [d for d in scheduler_data if d["architecture"] == arch]
+                
+                # Sort alphabetically so "No Scheduler" plots first, and "With Scheduler" plots on top
+                arch_data.sort(key=lambda x: str(x["scheduler_status"]))
+                
+                for d in arch_data:
+                    acc = d["accuracy"]
+                    status_name = str(d["scheduler_status"])
+                    epochs_list = list(range(len(acc)))
+                    
+                    ax.plot(epochs_list, acc, label=status_name, color=status_colors[status_name], 
+                            linewidth=2.5, marker='o', markersize=5, alpha=0.8)
+                
+                # Formatting the subplot
+                ax.set_title(f"Architecture: {arch.upper()}", fontsize=14)
+                ax.set_xlabel("Epochs")
+                ax.set_ylabel("Accuracy (%)")
+                ax.grid(True, linestyle='--', alpha=0.6)
+                
+                # Only add legend if data exists for this subplot
+                if arch_data:
+                    ax.legend(title="Configuration", fontsize='small', loc='lower right')
+
+            # Clean up any empty subplots if you test < 4 architectures
+            for j in range(len(archs), len(axes_flat)):
+                fig_sched.delaxes(axes_flat[j])
+
+            plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+            
+            # Save the plot
+            save_path = os.path.join(folder_path, "scheduler_comparison.png")
+            plt.savefig(save_path, dpi=300)
+            print(f"Scheduler comparison plot saved to: {save_path}")
+            
+        else:
+            print(f"Skipping Scheduler plot: No compatible JSONs found in {folder_path}")
     plt.show()
 
 if __name__ == "__main__":

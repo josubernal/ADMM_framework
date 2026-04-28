@@ -208,6 +208,7 @@ for model_name in model_types:
         with torch.no_grad():                    
             m2.save_metrics(images, labels_one_hot) 
             print(f"Epoch [{epoch:3d}/{epochs}] | {m2}") 
+            print(admm_model.layers[0].beta, admm_model.layers[0].rho, admm_model.layers[1].beta, admm_model.layers[1].rho)
 
            # 3. Read the Primal Residuals (These are LISTS of per-layer residuals)
             primal_rho_list = m2.metrics["preactivation_constraint_sum"][-1]
