@@ -209,9 +209,13 @@ for model_name in model_types:
             m2.save_metrics(images, labels_one_hot) 
             print(f"Epoch [{epoch:3d}/{epochs}] | {m2}") 
 
-            # 3. Read the Primal Residuals from m2
-            primal_rho = m2.metrics["preactivation_constraint_sum"][-1] 
-            primal_beta = m2.metrics["activation_constraint_sum"][-1] 
+           # 3. Read the Primal Residuals (These are LISTS of per-layer residuals)
+            primal_rho_list = m2.metrics["preactivation_constraint_sum"][-1]
+            primal_beta_list = m2.metrics["activation_constraint_sum"][-1]
+            
+            # Sum them up to get a single float for the whole network
+            primal_rho = sum(primal_rho_list)
+            primal_beta = sum(primal_beta_list)
             
             # 4. Balance the network and automatically free memory!
             balancer.step(primal_rho, primal_beta)
