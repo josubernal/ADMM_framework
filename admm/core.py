@@ -49,7 +49,7 @@ class ADMM_Layer(nn.Module):
             self.use_reset = False   
             
         if hasattr(self, 'h') and hasattr(self.h, 'setup'):
-            self.h.setup(config)
+            self.h.setup(config, parent_layer=self)
     
     def _broadcast_to_match(self, tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.Tensor:
         """Helper method to safely align tensor dimensions for element-wise operations.

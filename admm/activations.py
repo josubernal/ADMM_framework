@@ -24,7 +24,7 @@ class ADMMActivationBase(nn.Module, ABC):
         super().__init__()
 
     @abstractmethod
-    def setup(self, config: dict):
+    def setup(self, config: dict,  parent_layer=None):
         """Receives and stores ADMM hyperparameters from the parent layer.
 
         Args:
@@ -67,7 +67,7 @@ class ADMM_Identity(ADMMActivationBase):
     def __init__(self):
         super().__init__()
         
-    def setup(self, config: dict):
+    def setup(self, config: dict,  parent_layer=None):
         pass 
 
     def forward(self, x):
@@ -87,12 +87,18 @@ class ADMM_ReLU(ADMMActivationBase):
     """
     def __init__(self):
         super().__init__()  
-        self.rho = None
-        self.beta = None 
+        self._layer_ref = [None] 
         
-    def setup(self, config: dict):
-        self.rho = config.get('rho', self.rho)
-        self.beta = config.get('beta', self.beta)   
+    def setup(self, config: dict, parent_layer=None):
+        self._layer_ref[0] = parent_layer 
+
+    @property
+    def rho(self):
+        return self._layer_ref[0].rho # Pull from index 0
+        
+    @property
+    def beta(self):
+        return self._layer_ref[0].beta
 
     def forward(self, x):
         return torch.relu(x)
@@ -125,19 +131,25 @@ class ADMM_Heaviside(ADMMActivationBase):
     non-differentiable and non-convex, the step evaluates distinct energy 
     states (spiking vs. not spiking) and incorporates temporal dependencies 
     (leakage and spike reset) over sequence steps.
-    """
+    """        
     def __init__(self, thetas=1.0):
         super().__init__()  
         self.thetas = thetas
-        self.rho = None
-        self.beta = None
         self.deltas = None 
+        self._layer_ref = [None]
         
-    def setup(self, config: dict):
+    def setup(self, config: dict, parent_layer=None):
         self.thetas = config.get('thetas', self.thetas)
         self.deltas = config.get('deltas', self.deltas)
-        self.rho = config.get('rho', self.rho)
-        self.beta = config.get('beta', self.beta)
+        self._layer_ref[0] = parent_layer
+        
+    @property
+    def rho(self):
+        return self._layer_ref[0].rho # Pull from index 0
+        
+    @property
+    def beta(self):
+        return self._layer_ref[0].beta
         
     def forward(self, x):
         return (x > self.thetas).to(x.dtype)
