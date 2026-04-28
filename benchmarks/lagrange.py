@@ -4,7 +4,7 @@ import configparser
 import torch.nn.functional as F
 from admm import (
     ADMM_SpikingLinear, ADMM_Flatten, ADMM_SpikingConv2d, 
-    ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics, ADMM_CrossEntropy_Taylor, ADMM_SSE
+    ADMM_Conv2d, ADMM_Linear, ADMM, ADMM_Heaviside, ADMM_ReLU, ADMM_Metrics, ADMM_CrossEntropy_Taylor, ADMM_SSE, ADMM_Scheduler
 )
 
 import json
@@ -149,35 +149,26 @@ for model_name in model_types:
         #########################################
         # ADMM TRAINING LOOP
         m = ADMM_Metrics(admm_model) 
-        
-        # Initializes variables and allocates lambda tensors based on our overrides above!
+        balancer = ADMM_Scheduler(admm_model, mu=10.0, tau=2.0, balance_freq=5, stop_epoch=int(epochs*0.75))
         admm_model._init_states(images)
         
         print("Training model with ADMM...")
         for epoch in range(epochs):
-            admm_model.fit(images, labels_one_hot, warming=is_warming)             
+            
+            balancer.capture_state()
+            admm_model.fit(images, labels_one_hot, warming=False)             
             
             with torch.no_grad():
                 m.save_metrics(images, labels_one_hot)
 
                 print(f"Epoch [{epoch:3d}/{epochs}] |  {m}")
                
-                # --- DYNAMIC WARMING LOGIC ---
-                current_primal = m.metrics["primal_residual"][-1]
-                accuracy  = m.metrics["accuracy"][-1]
-                primal_residual_delta = abs(prev_primal_residual - current_primal)
-                prev_primal_residual = current_primal
+                # 3. Read the Primal Residuals (These are LISTS of per-layer residuals)
+                primal_rho_list = m.metrics["preactivation_constraint_sum"][-1]
+                primal_beta_list = m.metrics["activation_constraint_sum"][-1]
 
-                if is_warming:
-                    hit_accuracy = (accuracy > accuracy_threshold) and (epoch > min_warming_iters)
-                    hit_time_limit = epoch >= max_warming_iters
-                    
-                    if hit_accuracy or hit_time_limit:
-                        if primal_residual_delta < primal_delta_limit or hit_time_limit:
-                            reason = "Accuracy/Delta Target Met" if hit_accuracy else "Max Epochs Reached"
-                            print(f"--- STOPPING WARMING at Epoch {epoch} ({reason}) ---")
-                            is_warming = False
-                            warming_stop = epoch
+                # 4. Balance the network! 
+                balancer.step(primal_rho_list, primal_beta_list)
                         
         #########################################
         # SAVING RESULTS AND PLOTTING
