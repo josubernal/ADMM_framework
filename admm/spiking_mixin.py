@@ -125,7 +125,7 @@ class ADMM_Spiking:
 
         Returns:
             TemporalCache: A typed data class containing the precomputed matrices."""
-        return TemporalCache.build(self, next_layer, a_prev, self.lambda_lagrange)
+        return TemporalCache.build(self, next_layer, a_prev)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:    
         """Standard sequential pass for initialization or inference.

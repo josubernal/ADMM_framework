@@ -19,7 +19,7 @@ class TemporalCache:
     denominator_last: torch.Tensor
     adjoint: torch.Tensor
     @classmethod
-    def build(cls, layer, next_layer, a_prev, lambda_lagrange:torch.Tensor=None):
+    def build(cls, layer, next_layer, a_prev):
         """Precomputes and distributes operations to accelerate the unrolled loop.
         
             This factory method calculates the static portions of the ADMM activation 
@@ -52,7 +52,7 @@ class TemporalCache:
         )
 
         #3- Term 2
-        adjoint = layer._get_a_adjoint(next_layer=next_layer, lambda_lagrange=lambda_lagrange)# forward_pass=forward_pass)  DEPRECATED   
+        adjoint = layer._get_a_adjoint(next_layer=next_layer)# forward_pass=forward_pass)  DEPRECATED   
 
         return cls(
                 forward_pass=forward_pass,

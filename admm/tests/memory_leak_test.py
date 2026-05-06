@@ -48,7 +48,7 @@ def test_autograd_and_memory_leak():
     for i, layer in enumerate(model.layers):
         if layer.W.requires_grad or layer.W.grad_fn is not None: graph_leaks += 1
         if layer.z.requires_grad or layer.z.grad_fn is not None: graph_leaks += 1
-        if layer.a.requires_grad or layer.a.grad_fn is not None: graph_leaks += 1
+        if layer.a is not None and (layer.a.requires_grad or layer.a.grad_fn is not None): graph_leaks += 1
 
     print(f"[{'Autograd Graph Check':<26}] Leaks found: {graph_leaks} " + ("✅" if graph_leaks == 0 else "❌"))
 

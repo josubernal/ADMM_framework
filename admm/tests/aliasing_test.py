@@ -50,7 +50,7 @@ def test_inplace_aliasing():
     layer2.update_bias(layer1.a)
     
     # Decoupled activation and pre-activation update
-    layer2.update_a(layer3, layer1.a, lambda_lagrange=None)
+    layer2.update_a(layer3, layer1.a)
     layer2.update_z_decoupled(layer1.a, time_steps)
 
     # 4. Verify Layer 1 and Layer 3 remained completely untouched

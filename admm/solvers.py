@@ -8,24 +8,69 @@ and read independently from the layer mechanics.
 
 import torch
 
-def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tensor, cached_pinv: torch.Tensor = None, use_cholesky: bool = True):
+def conjugate_gradient(A: torch.Tensor, B: torch.Tensor, x0: torch.Tensor = None, tol: float = 1e-4, max_iter: int = 50):
+    """
+    Solves AX = B using the Conjugate Gradient method.
+    Designed for batched solving (X has multiple columns).
+    """
+    # X is our W^T. Start with a cached guess or zeros.
+    x = x0 if x0 is not None else torch.zeros_like(B)
+    
+    # Initial residual: R = B - AX
+    r = B - torch.matmul(A, x)
+    p = r.clone()
+    
+    # Squared norm of the residuals per column
+    rs_old = torch.sum(r * r, dim=0) 
+    
+    for i in range(max_iter):
+        Ap = torch.matmul(A, p)
+        
+        # Step size alpha
+        p_Ap = torch.sum(p * Ap, dim=0).clamp(min=1e-8)
+        alpha = rs_old / p_Ap
+        
+        # Update solution and residual
+        x = x + alpha * p
+        r = r - alpha * Ap
+        
+        rs_new = torch.sum(r * r, dim=0)
+        
+        # Check for convergence across all columns
+        if torch.max(rs_new) < tol:
+            break
+            
+        # Update conjugate direction
+        p = r + (rs_new / rs_old) * p
+        rs_old = rs_new
+        
+    return x
+
+def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tensor, cached_pinv: torch.Tensor = None, use_cholesky: bool = True, use_cg: bool = False):
     """Solves the regularized least-squares problem for the Weight matrix W.
 
     W_new = (Y^T @ P) @ (P^T @ P)^-1
-
-    Args:
-        numerator (torch.Tensor): The numerator matrix (Y^T @ P).
-        denominator (torch.Tensor): The denominator matrix (P^T @ P).
-        cached_pinv (torch.Tensor, optional): A pre-computed pseudoinverse of the 
-            denominator. Defaults to None.
-
-    Returns:
-        tuple:
-            - torch.Tensor: The newly computed weight matrix.
-            - torch.Tensor: The computed or utilized pseudoinverse matrix.
     """
+    # ---------------------------------------------------------
+    # NEW: Conjugate Gradient Route
+    # ---------------------------------------------------------
+    if use_cg:
+        # Add slight jitter for positive-definiteness
+        max_val = torch.max(torch.abs(denominator)).clamp(min=1.0)
+        jitter = 1e-4 * max_val
+        denominator.diagonal().add_(jitter)
+        
+        # Here, cached_pinv acts as the warm-start guess for W^T (X0)
+        W_new_T = conjugate_gradient(A=denominator, B=numerator.mT, x0=cached_pinv)
+        
+        # Return the new weights and the new weights transposed as the cache for next time
+        return W_new_T.mT, W_new_T
+
+    # ---------------------------------------------------------
+    # Legacy: Cholesky / Pinv Route
+    # ---------------------------------------------------------
     is_cached_cholesky = False
-    if cached_pinv is not None:
+    if cached_pinv is not None and cached_pinv.shape == denominator.shape:
         is_cached_cholesky = torch.allclose(cached_pinv, torch.tril(cached_pinv))
 
     if use_cholesky:
@@ -48,13 +93,60 @@ def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tens
             return W_new_T.mT, L
             
     else:
-        # Standard pinv route
         if cached_pinv is None or is_cached_cholesky:
             pinv = torch.linalg.pinv(denominator)
         else:
             pinv = cached_pinv
             
         return numerator @ pinv, pinv
+
+# def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tensor, cached_pinv: torch.Tensor = None, use_cholesky: bool = True):
+#     """Solves the regularized least-squares problem for the Weight matrix W.
+
+#     W_new = (Y^T @ P) @ (P^T @ P)^-1
+
+#     Args:
+#         numerator (torch.Tensor): The numerator matrix (Y^T @ P).
+#         denominator (torch.Tensor): The denominator matrix (P^T @ P).
+#         cached_pinv (torch.Tensor, optional): A pre-computed pseudoinverse of the 
+#             denominator. Defaults to None.
+
+#     Returns:
+#         tuple:
+#             - torch.Tensor: The newly computed weight matrix.
+#             - torch.Tensor: The computed or utilized pseudoinverse matrix.
+#     """
+#     is_cached_cholesky = False
+#     if cached_pinv is not None:
+#         is_cached_cholesky = torch.allclose(cached_pinv, torch.tril(cached_pinv))
+
+#     if use_cholesky:
+#         if cached_pinv is None or not is_cached_cholesky:
+#             denominator.add_(denominator.mT.clone()).div_(2.0)
+#             max_val = torch.max(torch.abs(denominator)).clamp(min=1.0)
+#             jitter = 1e-4 * max_val
+#             denominator.diagonal().add_(jitter)
+#             try:
+#                 L = torch.linalg.cholesky(denominator)
+#                 W_new_T = torch.cholesky_solve(numerator.mT, L)
+#                 return W_new_T.mT, L
+#             except torch._C._LinAlgError:
+#                 print("⚠️ Cholesky failed. Falling back to pinv.")
+#                 pinv = torch.linalg.pinv(denominator)
+#                 return numerator @ pinv, pinv
+#         else:
+#             L = cached_pinv 
+#             W_new_T = torch.cholesky_solve(numerator.mT, L)
+#             return W_new_T.mT, L
+            
+#     else:
+#         # Standard pinv route
+#         if cached_pinv is None or is_cached_cholesky:
+#             pinv = torch.linalg.pinv(denominator)
+#         else:
+#             pinv = cached_pinv
+            
+#         return numerator @ pinv, pinv
     
 def solve_woodbury_system(W: torch.Tensor, B: torch.Tensor, beta: float, rho: float, a_shape: tuple):
     """

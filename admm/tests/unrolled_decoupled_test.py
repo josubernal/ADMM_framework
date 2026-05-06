@@ -24,7 +24,7 @@ def test_temporal_schemes_equivalence():
     
     # 1. Setup dimensions and time sequence
     T, batch, in_f, out_f = 6, 4, 16, 16
-    time_steps = list(range(T - 1)) # Strict chronological forward sweep
+    time_steps = list(range(T)) # Strict chronological forward sweep
     
     # ADMM Hyperparameters
     config = {'rho': 1.0, 'beta': 1.0, 'deltas': 0.8, 'thetas': 1.0}
@@ -43,8 +43,7 @@ def test_temporal_schemes_equivalence():
     
     # 3. Create identical random states for the environment
     a_prev = torch.randn((T, batch, in_f))
-    lambda_lagrange = torch.randn((batch, out_f))
-    
+
     # Initialize random auxiliary variables to ensure they start from the exact same point
     z_init = torch.randn((T, batch, out_f))
     a_init = torch.rand((T, batch, out_f)) # 'a' is usually [0, 1] bounded
@@ -65,14 +64,14 @@ def test_temporal_schemes_equivalence():
     # EXECUTE METHOD 1: UNROLLED SEQUENTIAL (Gauss-Seidel)
     # =======================================================
     start_unrolled = time.perf_counter()
-    layer_unrolled.update_az_interleaved(next_layer, a_prev, lambda_lagrange, time_steps)
+    layer_unrolled.update_az_interleaved(next_layer, a_prev, time_steps,False)
     time_unrolled = time.perf_counter() - start_unrolled
     
     # =======================================================
     # EXECUTE METHOD 2: DECOUPLED SEQUENTIAL (Mixed Jacobi)
     # =======================================================
     start_decoupled = time.perf_counter()
-    layer_decoupled.update_a(next_layer, a_prev, lambda_lagrange)
+    layer_decoupled.update_a(next_layer, a_prev)
     layer_decoupled.update_z_decoupled(a_prev, time_steps)
     time_decoupled = time.perf_counter() - start_decoupled
     

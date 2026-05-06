@@ -22,7 +22,7 @@ def test_isolated_temporal_schemes():
     
     # 1. Setup dimensions and sequence
     T, batch, in_f, out_f = 6, 4, 16, 16
-    time_steps = list(range(T - 1)) 
+    time_steps = list(range(T))
     
     # ADMM Hyperparameters
     config = {'rho': 1.0, 'beta': 1.0, 'deltas': 0.8, 'thetas': 1.0}
@@ -41,8 +41,6 @@ def test_isolated_temporal_schemes():
     
     # 3. Create identical random states
     a_prev = torch.randn((T, batch, in_f))
-    lambda_lagrange = torch.randn((batch, out_f))
-    
     z_init = torch.randn((T, batch, out_f))
     a_init = torch.rand((T, batch, out_f)) 
     
@@ -64,12 +62,12 @@ def test_isolated_temporal_schemes():
 
     # METHOD 1: FULLY VECTORIZED A
     start_a_vec = time.perf_counter()
-    layer_a_vec.update_a(next_layer, a_prev, lambda_lagrange)
+    layer_a_vec.update_a(next_layer, a_prev)
     time_a_vec = time.perf_counter() - start_a_vec
     
     # METHOD 2: ISOLATED UNROLLED A LOOP
     start_a_unrolled = time.perf_counter()
-    cache_a = layer_a_unrolled._create_cache(next_layer, a_prev, lambda_lagrange)
+    cache_a = layer_a_unrolled._create_cache(next_layer, a_prev)
     for t in range(T):
         layer_a_unrolled.update_a_unrolled(t, cache_a, next_layer)
     time_a_unrolled = time.perf_counter() - start_a_unrolled
@@ -148,12 +146,12 @@ def test_isolated_temporal_schemes():
 
     # METHOD 1: VECTORIZED Z LAST
     start_vec_last = time.perf_counter()
-    last_layer_vectorized.update_z_last(a_prev, labels, lambda_lagrange)
+    last_layer_vectorized.update_z_last(a_prev, labels)
     time_vec_last = time.perf_counter() - start_vec_last
 
     # METHOD 2: UNROLLED Z LAST
     start_unrolled_last = time.perf_counter()
-    last_layer_unrolled.update_z_last_unrolled(a_prev, labels, lambda_lagrange, time_steps, jacobi=True)
+    last_layer_unrolled.update_z_last_unrolled(a_prev, labels, time_steps, jacobi=True)
     time_unrolled_last = time.perf_counter() - start_unrolled_last
 
     # Verification 2

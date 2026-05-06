@@ -48,7 +48,6 @@ def test_speed_benchmark():
     
     # 3. Create states
     a_prev = torch.randn((T, batch, in_f))
-    lambda_lagrange = torch.randn((batch, out_f))
     
     z_init = torch.randn((T, batch, out_f))
     a_init = torch.rand((T, batch, out_f))
@@ -73,7 +72,7 @@ def test_speed_benchmark():
     # =======================================================
     start = time.perf_counter()
     for _ in range(iterations):
-        layer_vec.update_a(next_layer, a_prev, lambda_lagrange)
+        layer_vec.update_a(next_layer, a_prev)
         layer_vec.update_z(a_prev)
     time_vec = (time.perf_counter() - start) / iterations
 
@@ -82,7 +81,7 @@ def test_speed_benchmark():
     # =======================================================
     start = time.perf_counter()
     for _ in range(iterations):
-        layer_unrolled.update_az_interleaved(next_layer, a_prev, lambda_lagrange, time_steps)
+        layer_unrolled.update_az_interleaved(next_layer, a_prev, time_steps,False)
     time_unrolled = (time.perf_counter() - start) / iterations
 
     # =======================================================
@@ -90,7 +89,7 @@ def test_speed_benchmark():
     # =======================================================
     start = time.perf_counter()
     for _ in range(iterations):
-        layer_decoupled.update_a(next_layer, a_prev, lambda_lagrange)
+        layer_decoupled.update_a(next_layer, a_prev)
         layer_decoupled.update_z_decoupled(a_prev, time_steps)
     time_decoupled = (time.perf_counter() - start) / iterations
 

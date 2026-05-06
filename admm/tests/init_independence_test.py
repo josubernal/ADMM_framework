@@ -10,7 +10,6 @@ def test_weight_bias_initialization_independence():
     
     a_prev = torch.randn((batch, in_f), dtype=torch.float64)
     z_target = torch.randn((batch, out_f), dtype=torch.float64)
-    lambda_z = torch.zeros((batch, out_f), dtype=torch.float64)
 
     print("\n" + "="*65)
     print("  PROOF A: PURE W UPDATE OVERWRITE (BIAS = FALSE)")
@@ -28,8 +27,8 @@ def test_weight_bias_initialization_independence():
     layer_r_nobias.z = z_target.clone()
 
     # ONE single update
-    layer_z_nobias.update_weights(a_prev, lambda_z)
-    layer_r_nobias.update_weights(a_prev, lambda_z)
+    layer_z_nobias.update_weights(a_prev)
+    layer_r_nobias.update_weights(a_prev)
 
     w_diff_nobias = torch.max(torch.abs(layer_z_nobias.W - layer_r_nobias.W)).item()
     print(f"[{'Weight (W) Divergence':<26}] Max Difference: {w_diff_nobias:.8e} " + ("✅" if w_diff_nobias < 1e-9 else "❌"))
@@ -56,11 +55,11 @@ def test_weight_bias_initialization_independence():
     # Because W depends on b, and b depends on W, we run a short 
     # alternating loop (micro-iterations) to allow them to wash out.
     for _ in range(10):
-        layer_z_bias.update_weights(a_prev, lambda_z)
-        layer_z_bias.update_bias(a_prev, lambda_z)
+        layer_z_bias.update_weights(a_prev)
+        layer_z_bias.update_bias(a_prev)
         
-        layer_r_bias.update_weights(a_prev, lambda_z)
-        layer_r_bias.update_bias(a_prev, lambda_z)
+        layer_r_bias.update_weights(a_prev)
+        layer_r_bias.update_bias(a_prev)
 
     w_diff_bias = torch.max(torch.abs(layer_z_bias.W - layer_r_bias.W)).item()
     b_diff_bias = torch.max(torch.abs(layer_z_bias.b - layer_r_bias.b)).item()

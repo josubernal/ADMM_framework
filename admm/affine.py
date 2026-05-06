@@ -183,7 +183,8 @@ class ADMM_AffineLayer(ADMM_Layer):
             numerator, 
             denominator, 
             use_cholesky=self.use_cholesky,
-            cached_pinv=self.pinv if cache_pinv else None   
+            cached_pinv=self.pinv if cache_pinv else None , 
+            use_cg=True 
         )
         self.W.copy_(new_W.detach().reshape(self.W.shape))
         if cache_pinv and temp_pinv is not None:
