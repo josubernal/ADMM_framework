@@ -202,10 +202,26 @@ for model_name in model_types:
     m2 = ADMM_Metrics(admm_model) 
     admm_model._init_states(images)
     
-    # FIXED: Added the Deep Learning anti-oscillation parameters!
     balancer = ADMM_Scheduler(admm_model, mu=10.0, tau=2.0, balance_freq=5, stop_epoch=int(epochs*0.75))
 
     print("\nTraining model with ADMM (WITH SCHEDULER)...")
+    for epoch in range(epochs):
+            
+            balancer.capture_state()
+            admm_model.fit(images, labels_one_hot, warming=False)             
+            
+            with torch.no_grad():
+                m2.save_metrics(images, labels_one_hot)
+
+                print(f"Epoch [{epoch:3d}/{epochs}] |  {m2}")
+               
+                # 3. Read the Primal Residuals (These are LISTS of per-layer residuals)
+                primal_rho_list = m2.metrics["preactivation_constraint_sum"][-1]
+                primal_beta_list = m2.metrics["activation_constraint_sum"][-1]
+
+                # 4. Balance the network! 
+                balancer.step(primal_rho_list, primal_beta_list)
+
             
     #########################################
     # SAVING RESULTS AND PLOTTING

@@ -44,12 +44,6 @@ thetas = config.getfloat('config', 'thetas')
 input_size = 784
 n_timesteps = config.getint('config', 'n_timesteps')
 
-# WARMING CONFIG
-accuracy_threshold = config.getint('config', 'acc_threshold')
-min_warming_iters  = config.getint('config', 'min_warming_iters')
-max_warming_iters  = config.getint('config', 'max_warming_iters')
-primal_delta_limit = config.getfloat('config', 'primal_threshold') 
-
 def calc_spatial_out(size_in, k, p, s):
     return ((size_in + 2 * p - k) // s) + 1
 
@@ -75,11 +69,6 @@ for model_name in model_types:
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True 
         torch.backends.cudnn.benchmark = False
-
-        # Reset warming logic for each model
-        is_warming = True       
-        prev_primal_residual = float('inf')
-        warming_stop = None
 
         #########################################
         # DATA
@@ -176,7 +165,6 @@ for model_name in model_types:
         metrics["architecture"] = model_name
         metrics["batch_size"] = batch_size
         metrics["lagrange_config"] = lagrange_config  # Log the config!
-        metrics["warming_stop"] = warming_stop
         metrics["epochs"] = epochs
         metrics["seed"] = seed                    
 
