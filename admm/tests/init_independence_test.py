@@ -1,13 +1,14 @@
 import torch
 from admm.layers import ADMM_Linear
 from admm.activations import ADMM_ReLU
+from admm.dataclasses import ADMMLayerConfig
 
 def test_weight_bias_initialization_independence():
     torch.set_default_dtype(torch.float64)
     device = torch.device('cpu')
     batch, in_f, out_f = 16, 32, 32
-    config = {'rho': 1.0, 'beta': 1.0, 'deltas': 0.8, 'thetas': 1.0}
-    
+    config = ADMMLayerConfig(rho=1.0, beta=1.0, deltas=0.8, thetas=1.0, use_bias=False)
+
     a_prev = torch.randn((batch, in_f), dtype=torch.float64)
     z_target = torch.randn((batch, out_f), dtype=torch.float64)
 
@@ -15,10 +16,10 @@ def test_weight_bias_initialization_independence():
     print("  PROOF A: PURE W UPDATE OVERWRITE (BIAS = FALSE)")
     print("="*65)
     
-    layer_z_nobias = ADMM_Linear(in_f, out_f, h=ADMM_ReLU(), bias=False)
-    layer_r_nobias = ADMM_Linear(in_f, out_f, h=ADMM_ReLU(), bias=False)
-    layer_z_nobias.setup(config)
-    layer_r_nobias.setup(config)
+    layer_z_nobias = ADMM_Linear(in_f, out_f, h=ADMM_ReLU(), config=config)
+    layer_r_nobias = ADMM_Linear(in_f, out_f, h=ADMM_ReLU(), config=config)
+    layer_z_nobias._setup()
+    layer_r_nobias._setup()
 
     layer_z_nobias.W.data = torch.zeros_like(layer_z_nobias.W)
     layer_r_nobias.W.data = torch.randn_like(layer_r_nobias.W) * 100.0
@@ -38,10 +39,12 @@ def test_weight_bias_initialization_independence():
     print("  PROOF B: COUPLED W/B CONVERGENCE (BIAS = TRUE)")
     print("="*65)
 
-    layer_z_bias = ADMM_Linear(in_f, out_f, h=ADMM_ReLU(), bias=True)
-    layer_r_bias = ADMM_Linear(in_f, out_f, h=ADMM_ReLU(), bias=True)
-    layer_z_bias.setup(config)
-    layer_r_bias.setup(config)
+    config = ADMMLayerConfig(rho=1.0, beta=1.0, deltas=0.8, thetas=1.0, use_bias=True)
+
+    layer_z_bias = ADMM_Linear(in_f, out_f, h=ADMM_ReLU(), config=config)
+    layer_r_bias = ADMM_Linear(in_f, out_f, h=ADMM_ReLU(), config=config)
+    layer_z_bias._setup()
+    layer_r_bias._setup()
 
     layer_z_bias.W.data = torch.zeros_like(layer_z_bias.W)
     layer_z_bias.b.data = torch.zeros_like(layer_z_bias.b)

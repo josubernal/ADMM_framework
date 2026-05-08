@@ -5,6 +5,7 @@ ADMM Safety Test: In-Place Aliasing (Ghost Overwrite)
 import torch
 from admm.layers import ADMM_SpikingLinear
 from admm.activations import ADMM_Heaviside
+from admm.dataclasses import ADMMLayerConfig
 
 def test_inplace_aliasing():
     print("\n" + "="*55)
@@ -15,16 +16,17 @@ def test_inplace_aliasing():
     device = torch.device('cpu')
     T, batch, feats = 5, 4, 16
     
-    config = {'rho': 1.0, 'beta': 1.0, 'deltas': 0.8, 'thetas': 1.0}
+    config = ADMMLayerConfig(rho=1.0, beta=1.0, deltas=0.8, thetas=1.0, use_bias=True)
     
     # 1. Setup 3 sequential layers
-    layer1 = ADMM_SpikingLinear(feats, feats, h=ADMM_Heaviside(), bias=True)
-    layer2 = ADMM_SpikingLinear(feats, feats, h=ADMM_Heaviside(), bias=True)
-    layer3 = ADMM_SpikingLinear(feats, feats, h=ADMM_Heaviside(), bias=True)
+    layer1 = ADMM_SpikingLinear(feats, feats, h=ADMM_Heaviside(), config=config)
+    layer2 = ADMM_SpikingLinear(feats, feats, h=ADMM_Heaviside(), config=config)
+    layer3 = ADMM_SpikingLinear(feats, feats, h=ADMM_Heaviside(), config=config)
     
     for i, layer in enumerate([layer1, layer2, layer3]):
         layer.device = device
-        layer.setup(config, is_last_layer=(i == 2))
+        if (i == 2) : config.use_reset = False  
+        layer._setup()
         layer.T = T
         # Initialize raw tensors
         layer._init_weights_and_bias((feats, feats), (feats,))

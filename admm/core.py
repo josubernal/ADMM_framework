@@ -1,60 +1,77 @@
-"""
-ADMM Core Interface
-
-This module defines the absolute base for all ADMM layers. 
-It manages the fundamental auxiliary variables ('a' and 'z'), handles the 
-configuration setup, and dictates the generic forward passes.
+r"""This module defines the absolute base for all ADMM layers.
+It manages the fundamental auxiliary variables ($a$ and $z$), the dual variable ($\lambda$),
+handles the configuration setup, and dictates the generic forward passes.
 
 It is strictly non-parametric (no weights/biases) and non-temporal.
 """
 
+from typing import Any, Optional
+
 import torch
 import torch.nn as nn
+
 from .activations import ADMM_Identity
+from .dataclasses import ADMMConfig, ADMMLayerConfig
 
 ####################################################################################################
 # Base Layer Interface
-####################################################################################################           
+####################################################################################################
+
 
 class ADMM_Layer(nn.Module):
-    """The core Base Layer Interface for all ADMM modules.
-    
-    Manages the fundamental auxiliary variables, handles the configuration setup.
+    r"""The core Base Layer Interface for all ADMM modules.
+
+    Manages the fundamental auxiliary variables ($a$, $z$, $\lambda$) and securely
+    handles the localized configuration setup.
     """
-    def __init__(self, h: nn.Module = None):
-        super().__init__()
-        self.device = None
-        self.use_cholesky= None
-        self.rho = None
-        self.beta = None
-        self.deltas = None
-        self.thetas = None
-        self.lambda_lagrange = None
-        
-        self.z = None
-        self.a = None
-                
-        self.h = h if h is not None else ADMM_Identity()
-    
-    def setup(self, config: dict, is_last_layer: bool = False):
-        """Receives global ADMM hyperparameters from the manager and cascades them.
+
+    def __init__(
+        self,
+        rho: Optional[float] = None,
+        beta: Optional[float] = None,
+        deltas: Optional[float] = None,
+        thetas: Optional[float] = None,
+        use_reset: Optional[bool] = None,
+        h: nn.Module = None,
+        config: Optional[ADMMLayerConfig] = None,
+    ):
+        """Initializes the base layer and its constraints.
 
         Args:
-            config (dict): Dictionary containing global hyperparameters (e.g., rho, beta).
-            is_last_layer (bool, optional): Flag indicating if this is the final layer. Defaults to False.
+            rho (float, optional): Affine penalty parameter. Defaults to None.
+            beta (float, optional): Activation penalty parameter. Defaults to None.
+            deltas (float, optional): Temporal leakage parameter. Defaults to None.
+            thetas (float, optional): Spiking threshold parameter. Defaults to None.
+            use_reset (bool, optional): Whether to apply spike resets. Defaults to None.
+            h (nn.Module, optional): The activation function module. Defaults to ADMM_Identity.
+            config (ADMMLayerConfig, optional): Layer configuration object. Defaults to None.
         """
-        for key, val in config.items():
-            setattr(self, key, val)
-        
-        self.use_lagrange = config.get('use_lagrange', False)
-          
-        if is_last_layer and hasattr(self, 'use_reset'):
-            self.use_reset = False   
-            
-        if hasattr(self, 'h') and hasattr(self.h, 'setup'):
-            self.h.setup(config, parent_layer=self)
-    
-    def _broadcast_to_match(self, tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.Tensor:
+        super().__init__()
+        self.device = None
+
+        self.lambda_lagrange = None
+        self.z = None
+        self.a = None
+        self.h = h if h is not None else ADMM_Identity()
+        self.config = config if config is not None else ADMMLayerConfig()
+        self.config.rho = rho if rho is not None else self.config.rho
+        self.config.beta = beta if beta is not None else self.config.beta
+        self.config.deltas = deltas if deltas is not None else self.config.deltas
+        self.config.thetas = thetas if thetas is not None else self.config.thetas
+        self.config.use_reset = (
+            use_reset if use_reset is not None else self.config.use_reset
+        )
+
+    def _setup(self, global_config: Optional[ADMMConfig] = None) -> None:
+        """Cascades configuration setup to child modules."""
+        self.global_config = global_config
+
+        if hasattr(self, "h") and hasattr(self.h, "_setup"):
+            self.h._setup(self.config)
+
+    def _broadcast_to_match(
+        self, tensor: torch.Tensor, target_tensor: torch.Tensor
+    ) -> torch.Tensor:
         """Helper method to safely align tensor dimensions for element-wise operations.
 
         Args:
@@ -67,24 +84,24 @@ class ADMM_Layer(nn.Module):
         if tensor.dim() < target_tensor.dim():
             missing_dims = target_tensor.dim() - tensor.dim()
             return tensor.view(*tensor.shape, *([1] * missing_dims))
-        return tensor 
-            
-    def forward(self, x: torch.Tensor) -> torch.Tensor:    
-        """Standard sequential pass for initialization or inference.
+        return tensor
 
-        - For Static Networks: Simply returns the spatial transformation (y = Wx).
-        - For Spiking Networks (SNNs): Simulates the Leaky Integrate-and-Fire (LIF) 
-        mechanics step-by-step over the time dimension (T).
+    def forward(self, a_prev: torch.Tensor) -> torch.Tensor:
+        r"""Standard sequential pass for initialization or inference.
+
+        * For Static Networks: Simply returns the spatial transformation ($y = Wx$).
+        * For Spiking Networks (SNNs): Simulates the mechanics step-by-step.
 
         Args:
-            x (torch.Tensor): The input tensor.
+            a_prev (torch.Tensor): The input tensor.
 
         Returns:
-            torch.Tensor: The output tensor after the spatial (and temporal, if spiking) pass.
+            torch.Tensor: The output tensor after the spatial pass.
         """
-        y = self.spatial_forward(x)             
+        y = self.spatial_forward(a_prev)
         return y
-    def vectorized_forward(self, x: torch.Tensor) -> torch.Tensor:
+
+    def vectorized_forward(self, a_prev: torch.Tensor) -> torch.Tensor:
         """Vectorized ADMM pass for optimization and constraint evaluation.
 
         Args:
@@ -93,32 +110,38 @@ class ADMM_Layer(nn.Module):
         Returns:
             torch.Tensor: The evaluated constraints including temporal dependencies.
         """
-        y = self.spatial_forward(x)             
+        y = self.spatial_forward(a_prev)
         return y
-   
-    def update_z_last(self, a_prev: torch.Tensor, labels: torch.Tensor, time_steps=None):
-        """Delegates to loss function."""
-        forward = self.vectorized_forward(a_prev) 
+
+    def update_z_last(
+        self, a_prev: torch.Tensor, labels: torch.Tensor, loss_f: Any = None
+    ) -> None:
+        """Delegates the final layer's $z$ update to the active loss function.
+
+        Args:
+            a_prev (torch.Tensor): The previous layer's activations.
+            labels (torch.Tensor): The ground truth target labels.
+            loss_f (ADMM_Loss, optional): The objective function managing the update. Defaults to None.
+        """
+        forward = self.vectorized_forward(a_prev)
         labels = self._broadcast_to_match(labels, forward)
-        if self.use_lagrange and self.lambda_lagrange is not None:
+        if self.config.use_lagrange and self.lambda_lagrange is not None:
             lam = self._broadcast_to_match(self.lambda_lagrange, forward)
         else:
             lam = torch.zeros_like(forward)
-        self.z.copy_(self.loss_f.update_z_last_core(forward,self.rho, labels, lam))
-        
-    
-    def update_lambda(self, a_prev: torch.Tensor):
-        """Updates the Lagrange multiplier (lambda) based for the layer constraint.
+        self.z.copy_(loss_f.update_z_last_core(forward, self.config.rho, labels, lam))
 
-        Formula: lambda_new = lambda_old + rho * (z - forward(a_prev_L))
+    def update_lambda(self, a_prev: torch.Tensor) -> None:
+        r"""Updates the Lagrange multiplier ($\lambda$) based on the current layer constraints.
+
+        Formula evaluated:
+        $\lambda^{k+1}_l = \lambda^{k}_l + \rho_l (z_l - \text{forward}(a_{l-1}))$
 
         Args:
-            a_prev_L (torch.Tensor): The activations from the penultimate layer or inputs.
+            a_prev (torch.Tensor): The activations from the previous layer.
         """
-        if not self.use_lagrange or self.lambda_lagrange is None:
+        if not self.config.use_lagrange or self.lambda_lagrange is None:
             return
         forward = self.spatial_forward(a_prev)
-        self.lambda_lagrange.add_(self.z, alpha=self.rho)
-        self.lambda_lagrange.add_(forward, alpha=-self.rho)
-
-    
+        self.lambda_lagrange.add_(self.z, alpha=self.config.rho)
+        self.lambda_lagrange.add_(forward, alpha=-self.config.rho)

@@ -31,14 +31,15 @@ def test_temporal_schemes_equivalence():
     
     # 2. Instantiate Base Layers
     h_func = ADMM_Heaviside()
-    layer_base = ADMM_SpikingLinear(in_f, out_f, h=h_func, bias=False)
+    layer_base = ADMM_SpikingLinear(in_f, out_f, h=h_func, **config)
     layer_base.device = device
-    layer_base.setup(config)
+    layer_base._setup()
     layer_base.T = T
     
-    next_layer = ADMM_SpikingLinear(out_f, out_f, h=h_func, bias=False)
+    config = {'rho': 1.0, 'beta': 1.0, 'deltas': 0.8, 'thetas': 1.0, 'use_reset': False}
+    next_layer = ADMM_SpikingLinear(out_f, out_f, h=h_func, **config)
     next_layer.device = device
-    next_layer.setup(config, is_last_layer=True)
+    next_layer._setup()
     next_layer.T = T
     
     # 3. Create identical random states for the environment

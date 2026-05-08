@@ -29,14 +29,15 @@ def test_isolated_temporal_schemes():
     h_func = ADMM_Heaviside()
     
     # 2. Instantiate Base Layers
-    layer_base = ADMM_SpikingLinear(in_f, out_f, h=h_func, bias=False)
+    layer_base = ADMM_SpikingLinear(in_f, out_f, h=h_func,  **config)
     layer_base.device = device
-    layer_base.setup(config)
+    layer_base._setup()
     layer_base.T = T
     
-    next_layer = ADMM_SpikingLinear(out_f, out_f, h=h_func, bias=False)
+    config = {'rho': 1.0, 'beta': 1.0, 'deltas': 0.8, 'thetas': 1.0, 'use_reset': False}
+    next_layer = ADMM_SpikingLinear(out_f, out_f, h=h_func, **config)
     next_layer.device = device
-    next_layer.setup(config, is_last_layer=True)
+    next_layer._setup()
     next_layer.T = T
     
     # 3. Create identical random states
@@ -96,7 +97,7 @@ def test_isolated_temporal_schemes():
 
     # METHOD 1: VECTORIZED Z
     start_z_vec = time.perf_counter()
-    layer_z_vec.update_z(a_prev, time_steps)
+    layer_z_vec.update_z(a_prev)
     time_z_vec = time.perf_counter() - start_z_vec
     
     # METHOD 2: ISOLATED UNROLLED Z LOOP
@@ -123,10 +124,11 @@ def test_isolated_temporal_schemes():
     print("  TEST 3: FINAL LAYER (Z LAST UPDATE)  (Vectorized vs Unrolled Loop)")
     print("="*65)
 
+    config = {'rho': 1.0, 'beta': 1.0, 'deltas': 0.8, 'thetas': 1.0, 'use_reset': False}
     # Setup Layers for Test 2
-    last_layer_base = ADMM_SpikingLinear(in_f, out_f, h=h_func, bias=False)
+    last_layer_base = ADMM_SpikingLinear(in_f, out_f, h=h_func, **config)
     last_layer_base.device = device
-    last_layer_base.setup(config, is_last_layer=True)
+    last_layer_base._setup()
     last_layer_base.T = T
 
     # Random states specific to final layer
@@ -134,24 +136,24 @@ def test_isolated_temporal_schemes():
     
     # Setup test copies
     last_layer_vectorized = copy.deepcopy(last_layer_base)
-    last_layer_vectorized.loss_f = ADMM_SSE()
+    loss_f = ADMM_SSE()
     last_layer_vectorized.z = z_init.clone()
     last_layer_vectorized.a = a_init.clone()
 
     last_layer_unrolled = copy.deepcopy(last_layer_base)
-    last_layer_unrolled.loss_f = ADMM_SSE()
+
     
     last_layer_unrolled.z = z_init.clone()
     last_layer_unrolled.a = a_init.clone()
 
     # METHOD 1: VECTORIZED Z LAST
     start_vec_last = time.perf_counter()
-    last_layer_vectorized.update_z_last(a_prev, labels)
+    last_layer_vectorized.update_z_last(a_prev, labels, loss_f=loss_f)
     time_vec_last = time.perf_counter() - start_vec_last
 
     # METHOD 2: UNROLLED Z LAST
     start_unrolled_last = time.perf_counter()
-    last_layer_unrolled.update_z_last_unrolled(a_prev, labels, time_steps, jacobi=True)
+    last_layer_unrolled.update_z_last_unrolled(a_prev, labels, time_steps, jacobi=True, loss_f=loss_f)
     time_unrolled_last = time.perf_counter() - start_unrolled_last
 
     # Verification 2

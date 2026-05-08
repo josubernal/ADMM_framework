@@ -46,8 +46,8 @@ def test_fft_math():
     den_d_main, _, in_f_d = l_conv_dense._get_a_denominator(1.0, shape_4d)
     den_f_main, _, in_f_f = l_conv_fft._get_a_denominator(1.0, shape_4d)
     
-    a_d = l_conv_dense.solve_activation_system(num_4d, den_d_main, den_d_main, shape_4d, in_f_d)
-    a_f = l_conv_fft.solve_activation_system(num_4d, den_f_main, den_f_main, shape_4d, in_f_f)
+    a_d = l_conv_dense._solve_activation_system(num_4d, den_d_main, den_d_main, shape_4d, in_f_d)
+    a_f = l_conv_fft._solve_activation_system(num_4d, den_f_main, den_f_main, shape_4d, in_f_f)
     diff_sol = torch.max(torch.abs(a_d - a_f)).item()
     print(f"[4D System Solver]      Difference: {diff_sol:.8e} " + ("✅" if diff_sol < 1e-9 else "❌"))
 
@@ -97,8 +97,8 @@ def test_fft_math():
         beta_current=1.0, rho_current=0.1, thetas_current=0.3, a_shape=shape_5d
     )
 
-    a_d_5d = l_spk_dense.solve_activation_system(num_5d, den_d_5d_m, den_d_5d_l, shape_5d, in_f_d5)
-    a_f_5d = l_spk_fft.solve_activation_system(num_5d, den_f_5d_m, den_f_5d_l, shape_5d, in_f_f5)
+    a_d_5d = l_spk_dense._solve_activation_system(num_5d, den_d_5d_m, den_d_5d_l, shape_5d, in_f_d5)
+    a_f_5d = l_spk_fft._solve_activation_system(num_5d, den_f_5d_m, den_f_5d_l, shape_5d, in_f_f5)
     diff_sol_5d = torch.max(torch.abs(a_d_5d - a_f_5d)).item()
     print(f"[5D System Solver]      Difference: {diff_sol_5d:.8e} " + ("✅" if diff_sol_5d < 1e-9 else "❌"))
 
@@ -108,8 +108,8 @@ def test_fft_math():
     
     # Simulating a single timestep passed into the unrolled solver
     num_slice = num_5d[0] 
-    a_unroll_d = l_spk_dense.solve_activation_system_unrolled(num_slice, inv_den_d)
-    a_unroll_f = l_spk_fft.solve_activation_system_unrolled(num_slice, inv_den_f)
+    a_unroll_d = l_spk_dense._solve_activation_system_unrolled(num_slice, inv_den_d)
+    a_unroll_f = l_spk_fft._solve_activation_system_unrolled(num_slice, inv_den_f)
     
     diff_unroll = torch.max(torch.abs(a_unroll_d - a_unroll_f)).item()
     print(f"[4D Unrolled Slice]     Difference: {diff_unroll:.8e} " + ("✅" if diff_unroll < 1e-9 else "❌"))

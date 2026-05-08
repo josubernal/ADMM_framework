@@ -1,0 +1,72 @@
+site_name: ADMM Optimizer
+site_description: An Alternating Direction Method of Multipliers (ADMM) optimizer for Neural Networks (NNs) and Spiking Neural Networks (SNNs).
+theme:
+  name: material
+  palette:
+    # Set a clean toggle for light/dark mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs # Top navigation bar
+    - navigation.indexes # Clickable section headers
+
+# The structure of your website
+nav:
+  - Home: index.md
+  - Tutorials:
+    - Basic Linear Networks: tutorials/linear.md
+    - Spiking Convolutions: tutorials/spiking_conv.md
+  - Theory:
+    - Motivation: theory/motivation.md
+  - API Reference:
+    - Manager: api/manager.md
+    - Core Logic: api/core.md
+    - Affine Logic: api/affine.md
+    - Spiking Logic: api/spiking_mixin.md
+    - Convolutional Logic: api/convolutional_mixin.md
+    - Layers: api/layers.md
+    - Activation functions: api/activations.md
+    - Loss Functions: api/loss_functions.md
+    - Pooling Operations: api/pooling.md
+    - Metrics: api/metrics.md
+    - Initializers: api/initializers.md
+    - Scheduler: api/scheduler.md
+    - Dataclasses: api/dataclasses.md
+    - Solvers: api/solvers.md
+    - Helpers: api/temporal_helpers.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            members_order: source
+
+markdown_extensions:
+  - footnotes
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+watch:
+  - admm
+

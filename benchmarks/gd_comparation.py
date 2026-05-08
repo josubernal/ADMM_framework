@@ -135,7 +135,7 @@ class GDSpConvNet(nn.Module):
 # AUTOMATED ITERATION OVER MODELS
 #########################################
 # Un-commented array to loop through all models
-model_types = ["linear","conv","spiking-linear", "spiking-conv"]
+model_types = ["linear","conv", "spiking-linear", "spiking-conv"]
 
 for model_name in model_types:
     torch.manual_seed(seed)

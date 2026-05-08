@@ -7,6 +7,7 @@ import gc
 from admm.manager import ADMM
 from admm.layers import ADMM_SpikingLinear
 from admm.activations import ADMM_Heaviside
+from admm.dataclasses import ADMMConfig
 
 def test_autograd_and_memory_leak():
     print("\n" + "="*55)
@@ -17,11 +18,11 @@ def test_autograd_and_memory_leak():
     T, batch, in_f, hidden_f, out_f = 10, 8, 16, 32, 16
     
     # Setup a small 2-layer network
-    config = {'rho': 1.0, 'beta': 1.0, 'deltas': 0.8, 'thetas': 1.0}
-    layer1 = ADMM_SpikingLinear(in_f, hidden_f, h=ADMM_Heaviside(), bias=True)
-    layer2 = ADMM_SpikingLinear(hidden_f, out_f, h=ADMM_Heaviside(), bias=True)
+    global_config = ADMMConfig(init="zeros")
+    layer1 = ADMM_SpikingLinear(in_f, hidden_f, rho= 1.0, beta= 1.0, deltas= 0.8, thetas= 1.0, h=ADMM_Heaviside())
+    layer2 = ADMM_SpikingLinear(hidden_f, out_f, rho= 1.0, beta= 1.0, deltas= 0.8, thetas= 1.0, h=ADMM_Heaviside(), use_reset=False)
     
-    model = ADMM([layer1, layer2], T=T, device=device, init="zeros", **config)
+    model = ADMM([layer1, layer2], T=T, device=device, config=global_config)
     
     inputs = torch.randn((T, batch, in_f), device=device)
     labels = torch.ones((batch, out_f), device=device)
