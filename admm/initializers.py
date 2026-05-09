@@ -130,7 +130,7 @@ class ZUniform(ADMM_Initializer):
 
                 x = layer.a
             z_pred = layers[-1].forward(x)
-            layer[-1].z = torch.randn_like(z_pred)
+            layers[-1].z = torch.randn_like(z_pred)
 
 
 class StatesUniform(ADMM_Initializer):

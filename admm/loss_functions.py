@@ -1,7 +1,7 @@
 """
 This module defines the objective functions for the ADMM network.
 Each loss function provides both a scalar calculation for metrics,
-and the analytical 'z_update' formula to solve the final layer's ADMM subproblem.
+and the analytical ['update_z'][admm.affine.ADMM_AffineLayer.update_z] formula to solve the final layer's ADMM subproblem.
 """
 
 from abc import ABC, abstractmethod

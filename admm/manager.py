@@ -1,9 +1,5 @@
 """This module contains the core orchestrator for the network and ADMM optimizer.
-ADMM breaks the network down into layer-wise sub-problems and updates in a loop:
-
-* Weight Updates
-* Activation & Pre-activation Updates
-* Dual Variable / Lagrange Multiplier Updates
+ADMM breaks the network down into layer-wise sub-problems and updates in a loop.
 
 The manager handles both static and spiking networks, automatically adjusting the optimization loop based on the network type and selected training method.
 """
@@ -15,7 +11,7 @@ from typing import Optional, Union
 import torch
 import torch.nn as nn
 
-from .dataclasses import ADMMConfig
+from .dataclasses import ADMM_Config
 from .initializers import get_initializer
 from .loss_functions import ADMM_SSE
 
@@ -36,7 +32,7 @@ class ADMM(nn.Module):
             Defaults to [ADMM_SSE()][admm.loss_functions.ADMM_SSE].
         T (int, optional): The number of time steps for spiking networks. If None, assumes static network.
             Defaults to None.
-        config (ADMMConfig, optional): [Global configuration][admm.dataclasses.ADMMConfig] for ADMM training. Defaults to standard settings.
+        config (ADMM_Config, optional): [Global configuration][admm.dataclasses.ADMM_Config] for ADMM training. Defaults to standard settings.
     """
 
     def __init__(
@@ -45,7 +41,7 @@ class ADMM(nn.Module):
         device=None,
         loss_f=None,
         T=None,
-        config: Optional[ADMMConfig] = None,
+        config: Optional[ADMM_Config] = None,
     ):
         super().__init__()
 
@@ -62,7 +58,7 @@ class ADMM(nn.Module):
         self.T = T
         self.is_spiking = self.T is not None
 
-        self.config = config if config is not None else ADMMConfig()
+        self.config = config if config is not None else ADMM_Config()
 
         if not self.is_spiking and self.config.train_method != "vectorized":
             warnings.warn(
@@ -75,7 +71,7 @@ class ADMM(nn.Module):
         self._configure_layers()
 
     def _configure_layers(self):
-        """Initializes each layer."""
+        """Initializes each layer. Provides the global configuration to each layer for consistent initializations."""
         for layer in self.layers:
             layer._setup(global_config=self.config)
 
@@ -129,9 +125,7 @@ class ADMM(nn.Module):
         return layer_indices
 
     def _init_states(self, inputs: torch.Tensor):
-        """Warm-starts the ADMM auxiliary variables 'z' and 'a'.
-
-        Utilizes the selected initialization strategy and initializes the Lagrange multiplier.
+        """Utilizes the selected initialization strategy to warm-start the ADMM auxiliary variables 'z' and 'a'.
 
         Args:
             inputs (torch.Tensor): The initial input tensor.
@@ -140,11 +134,6 @@ class ADMM(nn.Module):
         initializer = get_initializer(self.config.init)
 
         initializer.init_states(self.layers, inputs, self.device)
-
-        for layer in self.layers:
-            if getattr(layer, "use_lagrange", False):
-                shape = layer.z[-1].shape if self.is_spiking else layer.z.shape
-                layer.lambda_lagrange = torch.zeros(shape, device=inputs.device)
 
     def forward_model(
         self, inputs: torch.Tensor, return_firing_rates: bool = False

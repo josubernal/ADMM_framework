@@ -12,7 +12,7 @@ import torch
 
 
 @dataclass
-class ADMMConfig:
+class ADMM_Config:
     r"""Universal global configuration class for the ADMM Manager.
 
     Defines the global behavior of the ADMM optimization loop, dictating how
@@ -85,7 +85,7 @@ class ADMMConfig:
 
 
 @dataclass
-class ADMMLayerConfig:
+class ADMM_LayerConfig:
     r"""Universal configuration container for layer-specific ADMM hyperparameters.
 
     Each mathematical layer in the network maintains its own instance of this
@@ -121,6 +121,7 @@ class ADMMLayerConfig:
     use_bias: bool = False
     use_reset: bool = True
     use_cholesky: bool = True
+    use_fft: bool = True  # Only applicable for convolutional layers
 
     def __post_init__(self):
         # Validate math penalties (must be strictly positive)
@@ -143,7 +144,7 @@ class ADMMLayerConfig:
 
 
 @dataclass
-class ADMMState:
+class ADMM_State:
     r"""Universal container for dynamic ADMM variables passed during activation updates.
 
     Attributes:
@@ -200,7 +201,7 @@ class TemporalCache:
         forward_pass = layer.spatial_forward(a_prev)
 
         # 2- Denominator
-        denominator_main, denominator_last, _ = next_layer._get_a_denominator(
+        denominator_main, denominator_last, _ = next_layer.get_a_denominator(
             beta_current=layer.config.beta,
             rho_current=layer.config.rho,
             thetas_current=layer.config.thetas,

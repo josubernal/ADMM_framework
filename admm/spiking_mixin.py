@@ -9,7 +9,7 @@ from typing import Any, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 
-from .dataclasses import ADMMState, TemporalCache
+from .dataclasses import ADMM_State, TemporalCache
 from .solvers import solve_spiking_system, solve_woodbury_system
 from .temporal_helpers import (
     compute_temporal_dependencies,
@@ -51,130 +51,15 @@ class ADMM_Spiking:
             include_reset=include_reset,
         )
 
-    def _get_v(self, include_reset: bool = True) -> torch.Tensor:
-        """Delegates to temporal_helpers.get_spiking_v."""
-        return get_spiking_v(
-            z=self.z,
-            bias=self._format_bias(),
-            temporal_dependencies=self._compute_temporal_dependencies(include_reset),
-            rho=self.config.rho,
-            lambda_lagrange=self.lambda_lagrange,
-            broadcast_func=self._broadcast_to_match,
-        )
-
-    def _get_a_denominator(
-        self,
-        beta_current: float,
-        rho_current: float,
-        thetas_current: float,
-        a_shape: tuple,
-        unrolled: bool = False,
-    ) -> Tuple[Union[torch.Tensor, dict], Union[torch.Tensor, dict], int]:
-        """Delegates to temporal_helpers.get_spiking_a_denominator."""
-        temporal_penalty = rho_current * (thetas_current**2)
-        W = self._get_expanded_weights(a_shape)
-        out_features, in_features = W.shape
-
-        if (
-            getattr(self, "W", None) is not None
-            and self.W.dim() == 2
-            and in_features > out_features
-        ):
-            main_dict = {
-                "W": W,
-                "beta": beta_current + temporal_penalty,
-                "rho": self.config.rho,
-            }
-            last_dict = {"W": W, "beta": beta_current, "rho": self.config.rho}
-            return main_dict, last_dict, in_features
-
-        WtW, in_features = self._get_WtW(a_shape=a_shape)
-
-        return get_spiking_a_denominator(
-            WtW=WtW,
-            in_features=in_features,
-            beta_current=beta_current,
-            rho_next=self.config.rho,
-            temporal_penalty=temporal_penalty,
-            unrolled=unrolled,
-        )
-
     def _get_a_adjoint(self, next_layer: nn.Module) -> torch.Tensor:
         """Delegates to temporal_helpers.get_spiking_a_adjoint."""
         return get_spiking_a_adjoint(layer=self, next_layer=next_layer)
 
-    def update_lambda(self, a_prev: torch.Tensor) -> None:
-        r"""Updates the Lagrange multiplier ($\lambda$) for the layer constraint.
-
-        Formula evaluated:
-        $\lambda_T^{k+1} = \lambda_T^k + \rho z_T - \rho \delta z_{T-1} - \rho \text{forward}(a_{prev})$
-
-        Args:
-            a_prev (torch.Tensor): The activations from the previous layer or inputs.
-        """
-        if not self.config.use_lagrange or self.lambda_lagrange is None:
-            return
-
-        z_T = self.z[-1]
-        z_T_minus_1 = self.z[-2]
-        forward = self.spatial_forward(a_prev[-1].unsqueeze(0)).squeeze(0)
-        self.lambda_lagrange.add_(z_T, alpha=self.config.rho)
-        self.lambda_lagrange.add_(
-            z_T_minus_1, alpha=-self.config.rho * self.config.deltas
-        )
-        self.lambda_lagrange.add_(forward, alpha=-self.config.rho)
-
-    def update_z_last(
-        self, a_prev: torch.Tensor, labels: torch.Tensor, loss_f: Any = None
-    ) -> None:
-        """Delegates the vectorized sequential boundary update to the active loss function."""
-        forward = self.spatial_forward(a_prev)
-        temporal_forward = self.vectorized_forward(a_prev)
-        shape = self.z[-1]
-        labels = self._broadcast_to_match(labels, shape)
-        if self.config.use_lagrange and self.lambda_lagrange is not None:
-            lam = self._broadcast_to_match(self.lambda_lagrange, shape)
-        else:
-            lam = torch.zeros_like(shape)
-        self.z.copy_(
-            loss_f.update_z_last_spiking(
-                forward=forward,
-                temporal_forward=temporal_forward,
-                labels=labels,
-                lambda_lagrange=lam,
-                z=self.z,
-                rho=self.config.rho,
-                deltas=self.config.deltas,
-            )
-        )
-
-    def update_z_last_unrolled(
-        self,
-        a_prev: torch.Tensor,
-        labels: torch.Tensor,
-        time_steps: list,
-        jacobi: bool = False,
-        loss_f: Any = None,
-    ) -> None:
-        """Delegates the unrolled sequence boundary update to the active loss function."""
-        labels = self._broadcast_to_match(labels, self.z[-1])
-        if self.config.use_lagrange and self.lambda_lagrange is not None:
-            lam = self._broadcast_to_match(self.lambda_lagrange, self.z[-1])
-        else:
-            lam = torch.zeros_like(self.z[-1])
-        forward = self.spatial_forward(a_prev)
-        self.z.copy_(
-            loss_f.update_z_last_unrolled_spiking(
-                forward=forward,
-                labels=labels,
-                lambda_lagrange=lam,
-                z=self.z,
-                rho=self.config.rho,
-                deltas=self.config.deltas,
-                time_steps=time_steps,
-                jacobi=jacobi,
-            )
-        )
+    def _init_lambda_lagrange(self) -> None:
+        """Initializes the Lagrange multiplier tensor with the specified shape."""
+        if self.config.use_lagrange:
+            shape = self.z[-1].shape
+            self.lambda_lagrange = torch.zeros(shape, device=self.device)
 
     def _create_cache(
         self, next_layer: nn.Module, a_prev: torch.Tensor
@@ -189,86 +74,6 @@ class ADMM_Spiking:
             TemporalCache: A typed data class containing the precomputed matrices.
         """
         return TemporalCache.build(self, next_layer, a_prev)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Standard sequential pass for initialization or inference.
-
-        Simulates the spiking mechanics step-by-step over the time dimension.
-
-        Args:
-            x (torch.Tensor): The input tensor.
-
-        Returns:
-            torch.Tensor: The output tensor after the full temporal simulation.
-        """
-        y = self.spatial_forward(x)
-        z = torch.zeros_like(y)
-        z_prev = torch.zeros_like(y[0])
-        a_prev = torch.zeros_like(y[0])
-        T = y.size(0)
-        for t in range(T):
-            reset = (
-                self.config.thetas * a_prev
-                if (t > 0 and self.config.use_reset)
-                else 0.0
-            )
-            z_t = y[t] + self.config.deltas * z_prev - reset
-            z[t] = z_t
-            z_prev = z_t
-            a_prev = self.h(z_t)
-        return z
-
-    def vectorized_forward(self, a_prev: torch.Tensor) -> torch.Tensor:
-        """Vectorized ADMM pass for optimization and constraint evaluation.
-
-        Args:
-            a_prev (torch.Tensor): The previous layer's activations.
-
-        Returns:
-            torch.Tensor: The evaluated constraints including temporal dependencies.
-        """
-        z = self.spatial_forward(a_prev) + self._compute_temporal_dependencies()
-        return z
-
-    def update_a(self, next_layer: nn.Module, a_prev: torch.Tensor) -> None:
-        """Manages the vectorized activation ($a$) update for the sequence.
-
-        Args:
-            next_layer (nn.Module): The subsequent layer in the network.
-            a_prev (torch.Tensor): The previous layer's activations.
-        """
-        # self.config.beta * self.h(self.z) + adjoint + temporal penalty
-        numerator = self._get_a_adjoint(next_layer=next_layer)
-        numerator.add_(self.h(self.z), alpha=self.config.beta)
-
-        # Temporal penalty  =  -rho*thetas(z_t+1 -forward_t+1 -delta*z)
-        num_slice = numerator[:-1]
-        forward_pass = self.spatial_forward(a_prev)
-        num_slice.sub_(forward_pass[1:], alpha=-self.config.thetas * self.config.rho)
-        del forward_pass
-        num_slice.add_(self.z[1:], alpha=-self.config.thetas * self.config.rho)
-        num_slice.add_(
-            self.z[:-1], alpha=self.config.deltas * self.config.thetas * self.config.rho
-        )
-
-        denominator_main, denominator_last, in_features = next_layer._get_a_denominator(
-            a_shape=self.a.shape,
-            beta_current=self.config.beta,
-            rho_current=self.config.rho,
-            thetas_current=self.config.thetas,
-            unrolled=False,
-        )
-
-        new_a = next_layer._solve_activation_system(
-            numerator=numerator,
-            denominator_main=denominator_main,
-            denominator_last=denominator_last,
-            a_shape=self.a.shape,
-            in_features=in_features,
-        )
-
-        new_a = torch.clamp(new_a, min=0.0, max=1.0)
-        self.a.copy_(new_a)
 
     def _solve_activation_system(
         self,
@@ -288,10 +93,99 @@ class ADMM_Spiking:
             T=numerator.size(0),
         )
 
-    def update_bias(self, a_prev: torch.Tensor) -> None:
-        r"""Averages the residual errors across spatial and temporal dimensions.
+    def _solve_activation_system_unrolled(
+        self, numerator: torch.Tensor, denominator: Union[torch.Tensor, dict]
+    ) -> torch.Tensor:
+        """Executes the unrolled step using dense matrix multiplication.
 
-        Formula evaluated: $b = \text{mean}(z - A(a_{prev}) - \text{temporal\_dependencies})$
+        Reshaping is aligned with `solve_linear_system` in `solvers.py`.
+        """
+        if isinstance(denominator, dict):
+            return solve_woodbury_system(
+                W=denominator["W"],
+                B=numerator,
+                beta=denominator["beta"],
+                rho=denominator["rho"],
+                a_shape=numerator.shape,
+            )
+        original_shape = numerator.shape
+        in_features = denominator.size(1)
+        numerator_flat = numerator.reshape(-1, in_features)
+        a_t_flat = torch.matmul(numerator_flat, denominator)
+        return a_t_flat.view(original_shape)
+
+    def forward(self, a_prev: torch.Tensor) -> torch.Tensor:
+        r"""Standard sequential pass for initialization or inference.
+
+        * For Static Networks: Simply returns the spatial transformation ($z_l = F_l(a_{l-1})$).
+        * For Spiking Networks (SNNs): Simulates the mechanics step-by-step.
+
+        To refer to its non-spiking counterpart, see [forward][admm.core.ADMM_Layer.forward]. For the vectorized optimization pass, see [vectorized_forward][admm.spiking_mixin.ADMM_Spiking.vectorized_forward].
+
+        > **Performance Note (Compute vs. Memory):**
+        > This method is **compute-bound**. It strictly enforces causality via an $O(T)$
+        > sequential loop, resulting in slow execution but minimal memory footprint.
+        > Use this strictly for inference.
+
+        Args:
+            a_prev (torch.Tensor): The input tensor.
+
+        Returns:
+            torch.Tensor: The output tensor after the full temporal simulation.
+        """
+        y = self.spatial_forward(a_prev)
+        z = torch.zeros_like(y)
+        z_prev = torch.zeros_like(y[0])
+        a_prev = torch.zeros_like(y[0])
+        T = y.size(0)
+        for t in range(T):
+            reset = (
+                self.config.thetas * a_prev
+                if (t > 0 and self.config.use_reset)
+                else 0.0
+            )
+            z_t = y[t] + self.config.deltas * z_prev - reset
+            z[t] = z_t
+            z_prev = z_t
+            a_prev = self.h(z_t)
+        return z
+
+    def vectorized_forward(self, a_prev: torch.Tensor) -> torch.Tensor:
+        """Vectorized ADMM pass for optimization and constraint evaluation.
+
+        To refer to its non-spiking counterpart, see [vectorized_forward][admm.core.ADMM_Layer.vectorized_forward]. For the unrolled version, see [forward][admm.spiking_mixin.ADMM_Spiking.forward].
+
+        Args:
+            a_prev (torch.Tensor): The previous layer's activations.
+
+        > **Performance Note (Compute vs. Memory):**
+        > This method is **memory-bound**. It trades a massive memory footprint (storing the
+        > entire $T$-step ADMM state) to achieve $O(1)$ parallel execution time across the
+        > sequence. Use this strictly during the ADMM training loop.
+
+        Returns:
+            torch.Tensor: The evaluated constraints including temporal dependencies.
+        """
+        z = self.spatial_forward(a_prev) + self._compute_temporal_dependencies()
+        return z
+
+    def get_v(self, include_reset: bool = True) -> torch.Tensor:
+        """Delegates to [temporal_helpers.get_spiking_v][admm.temporal_helpers.get_spiking_v]. It is used in the mixin to override the standard [get_v][admm.affine.ADMM_AffineLayer.get_v] method for the spatial activation update."""
+        return get_spiking_v(
+            z=self.z,
+            bias=self._format_bias(),
+            temporal_dependencies=self._compute_temporal_dependencies(include_reset),
+            rho=self.config.rho,
+            lambda_lagrange=self.lambda_lagrange,
+            broadcast_func=self._broadcast_to_match,
+        )
+
+    def update_bias(self, a_prev: torch.Tensor) -> None:
+        r"""Averages the residual errors to update the bias vector.
+
+        Formula evaluated: $b_l = \text{mean}(z_l - A(a_{l-1})-T_l)$
+
+        You can find the corresponding non-spiking version [update_bias][admm.affine.ADMM_AffineLayer.update_bias] in the [Affine[admm.affine] module.
 
         Args:
             a_prev (torch.Tensor): The previous layer's activations.
@@ -332,12 +226,98 @@ class ADMM_Spiking:
                 self.update_a_unrolled(t, cache, next_layer)
                 self.update_z_unrolled(t, cache)
 
+    def get_a_denominator(
+        self,
+        beta_current: float,
+        rho_current: float,
+        thetas_current: float,
+        a_shape: tuple,
+        unrolled: bool = False,
+    ) -> Tuple[Union[torch.Tensor, dict], Union[torch.Tensor, dict], int]:
+        """Delegates to [temporal_helpers.get_spiking_a_denominator][admm.temporal_helpers.get_spiking_a_denominator].  It is used in the mixin to override the standard [get_a_denominator][admm.affine.ADMM_AffineLayer.get_a_denominator] method for the spatial activation update."""
+
+        temporal_penalty = rho_current * (thetas_current**2)
+        W = self._get_expanded_weights(a_shape)
+        out_features, in_features = W.shape
+
+        if (
+            getattr(self, "W", None) is not None
+            and self.W.dim() == 2
+            and in_features > out_features
+        ):
+            main_dict = {
+                "W": W,
+                "beta": beta_current + temporal_penalty,
+                "rho": self.config.rho,
+            }
+            last_dict = {"W": W, "beta": beta_current, "rho": self.config.rho}
+            return main_dict, last_dict, in_features
+
+        WtW, in_features = self._get_WtW(a_shape=a_shape)
+
+        return get_spiking_a_denominator(
+            WtW=WtW,
+            in_features=in_features,
+            beta_current=beta_current,
+            rho_next=self.config.rho,
+            temporal_penalty=temporal_penalty,
+            unrolled=unrolled,
+        )
+
+    def update_a(self, next_layer: nn.Module, a_prev: torch.Tensor) -> None:
+        r"""Manages the activation ($a$) update for spiking layers calling [get_a_denominator][admm.spiking_mixin.ADMM_Spiking.get_a_denominator].
+
+        Computes the numerator:
+        $N = \beta_l h_l(z_l) +\rho_l \mathcal{A}_{l+1}^*\big(v_{l+1}\big)- \rho_l \theta S^T \big(z_l - \delta S z_l - F_l(a_{l-1}) \big)$
+
+        Refer to its non-spiking counterpart, [update_a][admm.affine.ADMM_AffineLayer.update_a], in the [Affine][admm.affine] module.
+        Refer to its unrolled version, [update_a_unrolled][admm.spiking_mixin.ADMM_Spiking.update_a_unrolled], for the interleaved optimization pass in the ADMM loop.
+
+        Args:
+            next_layer (nn.Module): The subsequent layer in the network.
+            a_prev (torch.Tensor): The previous layer's activations.
+        """
+        # self.config.beta * self.h(self.z) + adjoint + temporal penalty
+        numerator = self._get_a_adjoint(next_layer=next_layer)
+        numerator.add_(self.h(self.z), alpha=self.config.beta)
+
+        # Temporal penalty  =  -rho*thetas(z_t+1 -forward_t+1 -delta*z)
+        num_slice = numerator[:-1]
+        forward_pass = self.spatial_forward(a_prev)
+        num_slice.add_(forward_pass[1:], alpha=self.config.thetas * self.config.rho)
+        del forward_pass
+        num_slice.add_(self.z[1:], alpha=-self.config.thetas * self.config.rho)
+        num_slice.add_(
+            self.z[:-1], alpha=self.config.deltas * self.config.thetas * self.config.rho
+        )
+
+        denominator_main, denominator_last, in_features = next_layer.get_a_denominator(
+            a_shape=self.a.shape,
+            beta_current=self.config.beta,
+            rho_current=self.config.rho,
+            thetas_current=self.config.thetas,
+            unrolled=False,
+        )
+
+        new_a = next_layer._solve_activation_system(
+            numerator=numerator,
+            denominator_main=denominator_main,
+            denominator_last=denominator_last,
+            a_shape=self.a.shape,
+            in_features=in_features,
+        )
+
+        new_a = torch.clamp(new_a, min=0.0, max=1.0)
+        self.a.copy_(new_a)
+
     def update_a_unrolled(
         self, t: int, cache: TemporalCache, next_layer: nn.Module
     ) -> None:
-        """Manages the unrolled activation ($a$) update for a specific timestep.
+        """Manages the unrolled activation ($a$) update for spiking layers.
 
-        Utilizes precomputed terms from `TemporalCache`.
+        Utilizes precomputed terms from [TemporalCache][admm.dataclasses.TemporalCache].
+
+        Refer to its vectorized version, [update_a][admm.spiking_mixin.ADMM_Spiking.update_a],for the decoupled and vectorized methods.
 
         Args:
             t (int): The current timestep index.
@@ -366,38 +346,12 @@ class ADMM_Spiking:
 
         self.a[t].copy_(torch.clamp(new_a_t, min=0.0, max=1.0))
 
-    def _solve_activation_system_unrolled(
-        self, numerator: torch.Tensor, denominator: Union[torch.Tensor, dict]
-    ) -> torch.Tensor:
-        """Executes the unrolled step using dense matrix multiplication.
-
-        Reshaping is aligned with `solve_linear_system` in `solvers.py`.
-        """
-        if isinstance(denominator, dict):
-            return solve_woodbury_system(
-                W=denominator["W"],
-                B=numerator,
-                beta=denominator["beta"],
-                rho=denominator["rho"],
-                a_shape=numerator.shape,
-            )
-        original_shape = numerator.shape
-        in_features = denominator.size(1)
-        numerator_flat = numerator.reshape(-1, in_features)
-        a_t_flat = torch.matmul(numerator_flat, denominator)
-        return a_t_flat.view(original_shape)
-
     def update_z_unrolled(
         self, t: int, cache: TemporalCache, z_to_use: Optional[torch.Tensor] = None
     ) -> None:
-        r"""Performs the unrolled pre-activation ($z$) update for hidden layers.
+        r"""Applies the $z$ update in an unrolled manner using the [activation function's operators][admm.activations].
 
-        Defines the proximal update based on two main terms:
-         1. Temporal Forward pass: ($\text{Forward pass} + \delta z_{prev} - \theta a_{prev}$)
-         2. $z_{next} - \text{Forward Pass}$
-
-        Applies the proximal operator to these terms via the activation function's
-        specialized unrolled solver.
+        You can find the corresponding vectorized and decoupled versions [update_z][admm.affine.ADMM_AffineLayer.update_z] and [update_z_decoupled][admm.spiking_mixin.ADMM_Spiking.update_z_decoupled] in the [Affine][admm.affine] and [Spiking Mixin][admm.spiking_mixin] modules.
 
         Args:
             t (int): The current timestep index.
@@ -419,17 +373,16 @@ class ADMM_Spiking:
             z_minus_forward = z_to_use[t + 1].sub(cache.forward_pass[t + 1])
         else:
             z_minus_forward = None
-        current_state = ADMMState(
+        current_state = ADMM_State(
             forward=temporal_forward, z_minus_forward=z_minus_forward, a=self.a[t]
         )
         new_z_t = self.h.activation_z_unrolled(current_state)
         self.z[t].copy_(new_z_t)
 
     def update_z_decoupled(self, a_prev: torch.Tensor, time_steps: list) -> None:
-        """Decoupled causal sweep for the $z$ update.
+        r"""Applies the $z$ update in an decoupled manner calling [update_z_unrolled][admm.spiking_mixin.ADMM_Spiking.update_z_unrolled] and using the [activation function's operators][admm.activations].
 
-        Reuses the unrolled logic across all timesteps without redefining the math by
-        creating a lightweight mock cache.
+        You can find the corresponding vectorized and unrolled versions [update_z][admm.affine.ADMM_AffineLayer.update_z] and [update_z_unrolled][admm.spiking_mixin.ADMM_Spiking.update_z_unrolled] in the [Affine][admm.affine] and [Spiking Mixin][admm.spiking_mixin] modules.
 
         Args:
             a_prev (torch.Tensor): The previous layer's activations.
@@ -441,3 +394,96 @@ class ADMM_Spiking:
             self.update_z_unrolled(t, mock_cache)
         del forward_pass
         del mock_cache
+
+    def update_z_last(
+        self, a_prev: torch.Tensor, labels: torch.Tensor, loss_f: Any = None
+    ) -> None:
+        """Applies the $z$ update to spiking neurons using the [loss function operators][admm.loss_functions].
+
+        You can find the corresponding unrolled and non-spiking versions [update_z_last_unrolled][admm.spiking_mixin.ADMM_Spiking.update_z_last_unrolled] and [update_z_last][admm.core.ADMM_Layer.update_z_last] in the [Core][admm.core] and [Spiking Mixin][admm.spiking_mixin] modules.
+
+        Args:
+            a_prev (torch.Tensor): The previous layer's activations.
+            labels (torch.Tensor): The ground truth target labels.
+            loss_f (ADMM_Loss, optional): The objective function managing the update. Defaults to None.
+        """
+        forward = self.spatial_forward(a_prev)
+        temporal_forward = self.vectorized_forward(a_prev)
+        shape = self.z[-1]
+        labels = self._broadcast_to_match(labels, shape)
+        if self.config.use_lagrange and self.lambda_lagrange is not None:
+            lam = self._broadcast_to_match(self.lambda_lagrange, shape)
+        else:
+            lam = torch.zeros_like(shape)
+        self.z.copy_(
+            loss_f.update_z_last_spiking(
+                forward=forward,
+                temporal_forward=temporal_forward,
+                labels=labels,
+                lambda_lagrange=lam,
+                z=self.z,
+                rho=self.config.rho,
+                deltas=self.config.deltas,
+            )
+        )
+
+    def update_z_last_unrolled(
+        self,
+        a_prev: torch.Tensor,
+        labels: torch.Tensor,
+        time_steps: list,
+        jacobi: bool = False,
+        loss_f: Any = None,
+    ) -> None:
+        """Applies the $z$ update to spiking neurons in an unrolled manner using the [loss function operators][admm.loss_functions].
+
+        You can find the corresponding spikingand non-spiking versions [update_z_last][admm.spiking_mixin.ADMM_Spiking.update_z_last] and [update_z_last][admm.core.ADMM_Layer.update_z_last] in the [Core][admm.core] and [Spiking Mixin][admm.spiking_mixin] modules.
+
+        Args:
+            a_prev (torch.Tensor): The previous layer's activations.
+            labels (torch.Tensor): The ground truth target labels.
+            time_steps (list): The list of sequence time steps to update.
+            jacobi (bool): Flag to determine if the unrolled update should use Jacobi-style updates. Defaults to False.
+            loss_f (ADMM_Loss, optional): The objective function managing the update. Defaults to None.
+        """
+        labels = self._broadcast_to_match(labels, self.z[-1])
+        if self.config.use_lagrange and self.lambda_lagrange is not None:
+            lam = self._broadcast_to_match(self.lambda_lagrange, self.z[-1])
+        else:
+            lam = torch.zeros_like(self.z[-1])
+        forward = self.spatial_forward(a_prev)
+        self.z.copy_(
+            loss_f.update_z_last_unrolled_spiking(
+                forward=forward,
+                labels=labels,
+                lambda_lagrange=lam,
+                z=self.z,
+                rho=self.config.rho,
+                deltas=self.config.deltas,
+                time_steps=time_steps,
+                jacobi=jacobi,
+            )
+        )
+
+    def update_lambda(self, a_prev: torch.Tensor) -> None:
+        r"""Updates the Lagrange multiplier ($\lambda$) based on the current layer constraints for spiking neurons.
+
+        Formula evaluated:
+        $\lambda_l \leftarrow \lambda_l + \rho_l \big(z_{l,T} - \mathcal{F}_{l,T}\big)$
+
+        You can find the corresponding non-spiking version [update_lambda][admm.core.ADMM_Layer.update_lambda] in the [Core][admm.core] module.
+
+        Args:
+            a_prev (torch.Tensor): The activations from the previous layer.
+        """
+        if not self.config.use_lagrange or self.lambda_lagrange is None:
+            return
+
+        z_T = self.z[-1]
+        z_T_minus_1 = self.z[-2]
+        forward = self.spatial_forward(a_prev[-1].unsqueeze(0)).squeeze(0)
+        self.lambda_lagrange.add_(z_T, alpha=self.config.rho)
+        self.lambda_lagrange.add_(
+            z_T_minus_1, alpha=-self.config.rho * self.config.deltas
+        )
+        self.lambda_lagrange.add_(forward, alpha=-self.config.rho)

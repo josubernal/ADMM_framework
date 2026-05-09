@@ -51,7 +51,7 @@ def compute_temporal_dependencies(
 ) -> torch.Tensor:
     r"""Computes the physical voltage leakage and threshold reset over time.
 
-    Formula evaluated: $\Delta z_t = \delta * z_{t-1} - \theta * a_{t-1}$
+    Formula evaluated: $\Delta z_t = \delta z_{t-1} - \theta a_{t-1}$
 
     Args:
         z (torch.Tensor): The membrane potential tensor.
@@ -83,10 +83,15 @@ def get_spiking_v(
     lambda_lagrange: torch.Tensor = None,
     broadcast_func=None,
 ) -> torch.Tensor:
-    r"""Returns the spiking target ($v$), incorporating temporal leakage and reset penalties.
+    r"""Returns the target tensor $v$ for spiking layers.
 
-    This target is utilized primarily during the weight update phase to determine
-    the ideal spatial trajectory of the network.
+    Formula evaluated:
+
+    * $v_l = z_l - b_l -T_l$
+    * $v_l = z_l - b_l -T_l + \frac{\lambda_l}{\rho}$ If layer l has a Lagrangian multiplier
+
+    You can find the corresponding non-spiking version [get_v][admm.affine.ADMM_AffineLayer.get_v] in the [Affine][admm.affine] module.
+    This function is being called by the [get_v][admm.spiking_mixin.ADMM_Spiking.get_v] method in the [Spiking Mixin][admm.spiking_mixin] module, which overrides the non-spiking version to incorporate temporal dependencies.
 
     Args:
         z (torch.Tensor): The membrane potential tensor.
@@ -96,8 +101,9 @@ def get_spiking_v(
         lambda_lagrange (torch.Tensor, optional): The dual variable tensor. Defaults to None.
         broadcast_func (callable, optional): Helper function to align dimensions. Defaults to None.
 
+
     Returns:
-        torch.Tensor: The calculated spiking target tensor $v$.
+        torch.Tensor: The computed target tensor $v$.
     """
     v = z.clone()
     if isinstance(bias, torch.Tensor):
@@ -117,15 +123,12 @@ def get_spiking_a_denominator(
     temporal_penalty: float,
     unrolled: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor, int]:
-    r"""Computes the denominator (LHS) matrices for the activation ($a$) update step.
+    r"""Computes the spiking denominator matrix for the activation ($a$) update.
 
-    For spiking networks, the system matrix varies depending on the time step due
-    to recurrent dependencies.
+    Formula evaluated: $D = \beta_l I + \rho_{l+1} \mathcal{A}_{l+1}^* \circ \mathcal{A}_{l+1} + \rho \theta^2 I\mathbb{1}_{t<T}$
 
-    Formula evaluated:
-
-     - For $t < T$: $A_{main} = \beta I + \rho W^TW + \rho \theta^2 I$
-     - For $t = T$: $A_{last} = \beta I + \rho W^TW$
+    You can find the corresponding non-spiking version [get_a_denominator][admm.affine.ADMM_AffineLayer.get_a_denominator] in the [Affine][admm.affine] module.
+    This function is being called by the [get_a_denominator][admm.spiking_mixin.ADMM_Spiking.get_a_denominator] method in the [Spiking Mixin][admm.spiking_mixin] module, which overrides the non-spiking version to incorporate temporal dependencies.
 
     Args:
         WtW (torch.Tensor): The computed $W^T W$ covariance matrix of the next layer.
@@ -144,10 +147,16 @@ def get_spiking_a_denominator(
 
     denominator_last = WtW * rho_next
 
-    denominator_last.diagonal().add_(beta_current)
+    if denominator_last.dim() > 2:
+        denominator_last.diagonal(dim1=-2, dim2=-1).add_(beta_current)
+    else:
+        denominator_last.diagonal().add_(beta_current)
 
     denominator_main = denominator_last.clone()
-    denominator_main.diagonal().add_(temporal_penalty)
+    if denominator_main.dim() > 2:
+        denominator_main.diagonal(dim1=-2, dim2=-1).add_(temporal_penalty)
+    else:
+        denominator_main.diagonal().add_(temporal_penalty)
 
     if unrolled:
         denominator_main = torch.linalg.inv(denominator_main).transpose(-2, -1)
@@ -159,10 +168,9 @@ def get_spiking_a_denominator(
 def get_spiking_a_adjoint(
     layer: torch.nn.Module, next_layer: torch.nn.Module
 ) -> torch.Tensor:
-    r"""Computes the spatial linear components of the ADMM numerator for activation updates.
+    r"""Computes the adjoint of the ADMM numerator for activation updates.
 
-    Maps the errors of the subsequent layer backwards through its spatial weights
-    using the transposed adjoint operator.
+    Formula evaluated: $\rho_{l+1} \mathcal{A}_{l+1}^*\big(v_{l+1}\big)$
 
     Args:
         layer (ADMM_Layer): The current layer being updated.
@@ -171,7 +179,7 @@ def get_spiking_a_adjoint(
     Returns:
         torch.Tensor: The resulting adjoint tensor shaped to match `layer.a`.
     """
-    v = next_layer._get_v(include_reset=False)
+    v = next_layer.get_v(include_reset=False)
     adjoint = next_layer.adjoint_operator(v, original_input_shape=layer.a.shape)
     # temporal_penalty = torch.zeros_like(layer.z)
     # temporal_penalty[:-1] = -layer.thetas * layer.rho * (layer.z[1:] - layer.deltas * layer.z[:-1] - forward_pass[1:]) DEPRECATED

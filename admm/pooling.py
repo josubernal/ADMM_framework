@@ -17,7 +17,7 @@ from abc import ABC, abstractmethod
 import torch
 
 
-class ADMMPoolingBase(ABC):
+class ADMM_PoolingBase(ABC):
     """Abstract Base Class for ADMM Pooling and Flattening operators.
 
     Enforces that all pooling methods implement a forward pass, an explicit
@@ -78,7 +78,7 @@ class ADMMPoolingBase(ABC):
 ####################################################################################################
 
 
-class ADMM_Flatten(ADMMPoolingBase):
+class ADMM_Flatten(ADMM_PoolingBase):
     """Explicit Flattening Operator for ADMM.
 
     How it works:
@@ -102,7 +102,7 @@ class ADMM_Flatten(ADMMPoolingBase):
         return W.view(W.size(0), -1)
 
 
-class ADMM_GAP(ADMMPoolingBase):
+class ADMM_GAP(ADMM_PoolingBase):
     """Global Average Pooling (GAP) Operator for ADMM.
 
     How it works:
@@ -155,7 +155,7 @@ class ADMM_GAP(ADMMPoolingBase):
         return (W_expanded * scale).view(out_f, -1)
 
 
-class ADMM_SpatialPool(ADMMPoolingBase):
+class ADMM_SpatialPool(ADMM_PoolingBase):
     """Adaptive Spatial Pooling Operator for ADMM.
 
     How it works:

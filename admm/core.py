@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 
 from .activations import ADMM_Identity
-from .dataclasses import ADMMConfig, ADMMLayerConfig
+from .dataclasses import ADMM_Config, ADMM_LayerConfig
 
 ####################################################################################################
 # Base Layer Interface
@@ -33,7 +33,7 @@ class ADMM_Layer(nn.Module):
         thetas: Optional[float] = None,
         use_reset: Optional[bool] = None,
         h: nn.Module = None,
-        config: Optional[ADMMLayerConfig] = None,
+        config: Optional[ADMM_LayerConfig] = None,
     ):
         """Initializes the base layer and its constraints.
 
@@ -44,7 +44,7 @@ class ADMM_Layer(nn.Module):
             thetas (float, optional): Spiking threshold parameter. Defaults to None.
             use_reset (bool, optional): Whether to apply spike resets. Defaults to None.
             h (nn.Module, optional): The activation function module. Defaults to ADMM_Identity.
-            config (ADMMLayerConfig, optional): Layer configuration object. Defaults to None.
+            config (ADMM_LayerConfig, optional): Layer configuration object. Defaults to None.
         """
         super().__init__()
         self.device = None
@@ -53,7 +53,7 @@ class ADMM_Layer(nn.Module):
         self.z = None
         self.a = None
         self.h = h if h is not None else ADMM_Identity()
-        self.config = config if config is not None else ADMMLayerConfig()
+        self.config = config if config is not None else ADMM_LayerConfig()
         self.config.rho = rho if rho is not None else self.config.rho
         self.config.beta = beta if beta is not None else self.config.beta
         self.config.deltas = deltas if deltas is not None else self.config.deltas
@@ -62,12 +62,18 @@ class ADMM_Layer(nn.Module):
             use_reset if use_reset is not None else self.config.use_reset
         )
 
-    def _setup(self, global_config: Optional[ADMMConfig] = None) -> None:
+    def _setup(self, global_config: Optional[ADMM_Config] = None) -> None:
         """Cascades configuration setup to child modules."""
         self.global_config = global_config
 
         if hasattr(self, "h") and hasattr(self.h, "_setup"):
             self.h._setup(self.config)
+
+    def _init_lambda_lagrange(self) -> None:
+        """Initializes the Lagrange multiplier tensor with the specified shape."""
+        if self.config.use_lagrange:
+            shape = self.z.shape
+            self.lambda_lagrange = torch.zeros(shape, device=self.device)
 
     def _broadcast_to_match(
         self, tensor: torch.Tensor, target_tensor: torch.Tensor
@@ -89,8 +95,10 @@ class ADMM_Layer(nn.Module):
     def forward(self, a_prev: torch.Tensor) -> torch.Tensor:
         r"""Standard sequential pass for initialization or inference.
 
-        * For Static Networks: Simply returns the spatial transformation ($y = Wx$).
+        * For Static Networks: Simply returns the spatial transformation ($z_l = F_l(a_{l-1})$).
         * For Spiking Networks (SNNs): Simulates the mechanics step-by-step.
+
+        To refer to its spiking counterpart, see [forward][admm.spiking_mixin.ADMM_Spiking.forward]. For the vectorized optimization pass, see [vectorized_forward][admm.core.ADMM_Layer.vectorized_forward].
 
         Args:
             a_prev (torch.Tensor): The input tensor.
@@ -104,6 +112,8 @@ class ADMM_Layer(nn.Module):
     def vectorized_forward(self, a_prev: torch.Tensor) -> torch.Tensor:
         """Vectorized ADMM pass for optimization and constraint evaluation.
 
+        To refer to its spiking counterpart, see [vectorized_forward][admm.spiking_mixin.ADMM_Spiking.vectorized_forward]. For the unrolled version, see [forward][admm.core.ADMM_Layer.forward].
+
         Args:
             a_prev (torch.Tensor): The previous layer's activations.
 
@@ -116,7 +126,9 @@ class ADMM_Layer(nn.Module):
     def update_z_last(
         self, a_prev: torch.Tensor, labels: torch.Tensor, loss_f: Any = None
     ) -> None:
-        """Delegates the final layer's $z$ update to the active loss function.
+        """Applies the $z$ update using the [loss function operators][admm.loss_functions].
+
+        You can find the corresponding unrolled and spiking versions [update_z_last_unrolled][admm.spiking_mixin.ADMM_Spiking.update_z_last_unrolled] and [update_z_last][admm.spiking_mixin.ADMM_Spiking.update_z_last] in the [Spiking Mixin][admm.spiking_mixin] module.
 
         Args:
             a_prev (torch.Tensor): The previous layer's activations.
@@ -135,7 +147,9 @@ class ADMM_Layer(nn.Module):
         r"""Updates the Lagrange multiplier ($\lambda$) based on the current layer constraints.
 
         Formula evaluated:
-        $\lambda^{k+1}_l = \lambda^{k}_l + \rho_l (z_l - \text{forward}(a_{l-1}))$
+        $\lambda_l \leftarrow \lambda_l + \rho_l \big(z_l - F_l(a_{l-1})\big)$
+
+        You can find the corresponding spiking version [update_lambda][admm.spiking_mixin.ADMM_Spiking.update_lambda] in the [Spiking Mixin][admm.spiking_mixin] module.
 
         Args:
             a_prev (torch.Tensor): The activations from the previous layer.

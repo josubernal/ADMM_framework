@@ -73,7 +73,7 @@ class ADMM_Metrics:
 
     @torch.no_grad()
     def loss(self, labels: torch.Tensor) -> float:
-        """Computes the scalar loss of the final output.
+        """Computes the scalar [loss][admm.loss_functions.ADMM_Loss] of the final output.
 
         Args:
             labels (torch.Tensor): The ground truth labels.
@@ -92,7 +92,7 @@ class ADMM_Metrics:
     def lagrangian(self, inputs: torch.Tensor, labels: torch.Tensor) -> float:
         r"""Calculates the ADMM augmented Lagrangian energy to track convergence.
 
-        This incorporates the objective loss, the spatial affine penalties,
+        This incorporates the objective  [loss][admm.loss_functions.ADMM_Loss], the spatial affine penalties,
         the activation penalties, and the dual variable (Lagrange) multipliers.
 
         Args:
@@ -136,7 +136,7 @@ class ADMM_Metrics:
     def primal_residual_norm(self, inputs: torch.Tensor) -> float:
         r"""Calculates the normalized norm of the primal residual for the final layer.
 
-        Formula evaluated: $||z_L - W a_{L-1}|| / \sqrt{N}$
+        Formula evaluated: $||z_L -F_L(a_{L-1})|| / \sqrt{N}$
 
         Args:
             inputs (torch.Tensor): The input data tensor.
@@ -157,7 +157,7 @@ class ADMM_Metrics:
     def preactivation_constraint_sum(self, inputs: torch.Tensor) -> list[float]:
         r"""Calculates the normalized L2 norm of the pre-activation constraints.
 
-        Formula evaluated per layer: $||z_l - W a_{l-1}|| / \sqrt{N}$
+        Formula evaluated per layer: $||z_l - F_l(a_{l-1})|| / \sqrt{N}$
 
         Args:
             inputs (torch.Tensor): The input data tensor.
@@ -182,7 +182,7 @@ class ADMM_Metrics:
     def activation_constraint_sum(self) -> list[float]:
         r"""Calculates the normalized L2 norm of the activation constraints.
 
-        Formula evaluated per layer: $||a_l - h(z_l)|| / \sqrt{N}$
+        Formula evaluated per layer: $||a_l - h_l(z_l)|| / \sqrt{N}$
 
         Returns:
             list of float: The residual norms per layer.

@@ -22,8 +22,7 @@ theme:
 nav:
   - Home: index.md
   - Tutorials:
-    - Basic Linear Networks: tutorials/linear.md
-    - Spiking Convolutions: tutorials/spiking_conv.md
+    - Getting Started: tutorials/getting_started.md
   - Theory:
     - Motivation: theory/motivation.md
   - API Reference:

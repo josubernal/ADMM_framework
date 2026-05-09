@@ -1,11 +1,5 @@
 r"""
 This module contains the linear and convolutional layers for ADMM.
-
-Each layer must provide:
-
-1. A forward pass (`spatial_forward`).
-2. An `adjoint_operator` (transpose) to map targets/errors back to the input space.
-3. A `_compute_P` method to extract the "patch matrix", which is used to solve the weight update step.
 """
 
 from typing import Optional, Tuple
@@ -15,7 +9,7 @@ import torch.nn as nn
 
 from .affine import ADMM_AffineLayer
 from .convolutional_mixin import ADMM_Convolution
-from .dataclasses import ADMMLayerConfig
+from .dataclasses import ADMM_LayerConfig
 from .spiking_mixin import ADMM_Spiking
 
 ####################################################################################################
@@ -44,7 +38,7 @@ class ADMM_Linear(ADMM_AffineLayer):
         deltas: float = None,
         thetas: float = None,
         use_reset: bool = None,
-        config: Optional[ADMMLayerConfig] = None,
+        config: Optional[ADMM_LayerConfig] = None,
     ):
         super().__init__(
             h=h,
@@ -64,6 +58,7 @@ class ADMM_Linear(ADMM_AffineLayer):
         """Initializes the weight and bias tensors for the linear layer."""
         super()._setup(global_config)
         self._init_weights_and_bias((self.out_f, self.in_f), (self.out_f,))
+        self._init_lambda_lagrange()
 
     def spatial_forward(self, x: torch.Tensor, use_bias: bool = True) -> torch.Tensor:
         """Applies the linear transformation to the input data.
@@ -128,9 +123,8 @@ class ADMM_Conv2d(ADMM_Convolution, ADMM_AffineLayer):
         s: int,
         h: nn.Module = None,
         pool_op: nn.Module = None,
-        use_fft: bool = True,
         padding_mode: str = "circular",
-        config: Optional[ADMMLayerConfig] = None,
+        config: Optional[ADMM_LayerConfig] = None,
         rho: float = None,
         beta: float = None,
         deltas: float = None,
@@ -140,7 +134,6 @@ class ADMM_Conv2d(ADMM_Convolution, ADMM_AffineLayer):
         super().__init__(
             h=h,
             pool_op=pool_op,
-            use_fft=use_fft,
             padding_mode=padding_mode,
             rho=rho,
             beta=beta,
@@ -162,6 +155,7 @@ class ADMM_Conv2d(ADMM_Convolution, ADMM_AffineLayer):
         self._init_weights_and_bias(
             (self.out_c, self.in_c, self.k, self.k), (self.out_c,)
         )
+        self._init_lambda_lagrange()
 
     def spatial_forward(self, x: torch.Tensor, use_bias: bool = True) -> torch.Tensor:
         """Applies the spatial 2D convolution over the input images.
@@ -254,7 +248,7 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
         deltas: float = None,
         thetas: float = None,
         use_reset: bool = None,
-        config: Optional[ADMMLayerConfig] = None,
+        config: Optional[ADMM_LayerConfig] = None,
     ):
         super().__init__(
             h=h,
@@ -277,6 +271,7 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
         """Initializes the weight and bias tensors for the spiking linear layer."""
         super()._setup(global_config)
         self._init_weights_and_bias((self.out_f, self.in_f), (self.out_f,))
+        self._init_lambda_lagrange()
 
     def spatial_forward(self, x: torch.Tensor, use_bias: bool = True) -> torch.Tensor:
         """Folds the sequence and applies the fully connected transformation.
@@ -348,9 +343,8 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
         s: int,
         h: nn.Module = None,
         pool_op: nn.Module = None,
-        use_fft: bool = True,
         padding_mode: str = "circular",
-        config: Optional[ADMMLayerConfig] = None,
+        config: Optional[ADMM_LayerConfig] = None,
         rho: float = None,
         beta: float = None,
         deltas: float = None,
@@ -360,7 +354,6 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
         super().__init__(
             h=h,
             pool_op=pool_op,
-            use_fft=use_fft,
             padding_mode=padding_mode,
             rho=rho,
             beta=beta,
@@ -385,6 +378,7 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
         self._init_weights_and_bias(
             (self.out_c, self.in_c, self.k, self.k), (self.out_c,)
         )
+        self._init_lambda_lagrange()
 
     def spatial_forward(self, x: torch.Tensor, use_bias: bool = True) -> torch.Tensor:
         """Applies spatial convolution frame-by-frame across the temporal sequence.
