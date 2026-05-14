@@ -12,6 +12,9 @@ import os
 import matplotlib.pyplot as plt
 import torch
 
+from .dataclasses import ADMM_BatchState, ADMM_LayerState
+from .functional.utils import compute_temporal_dependencies
+
 
 class ADMM_Metrics:
     """Observer class that computes performance and convergence metrics for an ADMM model.
@@ -71,8 +74,18 @@ class ADMM_Metrics:
 
         return f"Loss: {loss:.4f} | Acc:{acc} | FR: {fr_str} | Lagr: {lagr} | Lamb: {lamb} | Pre: {pre} | Act: {act}"
 
+    def vectorized_forward(self, layer, a_prev: torch.Tensor, state: ADMM_LayerState):
+        forward = layer.spatial_forward(a_prev)
+
+        temporal_forward = (
+            forward + (compute_temporal_dependencies(state, layer.config))
+            if self.model.is_spiking
+            else forward
+        )
+        return temporal_forward
+
     @torch.no_grad()
-    def loss(self, labels: torch.Tensor) -> float:
+    def loss(self, labels: torch.Tensor, batch_state: ADMM_BatchState) -> float:
         """Computes the scalar [loss][admm.loss_functions.ADMM_Loss] of the final output.
 
         Args:
@@ -81,15 +94,16 @@ class ADMM_Metrics:
         Returns:
             float: The computed loss value.
         """
+        final_layer_state = batch_state.layer_states[-1]
         final_out = (
-            self.model.layers[-1].z[-1]
-            if self.model.is_spiking
-            else self.model.layers[-1].z
+            final_layer_state.z[-1] if self.model.is_spiking else final_layer_state.z
         )
         return self.model.loss_f(final_out, labels).item()
 
     @torch.no_grad()
-    def lagrangian(self, inputs: torch.Tensor, labels: torch.Tensor) -> float:
+    def lagrangian(
+        self, inputs: torch.Tensor, labels: torch.Tensor, batch_state: ADMM_BatchState
+    ) -> float:
         r"""Calculates the ADMM augmented Lagrangian energy to track convergence.
 
         This incorporates the objective  [loss][admm.loss_functions.ADMM_Loss], the spatial affine penalties,
@@ -104,36 +118,47 @@ class ADMM_Metrics:
         """
         cost = 0.0
 
-        last_layer = self.model.layers[-1]
-        final_out = last_layer.z[-1] if self.model.is_spiking else last_layer.z
-        cost += self.model.loss_f(final_out, labels)
+        final_layer_state = batch_state.layer_states[-1]
+        final_out = (
+            final_layer_state.z[-1] if self.model.is_spiking else final_layer_state.z
+        )
 
-        for l, layer in enumerate(self.model.layers):
-            a_prev = inputs if l == 0 else self.model.layers[l - 1].a
+        loss_val = self.model.loss_f(final_out, labels)
+        cost += loss_val.item() if isinstance(loss_val, torch.Tensor) else loss_val
 
-            predicted_z = layer.vectorized_forward(a_prev)
-            residual = layer.z - predicted_z
+        for layer_idx, layer in enumerate(self.model.layers):
+            layer_state = batch_state.layer_states[layer_idx]
+            a_prev = (
+                inputs if layer_idx == 0 else batch_state.layer_states[layer_idx - 1].a
+            )
 
-            cost += (layer.config.rho / 2.0) * torch.norm(residual) ** 2
+            predicted_z = self.vectorized_forward(
+                layer=layer, state=layer_state, a_prev=a_prev
+            )
 
-            if l < self.model.L - 1:
+            residual = layer_state.z - predicted_z
+            cost += (layer.config.rho / 2.0) * torch.norm(residual).item() ** 2
+
+            if layer_idx < self.model.L - 1:
                 cost += (layer.config.beta / 2.0) * torch.norm(
-                    layer.a - layer.h(layer.z)
-                ) ** 2
+                    layer_state.a - layer.h(layer_state.z)
+                ).item() ** 2
 
             if (
                 getattr(layer.config, "use_lagrange", False)
-                and layer.lambda_lagrange is not None
+                and layer_state.lambda_lagrange is not None
             ):
                 if self.model.is_spiking:
-                    cost += torch.sum(layer.lambda_lagrange * residual[-1])
+                    cost += torch.sum(layer_state.lambda_lagrange * residual[-1]).item()
                 else:
-                    cost += torch.sum(layer.lambda_lagrange * residual)
+                    cost += torch.sum(layer_state.lambda_lagrange * residual).item()
 
-        return cost.item()
+        return cost
 
     @torch.no_grad()
-    def primal_residual_norm(self, inputs: torch.Tensor) -> float:
+    def primal_residual_norm(
+        self, inputs: torch.Tensor, batch_state: ADMM_BatchState
+    ) -> float:
         r"""Calculates the normalized norm of the primal residual for the final layer.
 
         Formula evaluated: $||z_L -F_L(a_{L-1})|| / \sqrt{N}$
@@ -145,19 +170,26 @@ class ADMM_Metrics:
             float: The normalized residual.
         """
         last_layer = self.model.layers[-1]
-        a_prev_L = self.model.layers[-2].a if self.model.L > 1 else inputs
-        last_out = last_layer.vectorized_forward(a_prev_L)
-        residual = last_layer.z - last_out
+        last_state = batch_state.layer_states[-1]
+        a_prev_L = batch_state.layer_states[-2].a if self.model.L > 1 else inputs
+
+        last_out = self.vectorized_forward(
+            layer=last_layer, state=last_state, a_prev=a_prev_L
+        )
+
+        residual = last_state.z - last_out
         r = residual[-1] if self.model.is_spiking else residual
         norm_factor = r.numel() ** 0.5
 
         return (torch.norm(r) / norm_factor).item()
 
     @torch.no_grad()
-    def preactivation_constraint_sum(self, inputs: torch.Tensor) -> list[float]:
+    def preactivation_constraint_sum(
+        self, inputs: torch.Tensor, batch_state: ADMM_BatchState
+    ) -> list[float]:
         r"""Calculates the normalized L2 norm of the pre-activation constraints.
 
-        Formula evaluated per layer: $||z_l - F_l(a_{l-1})|| / \sqrt{N}$
+        Formula evaluated per layer: $||z_l - F_l(a_{layer_idx-1})|| / \sqrt{N}$
 
         Args:
             inputs (torch.Tensor): The input data tensor.
@@ -167,19 +199,25 @@ class ADMM_Metrics:
         """
         constraints_residuals = []
 
-        with torch.no_grad():
-            for l, layer in enumerate(self.model.layers):
-                a_prev = inputs if l == 0 else self.model.layers[l - 1].a
-                predicted_z = layer.vectorized_forward(a_prev)
-                residual = layer.z - predicted_z
-                norm_factor = residual.numel() ** 0.5
-                val = (torch.norm(residual) / norm_factor).item()
-                constraints_residuals.append(val)
+        for layer_idx, layer in enumerate(self.model.layers):
+            layer_state = batch_state.layer_states[layer_idx]
+            a_prev = (
+                inputs if layer_idx == 0 else batch_state.layer_states[layer_idx - 1].a
+            )
+
+            predicted_z = self.vectorized_forward(
+                layer=layer, state=layer_state, a_prev=a_prev
+            )
+
+            residual = layer_state.z - predicted_z
+            norm_factor = residual.numel() ** 0.5
+            val = (torch.norm(residual) / norm_factor).item()
+            constraints_residuals.append(val)
 
         return constraints_residuals
 
     @torch.no_grad()
-    def activation_constraint_sum(self) -> list[float]:
+    def activation_constraint_sum(self, batch_state: ADMM_BatchState) -> list[float]:
         r"""Calculates the normalized L2 norm of the activation constraints.
 
         Formula evaluated per layer: $||a_l - h_l(z_l)|| / \sqrt{N}$
@@ -189,13 +227,14 @@ class ADMM_Metrics:
         """
         constraints_residuals = []
 
-        with torch.no_grad():
-            for l in range(self.model.L - 1):
-                layer = self.model.layers[l]
-                residual = layer.a - layer.h(layer.z)
-                norm_factor = residual.numel() ** 0.5
-                val = (torch.norm(residual) / norm_factor).item()
-                constraints_residuals.append(val)
+        for layer_idx in range(self.model.L - 1):
+            layer = self.model.layers[layer_idx]
+            layer_state = batch_state.layer_states[layer_idx]
+
+            residual = layer_state.a - layer.h(layer_state.z)
+            norm_factor = residual.numel() ** 0.5
+            val = (torch.norm(residual) / norm_factor).item()
+            constraints_residuals.append(val)
 
         return constraints_residuals
 
@@ -247,6 +286,13 @@ class ADMM_Metrics:
         stats = {}
         total_params = 0
         total_aux = 0
+        batch_state = None
+
+        if (
+            getattr(self.model, "initialized", False)
+            and self.model.state_handler.num_batches > 0
+        ):
+            _, _, batch_state = self.model.state_handler.load_batch(0)
 
         for i, layer in enumerate(self.model.layers):
             W_size = (
@@ -256,14 +302,14 @@ class ADMM_Metrics:
                 layer.b.numel() if hasattr(layer, "b") and layer.b is not None else 0
             )
 
-            a_size = (
-                layer.a.numel() if hasattr(layer, "a") and layer.a is not None else 0
-            )
-            z_size = (
-                layer.z.numel() if hasattr(layer, "z") and layer.z is not None else 0
-            )
+            if batch_state is not None:
+                layer_state = batch_state.layer_states[i]
+                a_size = layer_state.a.numel() if layer_state.a is not None else 0
+                z_size = layer_state.z.numel() if layer_state.z is not None else 0
+            else:
+                a_size, z_size = 0, 0
 
-            layer_params = W_size  # + b_size
+            layer_params = W_size
             layer_aux = a_size + z_size
 
             stats[f"Layer_{i}"] = {
@@ -287,24 +333,28 @@ class ADMM_Metrics:
 
         return stats
 
-    def save_metrics(self, inputs: torch.Tensor, labels: torch.Tensor) -> None:
+    def save_metrics(
+        self, inputs: torch.Tensor, labels: torch.Tensor, batch_state: ADMM_BatchState
+    ) -> None:
         """Computes and appends all tracked metrics for the current epoch.
 
         Args:
             inputs (torch.Tensor): The input data tensor.
             labels (torch.Tensor): The ground truth labels.
         """
-        self.metrics["loss"].append(self.loss(labels))
+        self.metrics["loss"].append(self.loss(labels, batch_state))
         acc, fr = self.evaluate_performance(inputs, labels)
         self.metrics["accuracy"].append(acc)
         self.metrics["firing_rate"].append(fr)
-        self.metrics["lagrangian"].append(self.lagrangian(inputs, labels))
-        self.metrics["primal_residual"].append(self.primal_residual_norm(inputs))
+        self.metrics["lagrangian"].append(self.lagrangian(inputs, labels, batch_state))
+        self.metrics["primal_residual"].append(
+            self.primal_residual_norm(inputs, batch_state)
+        )
         self.metrics["preactivation_constraint_sum"].append(
-            self.preactivation_constraint_sum(inputs)
+            self.preactivation_constraint_sum(inputs, batch_state)
         )
         self.metrics["activation_constraint_sum"].append(
-            self.activation_constraint_sum()
+            self.activation_constraint_sum(batch_state)
         )
 
     def get_dic(self) -> dict:

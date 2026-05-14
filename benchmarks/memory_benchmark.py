@@ -10,7 +10,7 @@ import os
 
 import torch
 
-from admm.activations import ADMM_Heaviside, ADMM_ReLU
+from admm.activation_functions import ADMM_Heaviside, ADMM_ReLU
 from admm.dataclasses import ADMM_Config, ADMM_LayerConfig
 from admm.layers import ADMM_Conv2d, ADMM_Linear, ADMM_SpikingConv2d, ADMM_SpikingLinear
 from admm.manager import ADMM
@@ -36,7 +36,6 @@ def profile_architecture(arch_name, layers, inputs, labels, device, T_val):
     config = ADMM_Config(train_method="decoupled-sequential", init="zeros")
     model = ADMM(layers, T=T_val, device=device, config=config).to(device)
 
-    model._init_states(inputs)
     torch.cuda.synchronize()
     mem_init = format_mb(torch.cuda.memory_allocated())
     print(f"🔹 Init (a,z) Allocated: {mem_init:.2f} MB")

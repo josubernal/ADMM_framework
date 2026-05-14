@@ -268,7 +268,6 @@ for model_name in model_types:
         balancer = ADMM_Scheduler(
             admm_model, mu=10.0, tau=2.0, balance_freq=5, stop_epoch=int(epochs * 0.75)
         )
-        admm_model._init_states(images)
 
         print("Training model with ADMM...")
         for epoch in range(epochs):

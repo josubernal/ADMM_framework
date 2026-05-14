@@ -2,14 +2,20 @@ r"""
 This module contains the linear and convolutional layers for ADMM.
 """
 
+import warnings
 from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
 
-from .affine import ADMM_AffineLayer
-from .convolutional_mixin import ADMM_Convolution
+from .affine_layer import ADMM_AffineLayer
 from .dataclasses import ADMM_LayerConfig
+from .functional.fft_convolution import (
+    circular_adjoint,
+    circular_compute_P,
+    circular_forward,
+)
+from .functional.utils import fold_time, unfold_time
 from .spiking_mixin import ADMM_Spiking
 
 ####################################################################################################
@@ -53,12 +59,12 @@ class ADMM_Linear(ADMM_AffineLayer):
         self.channel_dim = -1  # Targets the [B, C] dimension
         self.in_f = in_f
         self.out_f = out_f
+        self.convolution = True
 
     def _setup(self, global_config=None) -> None:
         """Initializes the weight and bias tensors for the linear layer."""
         super()._setup(global_config)
         self._init_weights_and_bias((self.out_f, self.in_f), (self.out_f,))
-        self._init_lambda_lagrange()
 
     def spatial_forward(self, x: torch.Tensor, use_bias: bool = True) -> torch.Tensor:
         """Applies the linear transformation to the input data.
@@ -98,10 +104,10 @@ class ADMM_Linear(ADMM_AffineLayer):
 
     def _get_bias_reduction_dims(self) -> int:
         """Returns the reduction dimension index for bias averaging."""
-        return 0
+        return (0,)
 
 
-class ADMM_Conv2d(ADMM_Convolution, ADMM_AffineLayer):
+class ADMM_Conv2d(ADMM_AffineLayer):
     r"""Standard 2D Convolutional Layer for ADMM.
 
     How it works:
@@ -148,14 +154,28 @@ class ADMM_Conv2d(ADMM_Convolution, ADMM_AffineLayer):
         self.out_c = out_c
         self.k = k
         self.channel_dim = -3  # Targets the [B, C, H, W] dimension
+        self.padding_mode = padding_mode
+        self.convolution = True
+        if self.padding_mode == "circular" and not self.config.use_fft:
+            warnings.warn(
+                "Using circular padding without FFTs (use_fft=False) is highly inefficient. "
+                "The spatial solver must construct a massive dense Gram matrix to compute the adjoint. "
+                "Consider setting use_fft=True."
+            )
 
     def _setup(self, global_config=None) -> None:
         """Initializes the 4D kernel weights and bias tensors."""
         super()._setup(global_config)
+        if self.padding_mode == "circular" and self.s != 1:
+            warnings.warn(
+                f"Circular padding requires stride=1 to remain mathematically perfectly "
+                f"equivalent in the Fourier domain. Changing stride from {self.s} to 1."
+            )
+            self.s = 1
+
         self._init_weights_and_bias(
             (self.out_c, self.in_c, self.k, self.k), (self.out_c,)
         )
-        self._init_lambda_lagrange()
 
     def spatial_forward(self, x: torch.Tensor, use_bias: bool = True) -> torch.Tensor:
         """Applies the spatial 2D convolution over the input images.
@@ -168,7 +188,7 @@ class ADMM_Conv2d(ADMM_Convolution, ADMM_AffineLayer):
             torch.Tensor: The convolved feature maps.
         """
         if self.padding_mode == "circular":
-            return self._circular_forward(x, use_bias)
+            return circular_forward(x, use_bias)
         b = (
             self.b
             if (isinstance(use_bias, bool) and use_bias and self.config.use_bias)
@@ -192,7 +212,7 @@ class ADMM_Conv2d(ADMM_Convolution, ADMM_AffineLayer):
             torch.Tensor: The adjoint projection tensor in the input domain.
         """
         if self.padding_mode == "circular":
-            return self._circular_adjoint(target)
+            return circular_adjoint(target)
 
         out_pad = (0, 0)
         if original_input_shape is not None:
@@ -216,7 +236,7 @@ class ADMM_Conv2d(ADMM_Convolution, ADMM_AffineLayer):
             torch.Tensor: The flattened patch matrix $P$.
         """
         if self.padding_mode == "circular":
-            return self._circular_compute_P(a_prev)
+            return circular_compute_P(a_prev)
         patches = torch.nn.functional.unfold(
             a_prev, kernel_size=self.k, padding=self.p, stride=self.s
         )
@@ -266,12 +286,12 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
         self.in_f = in_f
         self.out_f = out_f
         self.channel_dim = -1
+        self.convolution = False
 
     def _setup(self, global_config=None) -> None:
         """Initializes the weight and bias tensors for the spiking linear layer."""
         super()._setup(global_config)
         self._init_weights_and_bias((self.out_f, self.in_f), (self.out_f,))
-        self._init_lambda_lagrange()
 
     def spatial_forward(self, x: torch.Tensor, use_bias: bool = True) -> torch.Tensor:
         """Folds the sequence and applies the fully connected transformation.
@@ -288,14 +308,14 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
             if (isinstance(use_bias, bool) and use_bias and self.config.use_bias)
             else None
         )
-        x_flat, tb_shape = self._fold_time(x)
+        x_flat, tb_shape = fold_time(x)
         x_pooled = self.pool_op(x_flat)
 
         out_flat = torch.matmul(x_pooled, self.W.t())
         if b is not None:
             out_flat += b
 
-        return self._unfold_time(out_flat, tb_shape)
+        return unfold_time(out_flat, tb_shape)
 
     def adjoint_operator(
         self, target: torch.Tensor, original_input_shape: tuple = None
@@ -309,13 +329,13 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
         Returns:
             torch.Tensor: The temporal adjoint response mapped to the input space.
         """
-        target_flat, tb_shape = self._fold_time(target)
+        target_flat, tb_shape = fold_time(target)
         deconv_flat = torch.matmul(target_flat, self.W)
         return self.pool_op.adjoint(deconv_flat, original_input_shape, tb_shape)
 
     def _compute_P(self, a_prev: torch.Tensor) -> torch.Tensor:
         """Folds the sequential activations to retrieve the pooled patch matrix."""
-        a_flat, _ = self._fold_time(a_prev)
+        a_flat, _ = fold_time(a_prev)
         return self.pool_op(a_flat)
 
     def _get_bias_reduction_dims(self) -> Tuple[int, int]:
@@ -323,7 +343,7 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
         return (0, 1)
 
 
-class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
+class ADMM_SpikingConv2d(ADMM_Spiking, ADMM_AffineLayer):
     r"""Spiking 2D Convolutional Layer.
 
     How it works:
@@ -371,14 +391,27 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
         self.p = p
         self.s = s
         self.channel_dim = -3
+        self.convolution = True
+        self.padding_mode = padding_mode
+        if self.padding_mode == "circular" and not self.config.use_fft:
+            warnings.warn(
+                "Using circular padding without FFTs (use_fft=False) is highly inefficient. "
+                "The spatial solver must construct a massive dense Gram matrix to compute the adjoint. "
+                "Consider setting use_fft=True."
+            )
 
     def _setup(self, global_config=None) -> None:
         """Initializes the 4D kernel weights and bias tensors for sequential data."""
         super()._setup(global_config)
+        if self.padding_mode == "circular" and self.s != 1:
+            warnings.warn(
+                f"Circular padding requires stride=1 to remain mathematically perfectly "
+                f"equivalent in the Fourier domain. Changing stride from {self.s} to 1."
+            )
+            self.s = 1
         self._init_weights_and_bias(
             (self.out_c, self.in_c, self.k, self.k), (self.out_c,)
         )
-        self._init_lambda_lagrange()
 
     def spatial_forward(self, x: torch.Tensor, use_bias: bool = True) -> torch.Tensor:
         """Applies spatial convolution frame-by-frame across the temporal sequence.
@@ -391,17 +424,17 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
             torch.Tensor: The convolved spiking video/sequence.
         """
         if self.padding_mode == "circular":
-            return self._circular_forward(x, use_bias)
+            return circular_forward(x, use_bias)
         b = (
             self.b
             if (isinstance(use_bias, bool) and use_bias and self.config.use_bias)
             else None
         )
-        x_flat, tb_shape = self._fold_time(x)
+        x_flat, tb_shape = fold_time(x)
         out_flat = torch.nn.functional.conv2d(
             x_flat, self.W, bias=b, padding=self.p, stride=self.s
         )
-        return self._unfold_time(out_flat, tb_shape)
+        return unfold_time(out_flat, tb_shape)
 
     def adjoint_operator(
         self, target: torch.Tensor, original_input_shape: tuple = None
@@ -417,8 +450,8 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
             torch.Tensor: The spatiotemporal adjoint response.
         """
         if self.padding_mode == "circular":
-            return self._circular_adjoint(target)
-        target_flat, tb_shape = self._fold_time(target)
+            return circular_adjoint(target)
+        target_flat, tb_shape = fold_time(target)
         out_pad = (0, 0)
         if original_input_shape is not None:
             H_in, W_in = original_input_shape[-2:]
@@ -431,13 +464,13 @@ class ADMM_SpikingConv2d(ADMM_Convolution, ADMM_Spiking, ADMM_AffineLayer):
         out_flat = torch.nn.functional.conv_transpose2d(
             target_flat, self.W, padding=self.p, stride=self.s, output_padding=out_pad
         )
-        return self._unfold_time(out_flat, tb_shape)
+        return unfold_time(out_flat, tb_shape)
 
     def _compute_P(self, a_prev: torch.Tensor) -> torch.Tensor:
         """Extracts and concatenates spatial patches sequentially using im2col."""
         if self.padding_mode == "circular":
-            return self._circular_compute_P(a_prev)
-        a_flat, _ = self._fold_time(a_prev)
+            return circular_compute_P(a_prev)
+        a_flat, _ = fold_time(a_prev)
         patches = torch.nn.functional.unfold(
             a_flat, kernel_size=self.k, padding=self.p, stride=self.s
         )

@@ -179,7 +179,6 @@ if __name__ == "__main__":
             ).to(device)
 
             m = ADMM_Metrics(model)
-            model._init_states(arch_data)
 
             # ---------------------------------------------------------
             # TRAINING LOOP

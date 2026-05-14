@@ -27,12 +27,12 @@ nav:
     - Motivation: theory/motivation.md
   - API Reference:
     - Manager: api/manager.md
-    - Core Logic: api/core.md
-    - Affine Logic: api/affine.md
+    - Base Layer Logic: api/base_layer.md
+    - Affine Layer Logic: api/affine_layer.md
     - Spiking Logic: api/spiking_mixin.md
     - Convolutional Logic: api/convolutional_mixin.md
     - Layers: api/layers.md
-    - Activation functions: api/activations.md
+    - Activation functions: api/activation_functions.md
     - Loss Functions: api/loss_functions.md
     - Pooling Operations: api/pooling.md
     - Metrics: api/metrics.md
@@ -40,7 +40,7 @@ nav:
     - Scheduler: api/scheduler.md
     - Dataclasses: api/dataclasses.md
     - Solvers: api/solvers.md
-    - Helpers: api/temporal_helpers.md
+    - Helpers: api/utils.md
 
 plugins:
   - search
@@ -52,6 +52,7 @@ plugins:
             show_source: true
             show_root_heading: true
             members_order: source
+            filters: []
 
 markdown_extensions:
   - footnotes

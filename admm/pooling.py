@@ -56,7 +56,7 @@ class ADMM_PoolingBase(ABC):
         pass
 
     @abstractmethod
-    def expand_weights(self, W: torch.Tensor, original_a_shape=None) -> torch.Tensor:
+    def expand_weights(self, W: torch.Tensor, a_shape=None) -> torch.Tensor:
         """Expands the weights of the next layer to match the spatial dimensions of a.
 
         This is necessary for computing the linear system in ADMM when spatial pooling
@@ -98,7 +98,7 @@ class ADMM_Flatten(ADMM_PoolingBase):
             return output.reshape(tb_shape[0], tb_shape[1], *output.shape[1:])
         return output
 
-    def expand_weights(self, W: torch.Tensor, original_a_shape: tuple):
+    def expand_weights(self, W: torch.Tensor, a_shape: tuple):
         return W.view(W.size(0), -1)
 
 
@@ -139,9 +139,9 @@ class ADMM_GAP(ADMM_PoolingBase):
             return output.reshape(tb_shape[0], tb_shape[1], *output.shape[1:])
         return output
 
-    def expand_weights(self, W: torch.Tensor, original_a_shape: tuple):
-        h, w = original_a_shape[-2:]
-        in_c = original_a_shape[-3]
+    def expand_weights(self, W: torch.Tensor, a_shape: tuple):
+        h, w = a_shape[-2:]
+        in_c = a_shape[-3]
         out_f = W.shape[0]
 
         pool_h, pool_w = (1, 1)
@@ -203,9 +203,9 @@ class ADMM_SpatialPool(ADMM_PoolingBase):
 
         return output
 
-    def expand_weights(self, W: torch.Tensor, original_a_shape: tuple):
-        h, w = original_a_shape[-2:]
-        in_c = original_a_shape[-3]
+    def expand_weights(self, W: torch.Tensor, a_shape: tuple):
+        h, w = a_shape[-2:]
+        in_c = a_shape[-3]
         out_f = W.shape[0]
 
         pool_h, pool_w = self.output_size

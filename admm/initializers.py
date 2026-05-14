@@ -16,9 +16,12 @@ and provides a modular interface for experimenting with novel initialization str
 
 import math
 from abc import ABC
+from typing import List, Tuple
 
 import torch
 import torch.nn as nn
+
+from .dataclasses import ADMM_LayerState
 
 
 class ADMM_Initializer(ABC):
@@ -46,9 +49,66 @@ class ADMM_Initializer(ABC):
         """
         return torch.zeros(*bias_shape, device=device)
 
+    def _get_warmup_states(
+        self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device
+    ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+        """Centralized helper to perform a warm-up forward pass and capture z and a shapes/values.
+
+        Properly handles both Static (batch-wise) and Spiking (time-unrolled) temporal causality.
+        """
+        x = inputs.to(device)
+        is_spiking = getattr(layers[0], "spiking", False)
+        L = len(layers)
+
+        z_inits = []
+        a_inits = []
+
+        if is_spiking:
+            T = x.size(0)
+            z_seqs = [[] for _ in range(L)]
+            a_seqs = [[] for _ in range(L)]
+            z_prevs = [None] * L
+            a_prevs = [None] * L
+
+            with torch.no_grad():
+                for t in range(T):
+                    a_t = x[t]
+                    for i, layer in enumerate(layers):
+                        z_t = layer.forward(a_t, z_prevs[i], a_prevs[i])
+                        z_prevs[i] = z_t
+
+                        a_t = layer.h(z_t)
+                        a_prevs[i] = a_t
+
+                        z_seqs[i].append(z_t)
+                        a_seqs[i].append(a_t)
+
+            for i in range(L):
+                z_inits.append(torch.stack(z_seqs[i], dim=0))
+                if i < L - 1:
+                    a_inits.append(torch.stack(a_seqs[i], dim=0))
+                else:
+                    a_inits.append(None)
+        else:
+            with torch.no_grad():
+                a_prev = x
+                for i, layer in enumerate(layers):
+                    z_t = layer.forward(a_prev)
+                    a_t = layer.h(z_t)
+
+                    z_inits.append(z_t)
+                    if i < L - 1:
+                        a_inits.append(a_t)
+                    else:
+                        a_inits.append(None)
+
+                    a_prev = a_t
+
+        return z_inits, a_inits
+
     def init_states(
         self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device
-    ):
+    ) -> list[ADMM_LayerState]:
         r"""Initializes the auxiliary variables $z$ and $a$.
         It performs a forward pass through the network and then populates $z$ and $a$ with the output.
 
@@ -57,15 +117,22 @@ class ADMM_Initializer(ABC):
             inputs (torch.Tensor): The initial input tensor to the network.
             device (torch.device): The device on which the tensors should be allocated.
         """
-        x = inputs.to(device)
-        with torch.no_grad():
-            for layer in layers[:-1]:
-                z_pred = layer.forward(x)
-                layer.z = z_pred.clone()
-                layer.a = z_pred.clone()
-                x = layer.a
-            z_pred = layers[-1].forward(x)
-            layers[-1].z = z_pred.clone()
+        z_inits, a_inits = self._get_warmup_states(layers, inputs, device)
+        states = []
+        is_spiking = getattr(layers[0], "spiking", False)
+
+        for i, layer in enumerate(layers):
+            z_init = z_inits[i].clone()
+            a_init = a_inits[i].clone() if a_inits[i] is not None else None
+
+            lam_shape = z_init[-1] if is_spiking else z_init
+            lam_init = (
+                torch.zeros_like(lam_shape) if layer.config.use_lagrange else None
+            )
+
+            states.append(ADMM_LayerState(z=z_init, a=a_init, lambda_lagrange=lam_init))
+
+        return states
 
 
 class WeightsZerosInitializer(ADMM_Initializer):
@@ -119,18 +186,23 @@ class ZUniform(ADMM_Initializer):
 
     def init_states(
         self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device
-    ):
-        x = inputs.to(device)
-        with torch.no_grad():
-            for layer in layers[:-1]:
-                z_pred = layer.forward(x)
-                layer.z = torch.randn_like(z_pred)
-                a_pred = layer.h(layer.z) if layer.h is not None else layer.z
-                layer.a = a_pred.clone()
+    ) -> list[ADMM_LayerState]:
+        z_inits, a_inits = self._get_warmup_states(layers, inputs, device)
+        states = []
+        is_spiking = getattr(layers[0], "spiking", False)
 
-                x = layer.a
-            z_pred = layers[-1].forward(x)
-            layers[-1].z = torch.randn_like(z_pred)
+        for i, layer in enumerate(layers):
+            z_init = torch.randn_like(z_inits[i])
+            a_init = layer.h(z_init) if i < len(layers) - 1 else None
+
+            lam_shape = z_init[-1] if is_spiking else z_init
+            lam_init = (
+                torch.zeros_like(lam_shape) if layer.config.use_lagrange else None
+            )
+
+            states.append(ADMM_LayerState(z=z_init, a=a_init, lambda_lagrange=lam_init))
+
+        return states
 
 
 class StatesUniform(ADMM_Initializer):
@@ -140,17 +212,23 @@ class StatesUniform(ADMM_Initializer):
 
     def init_states(
         self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device
-    ):
-        x = inputs.to(device)
-        with torch.no_grad():
-            for layer in layers[:-1]:
-                z_pred = layer.forward(x)
-                a_pred = layer.h(z_pred)
-                layer.z = torch.rand_like(z_pred)
-                layer.a = torch.rand_like(a_pred)
-                x = a_pred
-            z_pred = layers[-1].forward(x)
-            layers[-1].z = torch.rand_like(z_pred)
+    ) -> list[ADMM_LayerState]:
+        z_inits, a_inits = self._get_warmup_states(layers, inputs, device)
+        states = []
+        is_spiking = getattr(layers[0], "spiking", False)
+
+        for i, layer in enumerate(layers):
+            z_init = torch.rand_like(z_inits[i])
+            a_init = torch.rand_like(a_inits[i]) if a_inits[i] is not None else None
+
+            lam_shape = z_init[-1] if is_spiking else z_init
+            lam_init = (
+                torch.zeros_like(lam_shape) if layer.config.use_lagrange else None
+            )
+
+            states.append(ADMM_LayerState(z=z_init, a=a_init, lambda_lagrange=lam_init))
+
+        return states
 
 
 class RelaxedSpikeInitializer(ADMM_Initializer):
@@ -161,22 +239,29 @@ class RelaxedSpikeInitializer(ADMM_Initializer):
 
     def init_states(
         self, layers: nn.ModuleList, inputs: torch.Tensor, device: torch.device
-    ):
-        x = inputs.to(device)
-        with torch.no_grad():
-            for layer in layers[:-1]:
-                # 1. Do a forward pass just to get the exact tensor geometries
-                z_pred = layer.forward(x)
-                a_pred = layer.h(z_pred) if layer.h is not None else z_pred
+    ) -> list[ADMM_LayerState]:
+        z_inits, a_inits = self._get_warmup_states(layers, inputs, device)
+        states = []
+        is_spiking = getattr(layers[0], "spiking", False)
 
-                layer.z = torch.randn_like(z_pred)
-                layer.a = torch.randint(
-                    0, 2, size=a_pred.shape, dtype=a_pred.dtype, device=device
+        for i, layer in enumerate(layers):
+            z_init = torch.randn_like(z_inits[i])
+            a_init = (
+                torch.randint(
+                    0, 2, size=a_inits[i].shape, dtype=a_inits[i].dtype, device=device
                 )
+                if a_inits[i] is not None
+                else None
+            )
 
-                x = a_pred
-            z_pred = layers[-1].forward(x)
-            layers[-1].z = torch.randn_like(z_pred)
+            lam_shape = z_init[-1] if is_spiking else z_init
+            lam_init = (
+                torch.zeros_like(lam_shape) if layer.config.use_lagrange else None
+            )
+
+            states.append(ADMM_LayerState(z=z_init, a=a_init, lambda_lagrange=lam_init))
+
+        return states
 
 
 def get_initializer(init_type: str) -> ADMM_Initializer:

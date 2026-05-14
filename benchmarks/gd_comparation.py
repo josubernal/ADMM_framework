@@ -5,7 +5,6 @@ import os
 import snntorch as snn
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 from admm import (
@@ -23,7 +22,7 @@ from admm import (
     ADMM_SpikingConv2d,
     ADMM_SpikingLinear,
 )
-from utils.dataset import get_data
+from utils.dataset import get_dataset
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 config = configparser.ConfigParser()
@@ -33,6 +32,7 @@ config.read("benchmarks/config/config.ini")
 seed = config.getint("config", "seed")
 
 batch_size_static = config.getint("config", "batch_size_static")
+n_batches = config.getint("config", "n_batches")
 batch_size_spiking = config.getint("config", "batch_size_spiking")
 epochs = config.getint("config", "epochs")
 hidden_size_static = config.getint("config", "hidden_size_static")
@@ -205,14 +205,17 @@ for model_name in model_types:
     # DATA
     if model_name in ["linear", "conv"]:
         batch_size = batch_size_static
-        images, labels = get_data(batch_size, spiking=False, device=device, seed=seed)
+
+        dataset = get_dataset(batch_size, n_batches, spiking=False, seed=seed)
     else:
         batch_size = batch_size_spiking
-        images, labels = get_data(
-            batch_size, spiking=True, device=device, n_timesteps=n_timesteps, seed=seed
+        dataset = get_dataset(
+            batch_size,
+            spiking=True,
+            n_batches=n_batches,
+            n_timesteps=n_timesteps,
+            seed=seed,
         )
-
-    labels_one_hot = F.one_hot(labels.long(), num_classes=10).float()
 
     #########################################
     # MODEL INSTANTIATION
@@ -242,7 +245,6 @@ for model_name in model_types:
             admm_model = ADMM(linear_layers, loss_f=ADMM_SSE(), config=config).to(
                 device
             )
-            images = images.view(images.size(0), -1)
 
         case "conv":
             model = GDConvNet().to(device)
@@ -318,7 +320,6 @@ for model_name in model_types:
                 T=n_timesteps,
                 config=config,
             ).to(device)
-            images = images.view(images.size(0), images.size(1), -1).permute(1, 0, 2)
 
         case "spiking-conv":
             model = GDSpConvNet().to(device)
@@ -364,20 +365,23 @@ for model_name in model_types:
                 T=n_timesteps,
                 config=config,
             ).to(device)
-            images = images.permute(1, 0, 2, 3, 4)
 
     #########################################
     # ADMM TRAINING LOOP
     criterion = nn.CrossEntropyLoss()
     m = ADMM_Metrics(admm_model)
-    admm_model._init_states(images)
 
     print("\nTraining model with ADMM...")
     for epoch in range(epochs):
-        admm_model.fit(images, labels_one_hot, warming=is_warming)
+        admm_model.fit(dataset, warming=is_warming)
 
         with torch.no_grad():
-            m.save_metrics(images, labels_one_hot)
+            inputs, labels, batch_state = model.state_handler.load_batch(0)
+            if labels.dim() == 1 or labels.shape[-1] != 10:
+                labels = torch.nn.functional.one_hot(
+                    labels.long(), num_classes=10
+                ).float()
+            m.save_metrics(inputs, labels, batch_state)
             print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
             # --- DYNAMIC WARMING LOGIC ---
             current_primal = m.metrics["primal_residual"][-1]

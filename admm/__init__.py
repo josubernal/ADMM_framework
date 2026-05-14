@@ -1,4 +1,4 @@
-from .activations import ADMM_Heaviside, ADMM_ReLU
+from .activation_functions import ADMM_Heaviside, ADMM_ReLU
 from .dataclasses import ADMM_Config, ADMM_LayerConfig
 from .layers import (
     ADMM_Conv2d,

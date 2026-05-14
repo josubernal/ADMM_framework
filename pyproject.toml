@@ -8,10 +8,11 @@ dependencies = [
     "matplotlib>=3.10.1",
     "numpy>=1.26.0",
     "pandas",
+    "safetensors>=0.7.0",
     "snntorch>=0.9.4",
     "tonic>=1.6.0",
     "torch==2.4.0",
-    "torchvision==0.19.0"
+    "torchvision==0.19.0",
 ]
 
 # Explicitly route PyTorch to prevent CUDA version mismatches

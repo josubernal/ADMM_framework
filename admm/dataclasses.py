@@ -6,7 +6,7 @@ and dynamic optimization states.
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -144,21 +144,54 @@ class ADMM_LayerConfig:
 
 
 @dataclass
-class ADMM_State:
-    r"""Universal container for dynamic ADMM variables passed during activation updates.
+class ADMM_LayerState:
+    r"""Holds the persistent ADMM memory for a single layer for a specific batch.
+
+    This replaces the stateful `self.z`, `self.a`, and `self.lambda_lagrange`
+    attributes that previously lived inside the nn.Module.
 
     Attributes:
-        forward (torch.Tensor): The spatial forward pass tensor ($y = Wx + b$).
-        a (torch.Tensor): The current activation tensor from the layer.
-        z (torch.Tensor, optional): The pre-activation / membrane potential tensor. Defaults to `None`.
-        z_minus_forward (torch.Tensor, optional): The calculated temporal residual used
-            in recurrent SNN updates. Defaults to `None`.
+        z (torch.Tensor): The pre-activation / membrane potential tensor.
+        a (torch.Tensor): The activation / spike tensor.
+        lambda_lagrange (torch.Tensor, optional): The dual variable (Lagrange multiplier) tensor.
     """
 
-    forward: torch.Tensor
-    a: torch.Tensor
-    z: Optional[torch.Tensor] = None
-    z_minus_forward: Optional[torch.Tensor] = None
+    z: torch.Tensor
+    a: Optional[torch.Tensor] = None
+    lambda_lagrange: Optional[torch.Tensor] = None
+
+
+@dataclass
+class ADMM_BatchState:
+    r"""Holds the complete network state for a single batch of data.
+
+    Attributes:
+        batch_id (int): The unique identifier for this batch on the hard drive.
+        layer_states (list[ADMM_LayerState]): The memory states for each layer,
+            ordered from input (layer 0) to output (layer L-1).
+    """
+
+    batch_id: int
+    layer_states: list[ADMM_LayerState]
+
+
+@dataclass
+class ADMM_LayerCovariance:
+    r"""Holds the global accumulated matrices for a layer's parameter updates.
+
+    Attributes:
+        numerator (Union[float, torch.Tensor]): The accumulated $Y^T P$ numerator matrix.
+        denominator (Union[float, torch.Tensor]): The accumulated $P^T P$ denominator matrix.
+        bias_sum (Union[float, torch.Tensor]): The accumulated residual sum for bias updates.
+        bias_count (int): The number of elements accumulated in the bias sum.
+        pinv (torch.Tensor, optional): The cached pseudo-inverse matrix to speed up solves.
+    """
+
+    numerator: Union[float, torch.Tensor] = 0.0
+    denominator: Union[float, torch.Tensor] = 0.0
+    bias_sum: Optional[Union[float, torch.Tensor]] = None
+    bias_count: Optional[int] = None
+    pinv: Optional[torch.Tensor] = None
 
 
 @dataclass
@@ -182,7 +215,12 @@ class TemporalCache:
 
     @classmethod
     def build(
-        cls, layer: torch.nn.Module, next_layer: torch.nn.Module, a_prev: torch.Tensor
+        cls,
+        layer: torch.nn.Module,
+        next_layer: torch.nn.Module,
+        next_state: ADMM_LayerState,
+        a_prev: torch.Tensor,
+        state: ADMM_LayerState,
     ) -> "TemporalCache":
         """Precomputes and distributes operations to accelerate the unrolled loop.
 
@@ -205,13 +243,13 @@ class TemporalCache:
             beta_current=layer.config.beta,
             rho_current=layer.config.rho,
             thetas_current=layer.config.thetas,
-            a_shape=layer.a.shape,
+            a_shape=state.a.shape,
             unrolled=True,
         )
 
         # 3- Term 2
         adjoint = layer._get_a_adjoint(
-            next_layer=next_layer
+            next_layer=next_layer, next_state=next_state, a_shape=state.a.shape
         )  # forward_pass=forward_pass)  DEPRECATED
 
         return cls(

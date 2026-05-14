@@ -6,7 +6,7 @@ import gc
 
 import torch
 
-from admm.activations import ADMM_Heaviside
+from admm.activation_functions import ADMM_Heaviside
 from admm.dataclasses import ADMM_Config
 from admm.layers import ADMM_SpikingLinear
 from admm.manager import ADMM
@@ -65,10 +65,14 @@ def test_autograd_and_memory_leak():
     for i, layer in enumerate(model.layers):
         if layer.W.requires_grad or layer.W.grad_fn is not None:
             graph_leaks += 1
-        if layer.z.requires_grad or layer.z.grad_fn is not None:
+
+        # Get the memory state from the orchestrator instead of the layer!
+        layer_state = model.state.network_state.layer_states[i]
+
+        if layer_state.z.requires_grad or layer_state.z.grad_fn is not None:
             graph_leaks += 1
-        if layer.a is not None and (
-            layer.a.requires_grad or layer.a.grad_fn is not None
+        if layer_state.a is not None and (
+            layer_state.a.requires_grad or layer_state.a.grad_fn is not None
         ):
             graph_leaks += 1
 

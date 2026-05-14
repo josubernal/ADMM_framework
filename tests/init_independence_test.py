@@ -1,7 +1,7 @@
 import torch
 
-from admm.activations import ADMM_ReLU
-from admm.dataclasses import ADMM_LayerConfig
+from admm.activation_functions import ADMM_ReLU
+from admm.dataclasses import ADMM_LayerConfig, ADMM_LayerState  # <-- Added Import
 from admm.layers import ADMM_Linear
 
 
@@ -13,6 +13,7 @@ def test_weight_bias_initialization_independence():
 
     a_prev = torch.randn((batch, in_f), dtype=torch.float64)
     z_target = torch.randn((batch, out_f), dtype=torch.float64)
+    a_dummy = torch.zeros_like(z_target)  # Dummy 'a' for initialization
 
     print("\n" + "=" * 65)
     print("  PROOF A: PURE W UPDATE OVERWRITE (BIAS = FALSE)")
@@ -26,12 +27,13 @@ def test_weight_bias_initialization_independence():
     layer_z_nobias.W.data = torch.zeros_like(layer_z_nobias.W)
     layer_r_nobias.W.data = torch.randn_like(layer_r_nobias.W) * 100.0
 
-    layer_z_nobias.z = z_target.clone()
-    layer_r_nobias.z = z_target.clone()
+    # Create the state objects!
+    state_z_nobias = ADMM_LayerState(z=z_target.clone(), a=a_dummy.clone())
+    state_r_nobias = ADMM_LayerState(z=z_target.clone(), a=a_dummy.clone())
 
-    # ONE single update
-    layer_z_nobias.update_weights(a_prev)
-    layer_r_nobias.update_weights(a_prev)
+    # ONE single update (Pass state and a_prev)
+    layer_z_nobias.update_weights(state=state_z_nobias, a_prev=a_prev)
+    layer_r_nobias.update_weights(state=state_r_nobias, a_prev=a_prev)
 
     w_diff_nobias = torch.max(torch.abs(layer_z_nobias.W - layer_r_nobias.W)).item()
     print(
@@ -56,17 +58,16 @@ def test_weight_bias_initialization_independence():
     layer_r_bias.W.data = torch.randn_like(layer_r_bias.W) * 100.0
     layer_r_bias.b.data = torch.randn_like(layer_r_bias.b) * 100.0
 
-    layer_z_bias.z = z_target.clone()
-    layer_r_bias.z = z_target.clone()
+    # Create states for the bias test
+    state_z_bias = ADMM_LayerState(z=z_target.clone(), a=a_dummy.clone())
+    state_r_bias = ADMM_LayerState(z=z_target.clone(), a=a_dummy.clone())
 
-    # Because W depends on b, and b depends on W, we run a short
-    # alternating loop (micro-iterations) to allow them to wash out.
     for _ in range(10):
-        layer_z_bias.update_weights(a_prev)
-        layer_z_bias.update_bias(a_prev)
+        layer_z_bias.update_weights(state=state_z_bias, a_prev=a_prev)
+        layer_z_bias.update_bias(state=state_z_bias, a_prev=a_prev)
 
-        layer_r_bias.update_weights(a_prev)
-        layer_r_bias.update_bias(a_prev)
+        layer_r_bias.update_weights(state=state_r_bias, a_prev=a_prev)
+        layer_r_bias.update_bias(state=state_r_bias, a_prev=a_prev)
 
     w_diff_bias = torch.max(torch.abs(layer_z_bias.W - layer_r_bias.W)).item()
     b_diff_bias = torch.max(torch.abs(layer_z_bias.b - layer_r_bias.b)).item()

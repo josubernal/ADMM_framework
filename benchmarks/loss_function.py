@@ -271,7 +271,6 @@ for model_name in model_types:
         # ADMM TRAINING LOOP
         criterion = nn.CrossEntropyLoss()
         m = ADMM_Metrics(admm_model)
-        admm_model._init_states(images)
 
         print("Training model with ADMM...")
         for epoch in range(epochs):

@@ -6,6 +6,10 @@ and read independently from the layer mechanics.
 
 import torch
 
+#####################################################################
+# weight update
+#####################################################################
+
 
 def conjugate_gradient(
     A: torch.Tensor,
@@ -139,56 +143,58 @@ def solve_least_squares_weights(
         return numerator @ pinv, pinv
 
 
-# def solve_least_squares_weights(numerator: torch.Tensor, denominator: torch.Tensor, cached_pinv: torch.Tensor = None, use_cholesky: bool = True):
-#     """Solves the regularized least-squares problem for the Weight matrix W.
+#####################################################################
+# a update
+#####################################################################
+def solve_woodbury_system_static(
+    W: torch.Tensor, B: torch.Tensor, beta: float, rho: float, a_shape: tuple
+) -> torch.Tensor:
+    r"""Solves the system $(\beta I_N + \rho W^T W) x = B$ using the Woodbury Matrix Identity.
 
-#     W_new = (Y^T @ P) @ (P^T @ P)^-1
+    Why use this?
+    Inverting a massive $N \times N$ matrix takes $O(N^3)$ memory and time. Woodbury allows us
+    to instead invert a tiny $M \times M$ matrix, dropping complexity to $O(M^3)$.
 
-#     Args:
-#         numerator (torch.Tensor): The numerator matrix (Y^T @ P).
-#         denominator (torch.Tensor): The denominator matrix (P^T @ P).
-#         cached_pinv (torch.Tensor, optional): A pre-computed pseudoinverse of the
-#             denominator. Defaults to None.
+    **Mathematical Derivation:**
 
-#     Returns:
-#         tuple:
-#             - torch.Tensor: The newly computed weight matrix.
-#             - torch.Tensor: The computed or utilized pseudoinverse matrix.
-#     """
-#     is_cached_cholesky = False
-#     if cached_pinv is not None:
-#         is_cached_cholesky = torch.allclose(cached_pinv, torch.tril(cached_pinv))
+    1.  Standard Woodbury Formula:
+        $(A + UCV)^{-1} = A^{-1} - A^{-1} U (C^{-1} + V A^{-1} U)^{-1} V A^{-1}$
 
-#     if use_cholesky:
-#         if cached_pinv is None or not is_cached_cholesky:
-#             denominator.add_(denominator.mT.clone()).div_(2.0)
-#             max_val = torch.max(torch.abs(denominator)).clamp(min=1.0)
-#             jitter = 1e-4 * max_val
-#             denominator.diagonal().add_(jitter)
-#             try:
-#                 L = torch.linalg.cholesky(denominator)
-#                 W_new_T = torch.cholesky_solve(numerator.mT, L)
-#                 return W_new_T.mT, L
-#             except torch._C._LinAlgError:
-#                 print("⚠️ Cholesky failed. Falling back to pinv.")
-#                 pinv = torch.linalg.pinv(denominator)
-#                 return numerator @ pinv, pinv
-#         else:
-#             L = cached_pinv
-#             W_new_T = torch.cholesky_solve(numerator.mT, L)
-#             return W_new_T.mT, L
+    2.  Our Substitutions:
+        $A = \beta I_N$, $U = W^T$, $C = \rho I_M$, $V = W$
 
-#     else:
-#         # Standard pinv route
-#         if cached_pinv is None or is_cached_cholesky:
-#             pinv = torch.linalg.pinv(denominator)
-#         else:
-#             pinv = cached_pinv
+    3.  The Simplified Result applied to $B$:
+        $x = \frac{1}{\beta}B - \frac{\rho}{\beta} W^T (\beta I_M + \rho W W^T)^{-1} W B$
 
-#         return numerator @ pinv, pinv
+    Args:
+        W (torch.Tensor): Weight matrix of shape `[out_features, in_features]`.
+        B (torch.Tensor): Target tensor to solve against.
+        beta (float): Penalty parameter for the activation constraint.
+        rho (float): Penalty parameter for the affine constraint.
+        a_shape (tuple): The original geometric shape of the activation tensor (e.g., `[Batch, Features]`).
+
+    Returns:
+        torch.Tensor: The solved activations $x$, reshaped back to `a_shape`.
+    """
+    out_features, in_features = W.shape
+    B_flat = B.reshape(-1, in_features).t()
+
+    WWT = torch.matmul(W, W.t())
+    WWT.mul_(rho)
+    WWT.diagonal().add_(beta)
+
+    WB = torch.matmul(W, B_flat)
+    parenthesis_inv_WB = torch.linalg.solve(WWT, WB)
+
+    term2 = torch.matmul(W.t(), parenthesis_inv_WB)
+
+    x_flat = B_flat.div(beta)
+    x_flat.sub_(term2, alpha=(rho / beta))
+
+    return x_flat.t().view(a_shape)
 
 
-def solve_woodbury_system(
+def solve_woodbury_system_spiking(
     W: torch.Tensor, B: torch.Tensor, beta: float, rho: float, a_shape: tuple
 ) -> torch.Tensor:
     r"""Solves the system $(\beta I_N + \rho W^T W) x = B$ using the Woodbury Matrix Identity.
@@ -254,8 +260,6 @@ def solve_linear_system(
     Returns:
         torch.Tensor: The solved system reshaped to match `a_shape`.
     """
-    if isinstance(A, dict):
-        return solve_woodbury_system(A["W"], B, A["beta"], A["rho"], a_shape)
     B_flat = B.reshape(-1, in_features)
     x_flat = torch.linalg.solve(A, B_flat.t()).t()
     return x_flat.view(a_shape)
@@ -294,4 +298,4 @@ def solve_spiking_system(
     else:
         a_main = torch.empty((0, *a_shape[1:]), device=B.device)
 
-    return torch.cat([a_main, a_last], dim=0)
+    return torch.clamp(torch.cat([a_main, a_last], dim=0), min=0.0, max=1.0)
