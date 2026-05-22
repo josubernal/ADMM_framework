@@ -39,3 +39,9 @@ dev = [
     "pytest>=9.0.3",
     "ruff>=0.15.12",
 ]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    # This ignores any warning that contains the phrase "Using circular padding without FFTs"
+    "ignore:.*Using circular padding without FFTs.*:UserWarning",
+]

@@ -1,1 +1,1 @@
-::: admm.spiking_mixin
+::: src.admm.spiking_mixin

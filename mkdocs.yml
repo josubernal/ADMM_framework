@@ -30,8 +30,9 @@ nav:
     - Base Layer Logic: api/base_layer.md
     - Affine Layer Logic: api/affine_layer.md
     - Spiking Logic: api/spiking_mixin.md
-    - Convolutional Logic: api/convolutional_mixin.md
     - Layers: api/layers.md
+    - Covariance Handler: api/covariance_handler.md
+    - State Handler: api/state_handler.md
     - Activation functions: api/activation_functions.md
     - Loss Functions: api/loss_functions.md
     - Pooling Operations: api/pooling.md
@@ -39,8 +40,11 @@ nav:
     - Initializers: api/initializers.md
     - Scheduler: api/scheduler.md
     - Dataclasses: api/dataclasses.md
-    - Solvers: api/solvers.md
-    - Helpers: api/utils.md
+    - Functional: 
+      - Weights Solvers: api/weights_solvers.md
+      - Activation Update Solvers: api/a_update_solvers.md
+      - Utils: api/utils.md
+      - FFT-Utils: api/fft_utils.md
 
 plugins:
   - search
@@ -66,7 +70,4 @@ extra_javascript:
   - javascripts/mathjax.js
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
-
-watch:
-  - admm
 

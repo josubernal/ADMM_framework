@@ -1,3 +1,7 @@
+---
+hide:
+  - navigation
+---
 # ADMM Optimizer
 
 **An Alternating Direction Method of Multipliers (ADMM) optimizer for Neural Networks (NNs) and Spiking Neural Networks (SNNs).**

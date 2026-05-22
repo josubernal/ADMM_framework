@@ -1,58 +1,53 @@
-"""
-ADMM Temporal Schemes Verification (Unrolled vs. Decoupled)
+"""Verifies the equivalence of sequential and decoupled temporal updates.
 
-PURPOSE:
-Verifies that performing a strictly chronological Gauss-Seidel unrolled sweep
-(interleaved a and z) produces mathematically identical results to the
-Decoupled approach (fully vectorized 'a' update followed by a causal 'z' sweep).
+Checks that executing the optimization loop sequentially across time steps
+(unrolled) yields the exact same internal states (activations and pre-activations)
+and parameters as computing the dynamics in a single, parallelized pass (decoupled).
 """
 
 import copy
-import time
 
 import torch
 
-from admm.activation_functions import ADMM_Heaviside
-from admm.dataclasses import ADMM_LayerState
-from admm.layers import ADMM_SpikingLinear
+from src.admm.activation_functions import ADMM_Heaviside
+from src.admm.dataclasses import ADMM_LayerState, TemporalCache
+from src.admm.layers import ADMM_SpikingLinear
 
 
 def test_temporal_schemes_equivalence():
-    print("\n" + "=" * 55)
-    print("  UNROLLED VS DECOUPLED SCHEME VERIFICATION TEST")
-    print("=" * 55)
-
-    # Force double precision to verify exact mathematical equivalence
     torch.set_default_dtype(torch.float64)
     device = torch.device("cpu")
 
-    # 1. Setup dimensions and time sequence
-    T, batch, in_f, out_f = 6, 4, 16, 16
-    time_steps = list(range(T))  # Strict chronological forward sweep
+    # Set experiments
+    T, BATCH, IN_F, OUT_F = 6, 4, 16, 16
+    time_steps = list(range(T))
 
-    # ADMM Hyperparameters
     config = {"rho": 1.0, "beta": 1.0, "deltas": 0.8, "thetas": 1.0}
-
-    # 2. Instantiate Base Layers
     h_func = ADMM_Heaviside()
-    layer_base = ADMM_SpikingLinear(in_f, out_f, h=h_func, **config)
+
+    layer_base = ADMM_SpikingLinear(IN_F, OUT_F, h=h_func, **config)
     layer_base.device = device
     layer_base._setup()
     layer_base.T = T
 
-    config = {"rho": 1.0, "beta": 1.0, "deltas": 0.8, "thetas": 1.0, "use_reset": False}
-    next_layer = ADMM_SpikingLinear(out_f, out_f, h=h_func, **config)
+    config_next = {
+        "rho": 1.0,
+        "beta": 1.0,
+        "deltas": 0.8,
+        "thetas": 1.0,
+        "use_reset": False,
+    }
+    next_layer = ADMM_SpikingLinear(OUT_F, OUT_F, h=h_func, **config_next)
     next_layer.device = device
     next_layer._setup()
     next_layer.T = T
 
-    # Replace step 3 and 4 with this:
-    a_prev = torch.randn((T, batch, in_f))
-    z_init = torch.randn((T, batch, out_f))
-    a_init = torch.rand((T, batch, out_f))
+    a_prev = torch.randn((T, BATCH, IN_F))
+    z_init = torch.randn((T, BATCH, OUT_F))
+    a_init = torch.rand((T, BATCH, OUT_F))
 
     next_state = ADMM_LayerState(
-        z=torch.randn((T, batch, out_f)), a=torch.rand((T, batch, out_f))
+        z=torch.randn((T, BATCH, OUT_F)), a=torch.rand((T, BATCH, OUT_F))
     )
 
     layer_unrolled = copy.deepcopy(layer_base)
@@ -61,55 +56,49 @@ def test_temporal_schemes_equivalence():
     layer_decoupled = copy.deepcopy(layer_base)
     state_decoupled = ADMM_LayerState(z=z_init.clone(), a=a_init.clone())
 
-    # =======================================================
-    # EXECUTE METHOD 1: UNROLLED SEQUENTIAL (Gauss-Seidel)
-    # =======================================================
-    start_unrolled = time.perf_counter()
-    layer_unrolled.update_az_interleaved(
+    # Unrolled sequential
+    cache = TemporalCache.build(
+        layer=layer_unrolled,
         next_layer=next_layer,
         next_state=next_state,
         state=state_unrolled,
         a_prev=a_prev,
-        time_steps=time_steps,
-        update_z_first=False,
     )
-    time_unrolled = time.perf_counter() - start_unrolled
+    for t in time_steps:
+        layer_unrolled.update_a_unrolled(
+            t=t, cache=cache, next_layer=next_layer, state=state_unrolled
+        )
+        layer_unrolled.h.update_z_unrolled(
+            t=t, cache=cache, state=state_unrolled, config=layer_unrolled.config
+        )
 
-    # =======================================================
-    # EXECUTE METHOD 2: DECOUPLED SEQUENTIAL (Mixed Jacobi)
-    # =======================================================
-    start_decoupled = time.perf_counter()
+    # Decoupled sequential
+    forward = layer_decoupled.spatial_forward(a_prev)
     layer_decoupled.update_a(
         next_layer=next_layer,
         next_state=next_state,
         state=state_decoupled,
         a_prev=a_prev,
     )
-    layer_decoupled.update_z_decoupled(
-        state=state_decoupled, a_prev=a_prev, time_steps=time_steps
-    )
-    time_decoupled = time.perf_counter() - start_decoupled
-
-    a_diff = torch.max(torch.abs(state_unrolled.a - state_decoupled.a)).item()
-    z_diff = torch.max(torch.abs(state_unrolled.z - state_decoupled.z)).item()
-
-    print(
-        f"[{'Activation (a) Update':<26}] Max Difference: {a_diff:.8e} "
-        + ("✅" if a_diff < 1e-9 else "❌")
-    )
-    print(
-        f"[{'Pre-activation (z) Update':<26}] Max Difference: {z_diff:.8e} "
-        + ("✅" if z_diff < 1e-9 else "❌")
+    layer_decoupled.h.update_z_decoupled(
+        state=state_decoupled,
+        forward=forward,
+        time_steps=time_steps,
+        config=layer_decoupled.config,
     )
 
-    if z_diff < 1e-9 and a_diff < 1e-9:
-        if time_decoupled < time_unrolled:
-            speedup = time_unrolled / time_decoupled
-            print(f"\n🚀 Decoupled method is {speedup:.2f}x faster!")
-        else:
-            speedup = time_decoupled / time_unrolled
-            print(f"\n🐢 Decoupled method is {speedup:.2f}x slower!")
-    else:
-        print("\nWARNING: Outputs diverged. The methods are not evaluating equally.")
-
-    print("=" * 65 + "\n")
+    # Assertions
+    torch.testing.assert_close(
+        state_unrolled.a,
+        state_decoupled.a,
+        rtol=0.0,
+        atol=1e-9,
+        msg="Activation (a) Update diverged",
+    )
+    torch.testing.assert_close(
+        state_unrolled.z,
+        state_decoupled.z,
+        rtol=0.0,
+        atol=1e-9,
+        msg="Pre-activation (z) Update diverged",
+    )

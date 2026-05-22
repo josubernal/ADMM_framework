@@ -1,22 +1,22 @@
-"""
-ADMM Safety Test: Autograd and Memory Leak Verification
+"""Verifies tensor memory management and prevents autograd leaks.
+
+Runs the optimization loop over multiple iterations to ensure the custom mathematical
+solvers do not unintentionally build or retain PyTorch computational graphs. Also
+monitors VRAM allocation during execution to ensure stable memory consumption without
+progressive leaking across batches.
 """
 
 import gc
 
 import torch
 
-from admm.activation_functions import ADMM_Heaviside
-from admm.dataclasses import ADMM_Config
-from admm.layers import ADMM_SpikingLinear
-from admm.manager import ADMM
+from src.admm.activation_functions import ADMM_Heaviside
+from src.admm.dataclasses import ADMM_Config
+from src.admm.layers import ADMM_SpikingLinear
+from src.admm.manager import ADMM
 
 
 def test_autograd_and_memory_leak():
-    print("\n" + "=" * 55)
-    print("  AUTOGRAD & MEMORY LEAK SAFETY TEST")
-    print("=" * 55)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     T, batch, in_f, hidden_f, out_f = 10, 8, 16, 32, 16
 
@@ -40,9 +40,8 @@ def test_autograd_and_memory_leak():
 
     inputs = torch.randn((T, batch, in_f), device=device)
     labels = torch.ones((batch, out_f), device=device)
-
-    # 1. Warmup and initial state capture
-    model.fit(inputs, labels)
+    dataloader = [(inputs, labels)]
+    model.fit(dataloader=dataloader)
 
     # Trigger garbage collection to clear any orphaned python objects
     gc.collect()
@@ -52,22 +51,24 @@ def test_autograd_and_memory_leak():
         initial_memory = torch.cuda.memory_allocated()
     else:
         initial_memory = (
-            0  # Memory tracking is highly noisy on CPU, we'll rely on graph checks
+            0  # Memory tracking is highly noisy on CPU, rely on graph checks
         )
 
-    # 2. Run multiple iterations
+    # Run multiple iterations
     iterations = 50
     for _ in range(iterations):
-        model.fit(inputs, labels)
+        model.fit(dataloader=dataloader)
 
     # 3. Check for Computational Graph Leaks (Autograd)
     graph_leaks = 0
+    batch_id = model.state_handler.get_batch_ids()[0]
+    _, _, batch_state = model.state_handler.load_batch(batch_id)
+
     for i, layer in enumerate(model.layers):
         if layer.W.requires_grad or layer.W.grad_fn is not None:
             graph_leaks += 1
 
-        # Get the memory state from the orchestrator instead of the layer!
-        layer_state = model.state.network_state.layer_states[i]
+        layer_state = batch_state.layer_states[i]
 
         if layer_state.z.requires_grad or layer_state.z.grad_fn is not None:
             graph_leaks += 1
@@ -75,11 +76,6 @@ def test_autograd_and_memory_leak():
             layer_state.a.requires_grad or layer_state.a.grad_fn is not None
         ):
             graph_leaks += 1
-
-    print(
-        f"[{'Autograd Graph Check':<26}] Leaks found: {graph_leaks} "
-        + ("✅" if graph_leaks == 0 else "❌")
-    )
 
     # 4. Check for VRAM Memory Leaks (Only if CUDA is available)
     if device.type == "cuda":
@@ -93,5 +89,5 @@ def test_autograd_and_memory_leak():
             + ("✅" if memory_diff_mb <= 0.01 else "❌")
         )
 
+    # Strict assertion
     assert graph_leaks == 0, "FATAL: PyTorch is tracking gradients on your raw tensors!"
-    print("=" * 55 + "\n")

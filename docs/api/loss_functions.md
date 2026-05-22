@@ -1,1 +1,1 @@
-::: admm.loss_functions
+::: src.admm.loss_functions

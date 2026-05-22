@@ -61,6 +61,6 @@ If you are coming from standard PyTorch, you might have noticed a few difference
 
 ## Next Steps
 
-Now that you have the basics running, check out the [Layers API][admm.layers] to see how to build Convolutional or Spiking networks!
+Now that you have the basics running, check out the [Layers API][src.admm.layers] to see how to build Convolutional or Spiking networks!
 
 ```

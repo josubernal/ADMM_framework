@@ -4,11 +4,17 @@ import os
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from torchvision import datasets, transforms
 
-from admm import ADMM, ADMM_Conv2d, ADMM_Flatten, ADMM_Linear, ADMM_Metrics, ADMM_ReLU
-from admm.dataclasses import ADMM_Config, ADMM_LayerConfig
+from benchmarks.utils.dataset import get_dataset
+from src.admm import (
+    ADMM,
+    ADMM_Conv2d,
+    ADMM_Flatten,
+    ADMM_Linear,
+    ADMM_Metrics,
+    ADMM_ReLU,
+)
+from src.admm.dataclasses import ADMM_Config, ADMM_LayerConfig
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 config = configparser.ConfigParser()
@@ -32,11 +38,7 @@ conv_beta = config.getfloat("config", "conv_beta")
 max_layers = config.getint("config", "max_layers")
 input_size = 784
 
-# WARMING CONFIG
-accuracy_threshold = config.getint("config", "acc_threshold")
-min_warming_iters = config.getint("config", "min_warming_iters")
-max_warming_iters = config.getint("config", "max_warming_iters")
-primal_delta_limit = config.getfloat("config", "primal_threshold")
+warming_iters = epochs // 2
 
 
 def calc_spatial_out(size_in, k, p, s):
@@ -48,21 +50,7 @@ def calc_spatial_out(size_in, k, p, s):
 model_types = ["linear", "conv"]
 
 batch_size = batch_size_static
-transform = transforms.Compose(
-    [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
-)
-
-mnist_train = datasets.MNIST(
-    root="./data", train=True, download=True, transform=transform
-)
-dataloader = torch.utils.data.DataLoader(
-    mnist_train, batch_size=batch_size, shuffle=True
-)
-images_orig, labels = next(iter(dataloader))
-images_orig, labels = images_orig.to(device), labels.to(device)
-images_orig += 0.01 * torch.randn_like(images_orig)
-labels_one_hot = F.one_hot(labels.long(), num_classes=10).float()
-
+train_loader = get_dataset(batch_size_static, 1, spiking=False, seed=seed)
 
 for model_name in model_types:
     print(f"\n{'=' * 50}")
@@ -70,16 +58,11 @@ for model_name in model_types:
     print(f"{'=' * 50}")
     for layers in range(1, max_layers + 1):
         print(f"\nHidden layers:{layers}")
-        images = images_orig.clone()
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-
-        is_warming = True
-        prev_primal_residual = float("inf")
-        warming_stop = None
 
         #########################################
         # MODEL INSTANTIATION
@@ -124,12 +107,11 @@ for model_name in model_types:
                     train_method="vectorized",
                 )
                 admm_model = ADMM(linear_layers, config=config).to(device)
-                images = images.view(images.size(0), -1)
 
             case "conv":
                 current_spatial = 28
                 layer_config = ADMM_LayerConfig(
-                    rho=conv_rho, beta=conv_beta, use_bias=True, use_fft=False
+                    rho=conv_rho, beta=conv_beta, use_bias=True, use_fft=True
                 )
                 layer_list.append(
                     ADMM_Conv2d(
@@ -140,7 +122,7 @@ for model_name in model_types:
                         s=s,
                         h=ADMM_ReLU(),
                         config=layer_config,
-                        padding_mode="zeros",
+                        padding_mode="circular",
                     )
                 )
                 current_spatial = int(calc_spatial_out(current_spatial, k, p, s))
@@ -155,7 +137,7 @@ for model_name in model_types:
                             s=s,
                             h=ADMM_ReLU(),
                             config=layer_config,
-                            padding_mode="zeros",
+                            padding_mode="circular",
                         )
                     )
                     current_spatial = int(calc_spatial_out(current_spatial, k, p, s))
@@ -181,46 +163,19 @@ for model_name in model_types:
         # ADMM TRAINING LOOP
         m = ADMM_Metrics(admm_model)
 
-        print("Training model with ADMM...")
-        for epoch in range(epochs):
-            admm_model.fit(images, labels_one_hot, warming=is_warming)
+        for epoch in range(epochs + 1):
+            admm_model.fit(train_loader, warming=epoch < warming_iters)
+            if epoch % 1 == 0:
+                with torch.no_grad():
+                    m.save_metrics()
+                    print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
 
-            with torch.no_grad():
-                m.save_metrics(images, labels_one_hot)
-
-                print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
-
-                current_primal = m.metrics["primal_residual"][-1]
-                accuracy = m.metrics["accuracy"][-1]
-                primal_residual_delta = abs(prev_primal_residual - current_primal)
-                prev_primal_residual = current_primal
-
-                if is_warming:
-                    hit_accuracy = (accuracy > accuracy_threshold) and (
-                        epoch > min_warming_iters
-                    )
-                    hit_time_limit = epoch >= max_warming_iters
-
-                    if hit_accuracy or hit_time_limit:
-                        if primal_residual_delta < primal_delta_limit or hit_time_limit:
-                            reason = (
-                                "Accuracy/Delta Target Met"
-                                if hit_accuracy
-                                else "Max Epochs Reached"
-                            )
-                            print(
-                                f"--- STOPPING WARMING at Epoch {epoch} ({reason}) ---"
-                            )
-                            is_warming = False
-                            warming_stop = epoch
-
-        #########################################
         # SAVING RESULTS
         metrics = m.get_dic()
         metrics["architecture"] = model_name
         metrics["batch_size"] = batch_size
         metrics["layers"] = layers
-        metrics["warming_stop"] = warming_stop
+        metrics["warming_stop"] = warming_iters
         metrics["epochs"] = epochs
         metrics["seed"] = seed
 

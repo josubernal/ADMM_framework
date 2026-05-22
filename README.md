@@ -103,7 +103,7 @@ Contributions are welcome! If you'd like to improve the solvers, add new layer t
 Please ensure all tests pass before submitting your PR:
 
 ```bash
-python -m pytest tests/
+python -m pytest -s tests/
 
 ```
 
