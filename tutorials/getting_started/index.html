@@ -11,26 +11,28 @@
       
       
       
+        <link rel="prev" href="../..">
       
-        <link rel="next" href="tutorials/getting_started/">
+      
+        <link rel="next" href="../../theory/motivation/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>ADMM Optimizer</title>
+        <title>Getting Started - ADMM Optimizer</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,9 +51,9 @@
       
     
     
-      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#admm-optimizer" class="md-skip">
+        <a href="#getting-started" class="md-skip">
           Skip to content
         </a>
       
@@ -90,7 +92,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="ADMM Optimizer" class="md-header__button md-logo" aria-label="ADMM Optimizer" data-md-component="logo">
+    <a href="../.." title="ADMM Optimizer" class="md-header__button md-logo" aria-label="ADMM Optimizer" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -110,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Getting Started
             
           </span>
         </div>
@@ -207,11 +209,9 @@
   
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="." class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -228,11 +228,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="tutorials/getting_started/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
           
   
   
@@ -254,7 +256,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="theory/motivation/" class="md-tabs__link">
+        <a href="../../theory/motivation/" class="md-tabs__link">
           
   
   
@@ -276,7 +278,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="api/manager/" class="md-tabs__link">
+        <a href="../../api/manager/" class="md-tabs__link">
           
   
   
@@ -301,9 +303,7 @@
           
             
               
-                
-              
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" hidden>
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -314,7 +314,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="ADMM Optimizer" class="md-nav__button md-logo" aria-label="ADMM Optimizer" data-md-component="logo">
+    <a href="../.." title="ADMM Optimizer" class="md-nav__button md-logo" aria-label="ADMM Optimizer" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -327,6 +327,92 @@
     
       
       
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
   
   
     
@@ -348,7 +434,7 @@
   <span class="md-ellipsis">
     
   
-    Home
+    Getting Started
   
 
     
@@ -359,14 +445,14 @@
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <a href="." class="md-nav__link md-nav__link--active">
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
   <span class="md-ellipsis">
     
   
-    Home
+    Getting Started
   
 
     
@@ -392,10 +478,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
+  <a href="#1-installation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Features
+        1. Installation
       
     </span>
   </a>
@@ -403,10 +489,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
+  <a href="#2-your-first-admm-network" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation
+        2. Your First ADMM Network
       
     </span>
   </a>
@@ -414,10 +500,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
+  <a href="#3-what-just-happened" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Start
+        3. What just happened?
       
     </span>
   </a>
@@ -425,10 +511,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#where-to-go-next" class="md-nav__link">
+  <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where to go next?
+        Next Steps
       
     </span>
   </a>
@@ -439,87 +525,6 @@
   
 </nav>
       
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-    
-    
-    
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Tutorials
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Tutorials
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="tutorials/getting_started/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Getting Started
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -593,7 +598,7 @@
   
   
     <li class="md-nav__item">
-      <a href="theory/motivation/" class="md-nav__link">
+      <a href="../../theory/motivation/" class="md-nav__link">
         
   
   
@@ -710,7 +715,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/manager/" class="md-nav__link">
+      <a href="../../api/manager/" class="md-nav__link">
         
   
   
@@ -738,7 +743,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/base_layer/" class="md-nav__link">
+      <a href="../../api/base_layer/" class="md-nav__link">
         
   
   
@@ -766,7 +771,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/affine_layer/" class="md-nav__link">
+      <a href="../../api/affine_layer/" class="md-nav__link">
         
   
   
@@ -794,7 +799,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/spiking_mixin/" class="md-nav__link">
+      <a href="../../api/spiking_mixin/" class="md-nav__link">
         
   
   
@@ -822,7 +827,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/layers/" class="md-nav__link">
+      <a href="../../api/layers/" class="md-nav__link">
         
   
   
@@ -850,7 +855,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/covariance_handler/" class="md-nav__link">
+      <a href="../../api/covariance_handler/" class="md-nav__link">
         
   
   
@@ -878,7 +883,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/state_handler/" class="md-nav__link">
+      <a href="../../api/state_handler/" class="md-nav__link">
         
   
   
@@ -906,7 +911,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/activation_functions/" class="md-nav__link">
+      <a href="../../api/activation_functions/" class="md-nav__link">
         
   
   
@@ -934,7 +939,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/loss_functions/" class="md-nav__link">
+      <a href="../../api/loss_functions/" class="md-nav__link">
         
   
   
@@ -962,7 +967,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/pooling/" class="md-nav__link">
+      <a href="../../api/pooling/" class="md-nav__link">
         
   
   
@@ -990,7 +995,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/metrics/" class="md-nav__link">
+      <a href="../../api/metrics/" class="md-nav__link">
         
   
   
@@ -1018,7 +1023,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/initializers/" class="md-nav__link">
+      <a href="../../api/initializers/" class="md-nav__link">
         
   
   
@@ -1046,7 +1051,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/scheduler/" class="md-nav__link">
+      <a href="../../api/scheduler/" class="md-nav__link">
         
   
   
@@ -1074,7 +1079,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/dataclasses/" class="md-nav__link">
+      <a href="../../api/dataclasses/" class="md-nav__link">
         
   
   
@@ -1162,7 +1167,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/weights_solvers/" class="md-nav__link">
+      <a href="../../api/weights_solvers/" class="md-nav__link">
         
   
   
@@ -1190,7 +1195,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/a_update_solvers/" class="md-nav__link">
+      <a href="../../api/a_update_solvers/" class="md-nav__link">
         
   
   
@@ -1218,7 +1223,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/utils/" class="md-nav__link">
+      <a href="../../api/utils/" class="md-nav__link">
         
   
   
@@ -1246,7 +1251,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/fft_utils/" class="md-nav__link">
+      <a href="../../api/fft_utils/" class="md-nav__link">
         
   
   
@@ -1290,8 +1295,6 @@
             
             
               
-                
-              
               <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
@@ -1311,10 +1314,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
+  <a href="#1-installation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Features
+        1. Installation
       
     </span>
   </a>
@@ -1322,10 +1325,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
+  <a href="#2-your-first-admm-network" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation
+        2. Your First ADMM Network
       
     </span>
   </a>
@@ -1333,10 +1336,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
+  <a href="#3-what-just-happened" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Start
+        3. What just happened?
       
     </span>
   </a>
@@ -1344,10 +1347,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#where-to-go-next" class="md-nav__link">
+  <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where to go next?
+        Next Steps
       
     </span>
   </a>
@@ -1368,69 +1371,59 @@
               <article class="md-content__inner md-typeset">
                 
                   
-  
 
 
 
-
-<h1 id="admm-optimizer">ADMM Optimizer</h1>
-<p><strong>An Alternating Direction Method of Multipliers (ADMM) optimizer for Neural Networks (NNs) and Spiking Neural Networks (SNNs).</strong></p>
-<p>Standard gradient-based training methods face several <a href="theory/motivation/">fundamental challenges</a>:</p>
-<ul>
-<li>Inefficiencies when scaling and parallelizing across distributed hardware.</li>
-<li>Vulnerability to vanishing gradients, saddle points, and poor conditioning.</li>
-<li>Difficulty handling the non-differentiable nature of spiking neurons.</li>
-</ul>
-<p>This package sidesteps backpropagation entirely by reframing neural network training as a distributed, layer-wise constrained optimization problem. While ADMM for deep learning remains an active area of research and may not yet match state-of-the-art gradient baselines in all scenarios, our goal is to provide a robust foundation for experimentation and to explore alternative paradigms in neural training.</p>
-<p>To learn more about ADMM, and use the package correctly, we highly recommend to read or <a href="theory/motivation/">theorical guide</a> first.</p>
-<h2 id="key-features">Key Features</h2>
-<ul>
-<li><strong>PyTorch Native:</strong> Built entirely on <code>torch.Tensor</code> operations. Layers, weights, and states seamlessly integrate with standard PyTorch device management.</li>
-</ul>
-<hr />
-<h2 id="installation">Installation</h2>
-<p>Install the package via <code>pip</code> (or your preferred package manager like <code>uv</code>):</p>
+<h1 id="getting-started">Getting Started</h1>
+<p>Welcome to the <strong>ADMM Optimizer Framework</strong>. This guide will take you from installation to training your first Alternating Direction Method of Multipliers (ADMM) network in less than two minutes.</p>
+<h2 id="1-installation">1. Installation</h2>
+<p>Install the framework using pip:</p>
 <div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>admm
 </code></pre></div>
-<p><em>(Note: Requires PyTorch 2.0.0 or higher).</em></p>
-<hr />
-<h2 id="quick-start">Quick Start</h2>
-<p>Training an ADMM network is different from standard PyTorch. Instead of <code>loss.backward()</code> and <code>optimizer.step()</code>, you initialize an ADMM orchestrator that handles the proximal updates and dual variables automatically.</p>
-<p>Here is how to train a basic 2-layer Spiking Neural Network:</p>
+<h2 id="2-your-first-admm-network">2. Your First ADMM Network</h2>
+<p>Unlike traditional PyTorch networks that rely on <code>loss.backward()</code> and Backpropagation, this framework uses the ADMM manager to handle forward passes and localized spatial/temporal weight updates.</p>
+<p>Here is a complete, runnable example of a 2-layer network:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">admm</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADMM</span><span class="p">,</span> <span class="n">ADMM_Linear</span><span class="p">,</span> <span class="n">ADMM_ReLU</span>
 
-<span class="c1"># 1. Define your network geometry</span>
-<span class="n">in_features</span> <span class="o">=</span> <span class="mi">784</span>
-<span class="n">hidden_features</span> <span class="o">=</span> <span class="mi">128</span>
-<span class="n">out_features</span> <span class="o">=</span> <span class="mi">10</span>
-<span class="n">batch_size</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">admm</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADMM</span><span class="p">,</span> <span class="n">ADMM_Config</span><span class="p">,</span> <span class="n">ADMM_Linear</span><span class="p">,</span> <span class="n">ADMM_ReLU</span>
 
+<span class="c1"># 1. Setup Environment and Data</span>
+<span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+<span class="n">batch_size</span><span class="p">,</span> <span class="n">in_features</span><span class="p">,</span> <span class="n">hidden</span><span class="p">,</span> <span class="n">out_features</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">784</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">10</span>
 
-<span class="c1"># 2. Instantiate ADMM Layers</span>
-<span class="n">layer1</span> <span class="o">=</span> <span class="n">ADMM_Linear</span><span class="p">(</span><span class="n">in_features</span><span class="p">,</span> <span class="n">hidden_features</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">ADMM_ReLU</span><span class="p">())</span>
-<span class="n">layer2</span> <span class="o">=</span> <span class="n">ADMM_Linear</span><span class="p">(</span><span class="n">hidden_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">dummy_x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">in_features</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+<span class="n">dummy_y</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
 
-<span class="c1"># 3. Initialize the Orchestrator</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">ADMM</span><span class="p">(</span>
-    <span class="n">layers</span><span class="o">=</span><span class="p">[</span><span class="n">layer1</span><span class="p">,</span> <span class="n">layer2</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;cpu&quot;</span>
-<span class="p">)</span>
+<span class="c1"># 2. Define the Global Configuration</span>
+<span class="c1"># This dictates initialization and overall configuration for the manager.</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">ADMM_Config</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="s2">&quot;pytorch&quot;</span><span class="p">,</span> <span class="n">train_method</span><span class="o">=</span><span class="s2">&quot;vectorized&quot;</span><span class="p">)</span>
 
-<span class="c1"># 4. Train (ADMM replaces standard forward/backward passes)</span>
-<span class="n">inputs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">in_features</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-<span class="n">labels</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+<span class="c1"># 3. Create ADMM-compatible Layers</span>
+<span class="n">layer1</span> <span class="o">=</span> <span class="n">ADMM_Linear</span><span class="p">(</span><span class="n">in_features</span><span class="p">,</span> <span class="n">hidden</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">ADMM_ReLU</span><span class="p">(),</span> <span class="n">rho</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="n">layer2</span> <span class="o">=</span> <span class="n">ADMM_Linear</span><span class="p">(</span><span class="n">hidden</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">ADMM_ReLU</span><span class="p">(),</span> <span class="n">rho</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
 
-<span class="c1"># A single call executes the full layer-wise optimization loop</span>
-<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+<span class="c1"># 4. Wrap in the ADMM Manager</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">ADMM</span><span class="p">(</span><span class="n">layers</span><span class="o">=</span><span class="p">[</span><span class="n">layer1</span><span class="p">,</span> <span class="n">layer2</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+
+<span class="c1"># 5. Execute an Optimization Step</span>
+<span class="c1"># Forward pass</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forward_model</span><span class="p">(</span><span class="n">dummy_x</span><span class="p">)</span>
+
+<span class="c1"># ADMM Weight Update (Replaces Backprop!)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">dummy_x</span><span class="p">,</span> <span class="n">dummy_y</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Forward pass and ADMM updates completed successfully!&quot;</span><span class="p">)</span>
 </code></pre></div>
-<hr />
-<h2 id="where-to-go-next">Where to go next?</h2>
+<h2 id="3-what-just-happened">3. What just happened?</h2>
+<p>If you are coming from standard PyTorch, you might have noticed a few differences:</p>
 <ul>
-<li><strong><a href="tutorials/getting_started/">Tutorials</a>:</strong> Step-by-step guides from basic linear networks to complex spatiotemporal convolutions.</li>
-<li><strong><a href="theory/motivation/">Theory</a>:</strong> Deep dive into the mathematical formulation of the ADMM splitting scheme and SNN temporal unrolling.</li>
-<li><strong><a href="api/manager/">API Reference</a>:</strong> Comprehensive documentation of all layers, managers, and functional math operations.</li>
+<li><strong>No <code>torch.optim</code> or <code>loss.backward()</code>:</strong> ADMM does not use chain-rule gradients. Instead, the <code>model.fit()</code> method solves a series of subproblems to update the weights.</li>
+<li><strong>The Manager (<code>ADMM</code>):</strong> Because ADMM requires layers to coordinate auxiliary variables (like the <span class="arithmatex">\(z\)</span> and <span class="arithmatex">\(u\)</span> penalties), you pass your layers into the <code>ADMM</code> manager. The manager acts as the conductor, orchestrating the forward sweeps and the backward spatial updates.</li>
+<li><strong>Global Config:</strong> Instead of setting initialization strategies on every single layer, you define an <code>ADMMConfig</code> once and the manager automatically cascades it down to all layers.</li>
 </ul>
-<hr />
+<h2 id="next-steps">Next Steps</h2>
+<p>Now that you have the basics running, check out the <a class="autorefs autorefs-internal" title="src.admm.layers" href="../../api/layers/#src.admm.layers">Layers API</a> to see how to build Convolutional or Spiking networks!</p>
+<p>```</p>
 
 
 
@@ -1438,13 +1431,8 @@
 
 
 
-  
-  
 
 
-
-
-  
 
 
 
@@ -1485,12 +1473,12 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.tabs", "navigation.indexes"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.indexes"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
-        <script src="javascripts/mathjax.js"></script>
+        <script src="../../javascripts/mathjax.js"></script>
       
         <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
       

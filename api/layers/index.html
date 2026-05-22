@@ -11,10 +11,10 @@
       
       
       
-        <link rel="prev" href="../convolutional_mixin/">
+        <link rel="prev" href="../spiking_mixin/">
       
       
-        <link rel="next" href="../activations/">
+        <link rel="next" href="../covariance_handler/">
       
       
         
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#admm.layers" class="md-skip">
+        <a href="#src.admm.layers" class="md-skip">
           Skip to content
         </a>
       
@@ -232,7 +232,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../tutorials/linear.md" class="md-tabs__link">
+        <a href="../../tutorials/getting_started/" class="md-tabs__link">
           
   
   
@@ -363,8 +363,6 @@
       
         
       
-        
-      
     
     
     
@@ -415,42 +413,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/linear.md" class="md-nav__link">
+      <a href="../../tutorials/getting_started/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Basic Linear Networks
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tutorials/spiking_conv.md" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Spiking Convolutions
+    Getting Started
   
 
     
@@ -682,14 +652,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../core/" class="md-nav__link">
+      <a href="../base_layer/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Core Logic
+    Base Layer Logic
   
 
     
@@ -710,14 +680,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../affine/" class="md-nav__link">
+      <a href="../affine_layer/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Affine Logic
+    Affine Layer Logic
   
 
     
@@ -746,34 +716,6 @@
     
   
     Spiking Logic
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../convolutional_mixin/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Convolutional Logic
   
 
     
@@ -850,7 +792,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#admm.layers" class="md-nav__link">
+  <a href="#src.admm.layers" class="md-nav__link">
     <span class="md-ellipsis">
       
         layers
@@ -862,7 +804,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_Linear" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_Linear" class="md-nav__link">
     <span class="md-ellipsis">
       
         ADMM_Linear
@@ -874,7 +816,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_Linear.spatial_forward" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_Linear._setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_Linear.spatial_forward" class="md-nav__link">
     <span class="md-ellipsis">
       
         spatial_forward
@@ -885,10 +838,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_Linear.adjoint_operator" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_Linear.adjoint_operator" class="md-nav__link">
     <span class="md-ellipsis">
       
         adjoint_operator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_Linear._compute_P" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _compute_P
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_Linear._get_bias_reduction_dims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _get_bias_reduction_dims
       
     </span>
   </a>
@@ -901,7 +876,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_Conv2d" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_Conv2d" class="md-nav__link">
     <span class="md-ellipsis">
       
         ADMM_Conv2d
@@ -913,7 +888,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_Conv2d.spatial_forward" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_Conv2d._setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_Conv2d.spatial_forward" class="md-nav__link">
     <span class="md-ellipsis">
       
         spatial_forward
@@ -924,10 +910,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_Conv2d.adjoint_operator" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_Conv2d.adjoint_operator" class="md-nav__link">
     <span class="md-ellipsis">
       
         adjoint_operator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_Conv2d._compute_P" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _compute_P
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_Conv2d._get_bias_reduction_dims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _get_bias_reduction_dims
       
     </span>
   </a>
@@ -940,7 +948,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_SpikingLinear" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_SpikingLinear" class="md-nav__link">
     <span class="md-ellipsis">
       
         ADMM_SpikingLinear
@@ -952,7 +960,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_SpikingLinear.spatial_forward" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_SpikingLinear._setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_SpikingLinear.spatial_forward" class="md-nav__link">
     <span class="md-ellipsis">
       
         spatial_forward
@@ -963,10 +982,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_SpikingLinear.adjoint_operator" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_SpikingLinear.adjoint_operator" class="md-nav__link">
     <span class="md-ellipsis">
       
         adjoint_operator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_SpikingLinear._compute_P" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _compute_P
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_SpikingLinear._get_bias_reduction_dims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _get_bias_reduction_dims
       
     </span>
   </a>
@@ -979,7 +1020,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_SpikingConv2d" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_SpikingConv2d" class="md-nav__link">
     <span class="md-ellipsis">
       
         ADMM_SpikingConv2d
@@ -991,7 +1032,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_SpikingConv2d.spatial_forward" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_SpikingConv2d._setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_SpikingConv2d.spatial_forward" class="md-nav__link">
     <span class="md-ellipsis">
       
         spatial_forward
@@ -1002,10 +1054,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_SpikingConv2d.adjoint_operator" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_SpikingConv2d.adjoint_operator" class="md-nav__link">
     <span class="md-ellipsis">
       
         adjoint_operator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_SpikingConv2d._compute_P" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _compute_P
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_SpikingConv2d._get_bias_reduction_dims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _get_bias_reduction_dims
       
     </span>
   </a>
@@ -1038,7 +1112,63 @@
   
   
     <li class="md-nav__item">
-      <a href="../activations/" class="md-nav__link">
+      <a href="../covariance_handler/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Covariance Handler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../state_handler/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    State Handler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../activation_functions/" class="md-nav__link">
         
   
   
@@ -1233,15 +1363,75 @@
   
   
   
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Functional
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Functional
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../solvers/" class="md-nav__link">
+      <a href="../weights_solvers/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Solvers
+    Weights Solvers
   
 
     
@@ -1262,14 +1452,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../temporal_helpers/" class="md-nav__link">
+      <a href="../a_update_solvers/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Helpers
+    Activation Update Solvers
   
 
     
@@ -1278,6 +1468,70 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fft_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT-Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1315,7 +1569,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#admm.layers" class="md-nav__link">
+  <a href="#src.admm.layers" class="md-nav__link">
     <span class="md-ellipsis">
       
         layers
@@ -1327,7 +1581,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_Linear" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_Linear" class="md-nav__link">
     <span class="md-ellipsis">
       
         ADMM_Linear
@@ -1339,7 +1593,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_Linear.spatial_forward" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_Linear._setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_Linear.spatial_forward" class="md-nav__link">
     <span class="md-ellipsis">
       
         spatial_forward
@@ -1350,10 +1615,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_Linear.adjoint_operator" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_Linear.adjoint_operator" class="md-nav__link">
     <span class="md-ellipsis">
       
         adjoint_operator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_Linear._compute_P" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _compute_P
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_Linear._get_bias_reduction_dims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _get_bias_reduction_dims
       
     </span>
   </a>
@@ -1366,7 +1653,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_Conv2d" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_Conv2d" class="md-nav__link">
     <span class="md-ellipsis">
       
         ADMM_Conv2d
@@ -1378,7 +1665,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_Conv2d.spatial_forward" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_Conv2d._setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_Conv2d.spatial_forward" class="md-nav__link">
     <span class="md-ellipsis">
       
         spatial_forward
@@ -1389,10 +1687,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_Conv2d.adjoint_operator" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_Conv2d.adjoint_operator" class="md-nav__link">
     <span class="md-ellipsis">
       
         adjoint_operator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_Conv2d._compute_P" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _compute_P
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_Conv2d._get_bias_reduction_dims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _get_bias_reduction_dims
       
     </span>
   </a>
@@ -1405,7 +1725,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_SpikingLinear" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_SpikingLinear" class="md-nav__link">
     <span class="md-ellipsis">
       
         ADMM_SpikingLinear
@@ -1417,7 +1737,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_SpikingLinear.spatial_forward" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_SpikingLinear._setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_SpikingLinear.spatial_forward" class="md-nav__link">
     <span class="md-ellipsis">
       
         spatial_forward
@@ -1428,10 +1759,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_SpikingLinear.adjoint_operator" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_SpikingLinear.adjoint_operator" class="md-nav__link">
     <span class="md-ellipsis">
       
         adjoint_operator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_SpikingLinear._compute_P" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _compute_P
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_SpikingLinear._get_bias_reduction_dims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _get_bias_reduction_dims
       
     </span>
   </a>
@@ -1444,7 +1797,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_SpikingConv2d" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_SpikingConv2d" class="md-nav__link">
     <span class="md-ellipsis">
       
         ADMM_SpikingConv2d
@@ -1456,7 +1809,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_SpikingConv2d.spatial_forward" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_SpikingConv2d._setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_SpikingConv2d.spatial_forward" class="md-nav__link">
     <span class="md-ellipsis">
       
         spatial_forward
@@ -1467,10 +1831,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.layers.ADMM_SpikingConv2d.adjoint_operator" class="md-nav__link">
+  <a href="#src.admm.layers.ADMM_SpikingConv2d.adjoint_operator" class="md-nav__link">
     <span class="md-ellipsis">
       
         adjoint_operator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_SpikingConv2d._compute_P" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _compute_P
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.layers.ADMM_SpikingConv2d._get_bias_reduction_dims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _get_bias_reduction_dims
       
     </span>
   </a>
@@ -1510,8 +1896,8 @@
 
 
 
-<h2 id="admm.layers" class="doc doc-heading">
-            <code>admm.layers</code>
+<h2 id="src.admm.layers" class="doc doc-heading">
+            <code>src.admm.layers</code>
 
 
 </h2>
@@ -1519,12 +1905,6 @@
     <div class="doc doc-contents first">
 
         <p>This module contains the linear and convolutional layers for ADMM.</p>
-<p>Each layer must provide:</p>
-<ol>
-<li>A forward pass (<code>spatial_forward</code>).</li>
-<li>An <code>adjoint_operator</code> (transpose) to map targets/errors back to the input space.</li>
-<li>A <code>_compute_P</code> method to extract the "patch matrix", which is used to solve the weight update step.</li>
-</ol>
 
 
 
@@ -1549,7 +1929,7 @@
 
 
 
-<h3 id="admm.layers.ADMM_Linear" class="doc doc-heading">
+<h3 id="src.admm.layers.ADMM_Linear" class="doc doc-heading">
             <code>ADMM_Linear</code>
 
 
@@ -1558,7 +1938,7 @@
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="ADMM_AffineLayer (admm.affine.ADMM_AffineLayer)" href="../affine/#admm.affine.ADMM_AffineLayer">ADMM_AffineLayer</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="ADMM_AffineLayer (src.admm.affine_layer.ADMM_AffineLayer)" href="../affine_layer/#src.admm.affine_layer.ADMM_AffineLayer">ADMM_AffineLayer</a></code></p>
 
 
 
@@ -1578,7 +1958,7 @@
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>admm\layers.py</code></summary>
+                <summary>Source code in <code>src\admm\layers.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 26</span>
 <span class="normal"> 27</span>
 <span class="normal"> 28</span>
@@ -1659,7 +2039,8 @@
 <span class="normal">103</span>
 <span class="normal">104</span>
 <span class="normal">105</span>
-<span class="normal">106</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Linear</span><span class="p">(</span><span class="n">ADMM_AffineLayer</span><span class="p">):</span>
+<span class="normal">106</span>
+<span class="normal">107</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Linear</span><span class="p">(</span><span class="n">ADMM_AffineLayer</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Standard Fully Connected Layer for ADMM.</span>
 
 <span class="sd">    How it works:</span>
@@ -1680,7 +2061,7 @@
         <span class="n">deltas</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">thetas</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">use_reset</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMMLayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMM_LayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">h</span><span class="o">=</span><span class="n">h</span><span class="p">,</span>
@@ -1695,6 +2076,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">channel_dim</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>  <span class="c1"># Targets the [B, C] dimension</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">in_f</span> <span class="o">=</span> <span class="n">in_f</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">out_f</span> <span class="o">=</span> <span class="n">out_f</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convolution</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the weight and bias tensors for the linear layer.&quot;&quot;&quot;</span>
@@ -1739,7 +2121,7 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_bias_reduction_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the reduction dimension index for bias averaging.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -1759,7 +2141,36 @@
 <div class="doc doc-object doc-function">
 
 
-<h4 id="admm.layers.ADMM_Linear.spatial_forward" class="doc doc-heading">
+<h4 id="src.admm.layers.ADMM_Linear._setup" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_setup</span><span class="p">(</span><span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Initializes the weight and bias tensors for the linear layer.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the weight and bias tensors for the linear layer.&quot;&quot;&quot;</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_setup</span><span class="p">(</span><span class="n">global_config</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_init_weights_and_bias</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">out_f</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_f</span><span class="p">),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_f</span><span class="p">,))</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.layers.ADMM_Linear.spatial_forward" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">spatial_forward</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">use_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
 </h4>
@@ -1841,9 +2252,8 @@
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\layers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">68</span>
-<span class="normal">69</span>
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">69</span>
 <span class="normal">70</span>
 <span class="normal">71</span>
 <span class="normal">72</span>
@@ -1857,7 +2267,8 @@
 <span class="normal">80</span>
 <span class="normal">81</span>
 <span class="normal">82</span>
-<span class="normal">83</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">spatial_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="normal">83</span>
+<span class="normal">84</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">spatial_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Applies the linear transformation to the input data.</span>
 
 <span class="sd">    Args:</span>
@@ -1882,7 +2293,7 @@
 <div class="doc doc-object doc-function">
 
 
-<h4 id="admm.layers.ADMM_Linear.adjoint_operator" class="doc doc-heading">
+<h4 id="src.admm.layers.ADMM_Linear.adjoint_operator" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">adjoint_operator</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h4>
@@ -1921,9 +2332,8 @@ Args:
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\layers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">85</span>
-<span class="normal">86</span>
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">86</span>
 <span class="normal">87</span>
 <span class="normal">88</span>
 <span class="normal">89</span>
@@ -1935,7 +2345,8 @@ Args:
 <span class="normal">95</span>
 <span class="normal">96</span>
 <span class="normal">97</span>
-<span class="normal">98</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">adjoint_operator</span><span class="p">(</span>
+<span class="normal">98</span>
+<span class="normal">99</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">adjoint_operator</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Maps the target vector back to the input space via the transposed weights.</span>
@@ -1955,6 +2366,60 @@ Args:
 
 </div>
 
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.layers.ADMM_Linear._compute_P" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_compute_P</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Retrieves the patch matrix for linear least-squares updates.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_compute_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieves the patch matrix for linear least-squares updates.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_op</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.layers.ADMM_Linear._get_bias_reduction_dims" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_get_bias_reduction_dims</span><span class="p">()</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Returns the reduction dimension index for bias averaging.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_bias_reduction_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the reduction dimension index for bias averaging.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
 
 
   </div>
@@ -1967,7 +2432,7 @@ Args:
 
 
 
-<h3 id="admm.layers.ADMM_Conv2d" class="doc doc-heading">
+<h3 id="src.admm.layers.ADMM_Conv2d" class="doc doc-heading">
             <code>ADMM_Conv2d</code>
 
 
@@ -1976,7 +2441,7 @@ Args:
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="ADMM_Convolution (admm.convolutional_mixin.ADMM_Convolution)" href="../convolutional_mixin/#admm.convolutional_mixin.ADMM_Convolution">ADMM_Convolution</a></code>, <code><a class="autorefs autorefs-internal" title="ADMM_AffineLayer (admm.affine.ADMM_AffineLayer)" href="../affine/#admm.affine.ADMM_AffineLayer">ADMM_AffineLayer</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="ADMM_AffineLayer (src.admm.affine_layer.ADMM_AffineLayer)" href="../affine_layer/#src.admm.affine_layer.ADMM_AffineLayer">ADMM_AffineLayer</a></code></p>
 
 
 
@@ -1999,9 +2464,8 @@ Args:
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>admm\layers.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">109</span>
-<span class="normal">110</span>
+                <summary>Source code in <code>src\admm\layers.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">110</span>
 <span class="normal">111</span>
 <span class="normal">112</span>
 <span class="normal">113</span>
@@ -2124,7 +2588,20 @@ Args:
 <span class="normal">230</span>
 <span class="normal">231</span>
 <span class="normal">232</span>
-<span class="normal">233</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Conv2d</span><span class="p">(</span><span class="n">ADMM_Convolution</span><span class="p">,</span> <span class="n">ADMM_AffineLayer</span><span class="p">):</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Conv2d</span><span class="p">(</span><span class="n">ADMM_AffineLayer</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Standard 2D Convolutional Layer for ADMM.</span>
 
 <span class="sd">    How it works:</span>
@@ -2146,9 +2623,8 @@ Args:
         <span class="n">s</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">h</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">pool_op</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">use_fft</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">padding_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;circular&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMMLayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMM_LayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">rho</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">deltas</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2158,8 +2634,6 @@ Args:
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">h</span><span class="o">=</span><span class="n">h</span><span class="p">,</span>
             <span class="n">pool_op</span><span class="o">=</span><span class="n">pool_op</span><span class="p">,</span>
-            <span class="n">use_fft</span><span class="o">=</span><span class="n">use_fft</span><span class="p">,</span>
-            <span class="n">padding_mode</span><span class="o">=</span><span class="n">padding_mode</span><span class="p">,</span>
             <span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">,</span>
             <span class="n">beta</span><span class="o">=</span><span class="n">beta</span><span class="p">,</span>
             <span class="n">deltas</span><span class="o">=</span><span class="n">deltas</span><span class="p">,</span>
@@ -2173,10 +2647,25 @@ Args:
         <span class="bp">self</span><span class="o">.</span><span class="n">out_c</span> <span class="o">=</span> <span class="n">out_c</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">k</span> <span class="o">=</span> <span class="n">k</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">channel_dim</span> <span class="o">=</span> <span class="o">-</span><span class="mi">3</span>  <span class="c1"># Targets the [B, C, H, W] dimension</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">=</span> <span class="n">padding_mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convolution</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_fft</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Using circular padding without FFTs (use_fft=False) is highly inefficient. &quot;</span>
+                <span class="s2">&quot;The spatial solver must construct a massive dense Gram matrix to compute the adjoint. &quot;</span>
+                <span class="s2">&quot;Consider setting use_fft=True.&quot;</span>
+            <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the 4D kernel weights and bias tensors.&quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_setup</span><span class="p">(</span><span class="n">global_config</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Circular padding requires stride=1 to remain mathematically perfectly &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;equivalent in the Fourier domain. Changing stride from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span><span class="si">}</span><span class="s2"> to 1.&quot;</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="mi">1</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_init_weights_and_bias</span><span class="p">(</span>
             <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_c</span><span class="p">,)</span>
         <span class="p">)</span>
@@ -2192,7 +2681,7 @@ Args:
 <span class="sd">            torch.Tensor: The convolved feature maps.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_circular_forward</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">circular_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">)</span>
         <span class="n">b</span> <span class="o">=</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">b</span>
             <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">use_bias</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">and</span> <span class="n">use_bias</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_bias</span><span class="p">)</span>
@@ -2216,7 +2705,7 @@ Args:
 <span class="sd">            torch.Tensor: The adjoint projection tensor in the input domain.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_circular_adjoint</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">circular_adjoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
 
         <span class="n">out_pad</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">original_input_shape</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -2240,7 +2729,7 @@ Args:
 <span class="sd">            torch.Tensor: The flattened patch matrix $P$.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_circular_compute_P</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">circular_compute_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">)</span>
         <span class="n">patches</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">unfold</span><span class="p">(</span>
             <span class="n">a_prev</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span>
         <span class="p">)</span>
@@ -2268,7 +2757,54 @@ Args:
 <div class="doc doc-object doc-function">
 
 
-<h4 id="admm.layers.ADMM_Conv2d.spatial_forward" class="doc doc-heading">
+<h4 id="src.admm.layers.ADMM_Conv2d._setup" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_setup</span><span class="p">(</span><span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Initializes the 4D kernel weights and bias tensors.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the 4D kernel weights and bias tensors.&quot;&quot;&quot;</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_setup</span><span class="p">(</span><span class="n">global_config</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Circular padding requires stride=1 to remain mathematically perfectly &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;equivalent in the Fourier domain. Changing stride from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span><span class="si">}</span><span class="s2"> to 1.&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">_init_weights_and_bias</span><span class="p">(</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_c</span><span class="p">,)</span>
+    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.layers.ADMM_Conv2d.spatial_forward" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">spatial_forward</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">use_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
 </h4>
@@ -2350,27 +2886,27 @@ Args:
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\layers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">166</span>
-<span class="normal">167</span>
-<span class="normal">168</span>
-<span class="normal">169</span>
-<span class="normal">170</span>
-<span class="normal">171</span>
-<span class="normal">172</span>
-<span class="normal">173</span>
-<span class="normal">174</span>
-<span class="normal">175</span>
-<span class="normal">176</span>
-<span class="normal">177</span>
-<span class="normal">178</span>
-<span class="normal">179</span>
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">179</span>
 <span class="normal">180</span>
 <span class="normal">181</span>
 <span class="normal">182</span>
 <span class="normal">183</span>
 <span class="normal">184</span>
-<span class="normal">185</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">spatial_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">spatial_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Applies the spatial 2D convolution over the input images.</span>
 
 <span class="sd">    Args:</span>
@@ -2381,7 +2917,7 @@ Args:
 <span class="sd">        torch.Tensor: The convolved feature maps.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_circular_forward</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">circular_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">)</span>
     <span class="n">b</span> <span class="o">=</span> <span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">b</span>
         <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">use_bias</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">and</span> <span class="n">use_bias</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_bias</span><span class="p">)</span>
@@ -2399,7 +2935,7 @@ Args:
 <div class="doc doc-object doc-function">
 
 
-<h4 id="admm.layers.ADMM_Conv2d.adjoint_operator" class="doc doc-heading">
+<h4 id="src.admm.layers.ADMM_Conv2d.adjoint_operator" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">adjoint_operator</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h4>
@@ -2482,21 +3018,8 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\layers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
-<span class="normal">192</span>
-<span class="normal">193</span>
-<span class="normal">194</span>
-<span class="normal">195</span>
-<span class="normal">196</span>
-<span class="normal">197</span>
-<span class="normal">198</span>
-<span class="normal">199</span>
-<span class="normal">200</span>
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">200</span>
 <span class="normal">201</span>
 <span class="normal">202</span>
 <span class="normal">203</span>
@@ -2509,7 +3032,20 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <span class="normal">210</span>
 <span class="normal">211</span>
 <span class="normal">212</span>
-<span class="normal">213</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">adjoint_operator</span><span class="p">(</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">adjoint_operator</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Maps errors back to the image domain via transposed convolutions.</span>
@@ -2523,7 +3059,7 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <span class="sd">        torch.Tensor: The adjoint projection tensor in the input domain.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_circular_adjoint</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">circular_adjoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
 
     <span class="n">out_pad</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">original_input_shape</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -2542,6 +3078,138 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 
 </div>
 
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.layers.ADMM_Conv2d._compute_P" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_compute_P</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Extracts image patches using unfold (im2col) for localized weight updates.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>a_prev</code>
+            </td>
+            <td>
+                  <code><span title="torch.Tensor">Tensor</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The previous layer's activations.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="torch.Tensor">Tensor</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>torch.Tensor: The flattened patch matrix <span class="arithmatex">\(P\)</span>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_compute_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extracts image patches using unfold (im2col) for localized weight updates.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        a_prev (torch.Tensor): The previous layer&#39;s activations.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        torch.Tensor: The flattened patch matrix $P$.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">circular_compute_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">)</span>
+    <span class="n">patches</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">unfold</span><span class="p">(</span>
+        <span class="n">a_prev</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">patches</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_c</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.layers.ADMM_Conv2d._get_bias_reduction_dims" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_get_bias_reduction_dims</span><span class="p">()</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Returns the reduction dimension tuple for spatial bias averaging.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_bias_reduction_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the reduction dimension tuple for spatial bias averaging.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
 
 
   </div>
@@ -2554,7 +3222,7 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 
 
 
-<h3 id="admm.layers.ADMM_SpikingLinear" class="doc doc-heading">
+<h3 id="src.admm.layers.ADMM_SpikingLinear" class="doc doc-heading">
             <code>ADMM_SpikingLinear</code>
 
 
@@ -2563,7 +3231,7 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="ADMM_Spiking (admm.spiking_mixin.ADMM_Spiking)" href="../spiking_mixin/#admm.spiking_mixin.ADMM_Spiking">ADMM_Spiking</a></code>, <code><a class="autorefs autorefs-internal" title="ADMM_AffineLayer (admm.affine.ADMM_AffineLayer)" href="../affine/#admm.affine.ADMM_AffineLayer">ADMM_AffineLayer</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="ADMM_Spiking (src.admm.spiking_mixin.ADMM_Spiking)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking">ADMM_Spiking</a></code>, <code><a class="autorefs autorefs-internal" title="ADMM_AffineLayer (src.admm.affine_layer.ADMM_AffineLayer)" href="../affine_layer/#src.admm.affine_layer.ADMM_AffineLayer">ADMM_AffineLayer</a></code></p>
 
 
 
@@ -2583,21 +3251,8 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>admm\layers.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">236</span>
-<span class="normal">237</span>
-<span class="normal">238</span>
-<span class="normal">239</span>
-<span class="normal">240</span>
-<span class="normal">241</span>
-<span class="normal">242</span>
-<span class="normal">243</span>
-<span class="normal">244</span>
-<span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span>
+                <summary>Source code in <code>src\admm\layers.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">249</span>
 <span class="normal">250</span>
 <span class="normal">251</span>
 <span class="normal">252</span>
@@ -2676,7 +3331,21 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <span class="normal">325</span>
 <span class="normal">326</span>
 <span class="normal">327</span>
-<span class="normal">328</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_SpikingLinear</span><span class="p">(</span><span class="n">ADMM_Spiking</span><span class="p">,</span> <span class="n">ADMM_AffineLayer</span><span class="p">):</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_SpikingLinear</span><span class="p">(</span><span class="n">ADMM_Spiking</span><span class="p">,</span> <span class="n">ADMM_AffineLayer</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Spiking Fully Connected Layer.</span>
 
 <span class="sd">    How it works:</span>
@@ -2697,7 +3366,7 @@ input, required to perfectly reconstruct edges when strides are used.</p>
         <span class="n">deltas</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">thetas</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">use_reset</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMMLayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMM_LayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">h</span><span class="o">=</span><span class="n">h</span><span class="p">,</span>
@@ -2715,6 +3384,7 @@ input, required to perfectly reconstruct edges when strides are used.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">in_f</span> <span class="o">=</span> <span class="n">in_f</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">out_f</span> <span class="o">=</span> <span class="n">out_f</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">channel_dim</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convolution</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the weight and bias tensors for the spiking linear layer.&quot;&quot;&quot;</span>
@@ -2736,14 +3406,14 @@ input, required to perfectly reconstruct edges when strides are used.</p>
             <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">use_bias</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">and</span> <span class="n">use_bias</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_bias</span><span class="p">)</span>
             <span class="k">else</span> <span class="kc">None</span>
         <span class="p">)</span>
-        <span class="n">x_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fold_time</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">x_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="n">fold_time</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">x_pooled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_op</span><span class="p">(</span><span class="n">x_flat</span><span class="p">)</span>
 
         <span class="n">out_flat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">x_pooled</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
         <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">out_flat</span> <span class="o">+=</span> <span class="n">b</span>
 
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold_time</span><span class="p">(</span><span class="n">out_flat</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">unfold_time</span><span class="p">(</span><span class="n">out_flat</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">adjoint_operator</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="kc">None</span>
@@ -2757,13 +3427,13 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <span class="sd">        Returns:</span>
 <span class="sd">            torch.Tensor: The temporal adjoint response mapped to the input space.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">target_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fold_time</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="n">target_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="n">fold_time</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="n">deconv_flat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">target_flat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_op</span><span class="o">.</span><span class="n">adjoint</span><span class="p">(</span><span class="n">deconv_flat</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_compute_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Folds the sequential activations to retrieve the pooled patch matrix.&quot;&quot;&quot;</span>
-        <span class="n">a_flat</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fold_time</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
+        <span class="n">a_flat</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">fold_time</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_op</span><span class="p">(</span><span class="n">a_flat</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_bias_reduction_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
@@ -2788,7 +3458,36 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="admm.layers.ADMM_SpikingLinear.spatial_forward" class="doc doc-heading">
+<h4 id="src.admm.layers.ADMM_SpikingLinear._setup" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_setup</span><span class="p">(</span><span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Initializes the weight and bias tensors for the spiking linear layer.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the weight and bias tensors for the spiking linear layer.&quot;&quot;&quot;</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_setup</span><span class="p">(</span><span class="n">global_config</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_init_weights_and_bias</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">out_f</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_f</span><span class="p">),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_f</span><span class="p">,))</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.layers.ADMM_SpikingLinear.spatial_forward" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">spatial_forward</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">use_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
 </h4>
@@ -2870,22 +3569,8 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\layers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">281</span>
-<span class="normal">282</span>
-<span class="normal">283</span>
-<span class="normal">284</span>
-<span class="normal">285</span>
-<span class="normal">286</span>
-<span class="normal">287</span>
-<span class="normal">288</span>
-<span class="normal">289</span>
-<span class="normal">290</span>
-<span class="normal">291</span>
-<span class="normal">292</span>
-<span class="normal">293</span>
-<span class="normal">294</span>
-<span class="normal">295</span>
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">295</span>
 <span class="normal">296</span>
 <span class="normal">297</span>
 <span class="normal">298</span>
@@ -2893,7 +3578,21 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <span class="normal">300</span>
 <span class="normal">301</span>
 <span class="normal">302</span>
-<span class="normal">303</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">spatial_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">spatial_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Folds the sequence and applies the fully connected transformation.</span>
 
 <span class="sd">    Args:</span>
@@ -2908,14 +3607,14 @@ input, required to perfectly reconstruct edges when strides are used.</p>
         <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">use_bias</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">and</span> <span class="n">use_bias</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_bias</span><span class="p">)</span>
         <span class="k">else</span> <span class="kc">None</span>
     <span class="p">)</span>
-    <span class="n">x_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fold_time</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">x_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="n">fold_time</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
     <span class="n">x_pooled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_op</span><span class="p">(</span><span class="n">x_flat</span><span class="p">)</span>
 
     <span class="n">out_flat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">x_pooled</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
     <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">out_flat</span> <span class="o">+=</span> <span class="n">b</span>
 
-    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold_time</span><span class="p">(</span><span class="n">out_flat</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">unfold_time</span><span class="p">(</span><span class="n">out_flat</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2925,7 +3624,7 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="admm.layers.ADMM_SpikingLinear.adjoint_operator" class="doc doc-heading">
+<h4 id="src.admm.layers.ADMM_SpikingLinear.adjoint_operator" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">adjoint_operator</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h4>
@@ -3007,22 +3706,22 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\layers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
-<span class="normal">308</span>
-<span class="normal">309</span>
-<span class="normal">310</span>
-<span class="normal">311</span>
-<span class="normal">312</span>
-<span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">adjoint_operator</span><span class="p">(</span>
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">adjoint_operator</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes the temporal adjoint sequence mapping errors backwards.</span>
@@ -3034,9 +3733,65 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <span class="sd">    Returns:</span>
 <span class="sd">        torch.Tensor: The temporal adjoint response mapped to the input space.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">target_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fold_time</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+    <span class="n">target_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="n">fold_time</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
     <span class="n">deconv_flat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">target_flat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="p">)</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_op</span><span class="o">.</span><span class="n">adjoint</span><span class="p">(</span><span class="n">deconv_flat</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.layers.ADMM_SpikingLinear._compute_P" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_compute_P</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Folds the sequential activations to retrieve the pooled patch matrix.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_compute_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Folds the sequential activations to retrieve the pooled patch matrix.&quot;&quot;&quot;</span>
+    <span class="n">a_flat</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">fold_time</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_op</span><span class="p">(</span><span class="n">a_flat</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.layers.ADMM_SpikingLinear._get_bias_reduction_dims" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_get_bias_reduction_dims</span><span class="p">()</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Returns the reduction dimensions tracking both batch and time indices.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_bias_reduction_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the reduction dimensions tracking both batch and time indices.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3055,7 +3810,7 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 
 
 
-<h3 id="admm.layers.ADMM_SpikingConv2d" class="doc doc-heading">
+<h3 id="src.admm.layers.ADMM_SpikingConv2d" class="doc doc-heading">
             <code>ADMM_SpikingConv2d</code>
 
 
@@ -3064,7 +3819,7 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="ADMM_Convolution (admm.convolutional_mixin.ADMM_Convolution)" href="../convolutional_mixin/#admm.convolutional_mixin.ADMM_Convolution">ADMM_Convolution</a></code>, <code><a class="autorefs autorefs-internal" title="ADMM_Spiking (admm.spiking_mixin.ADMM_Spiking)" href="../spiking_mixin/#admm.spiking_mixin.ADMM_Spiking">ADMM_Spiking</a></code>, <code><a class="autorefs autorefs-internal" title="ADMM_AffineLayer (admm.affine.ADMM_AffineLayer)" href="../affine/#admm.affine.ADMM_AffineLayer">ADMM_AffineLayer</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="ADMM_Spiking (src.admm.spiking_mixin.ADMM_Spiking)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking">ADMM_Spiking</a></code>, <code><a class="autorefs autorefs-internal" title="ADMM_AffineLayer (src.admm.affine_layer.ADMM_AffineLayer)" href="../affine_layer/#src.admm.affine_layer.ADMM_AffineLayer">ADMM_AffineLayer</a></code></p>
 
 
 
@@ -3085,22 +3840,8 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>admm\layers.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">331</span>
-<span class="normal">332</span>
-<span class="normal">333</span>
-<span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span>
-<span class="normal">337</span>
-<span class="normal">338</span>
-<span class="normal">339</span>
-<span class="normal">340</span>
-<span class="normal">341</span>
-<span class="normal">342</span>
-<span class="normal">343</span>
-<span class="normal">344</span>
-<span class="normal">345</span>
+                <summary>Source code in <code>src\admm\layers.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">345</span>
 <span class="normal">346</span>
 <span class="normal">347</span>
 <span class="normal">348</span>
@@ -3209,7 +3950,32 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <span class="normal">451</span>
 <span class="normal">452</span>
 <span class="normal">453</span>
-<span class="normal">454</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_SpikingConv2d</span><span class="p">(</span><span class="n">ADMM_Convolution</span><span class="p">,</span> <span class="n">ADMM_Spiking</span><span class="p">,</span> <span class="n">ADMM_AffineLayer</span><span class="p">):</span>
+<span class="normal">454</span>
+<span class="normal">455</span>
+<span class="normal">456</span>
+<span class="normal">457</span>
+<span class="normal">458</span>
+<span class="normal">459</span>
+<span class="normal">460</span>
+<span class="normal">461</span>
+<span class="normal">462</span>
+<span class="normal">463</span>
+<span class="normal">464</span>
+<span class="normal">465</span>
+<span class="normal">466</span>
+<span class="normal">467</span>
+<span class="normal">468</span>
+<span class="normal">469</span>
+<span class="normal">470</span>
+<span class="normal">471</span>
+<span class="normal">472</span>
+<span class="normal">473</span>
+<span class="normal">474</span>
+<span class="normal">475</span>
+<span class="normal">476</span>
+<span class="normal">477</span>
+<span class="normal">478</span>
+<span class="normal">479</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_SpikingConv2d</span><span class="p">(</span><span class="n">ADMM_Spiking</span><span class="p">,</span> <span class="n">ADMM_AffineLayer</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Spiking 2D Convolutional Layer.</span>
 
 <span class="sd">    How it works:</span>
@@ -3229,9 +3995,8 @@ input, required to perfectly reconstruct edges when strides are used.</p>
         <span class="n">s</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">h</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">pool_op</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">use_fft</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">padding_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;circular&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMMLayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMM_LayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">rho</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">deltas</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -3241,8 +4006,6 @@ input, required to perfectly reconstruct edges when strides are used.</p>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">h</span><span class="o">=</span><span class="n">h</span><span class="p">,</span>
             <span class="n">pool_op</span><span class="o">=</span><span class="n">pool_op</span><span class="p">,</span>
-            <span class="n">use_fft</span><span class="o">=</span><span class="n">use_fft</span><span class="p">,</span>
-            <span class="n">padding_mode</span><span class="o">=</span><span class="n">padding_mode</span><span class="p">,</span>
             <span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">,</span>
             <span class="n">beta</span><span class="o">=</span><span class="n">beta</span><span class="p">,</span>
             <span class="n">deltas</span><span class="o">=</span><span class="n">deltas</span><span class="p">,</span>
@@ -3259,10 +4022,24 @@ input, required to perfectly reconstruct edges when strides are used.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="n">p</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="n">s</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">channel_dim</span> <span class="o">=</span> <span class="o">-</span><span class="mi">3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convolution</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">=</span> <span class="n">padding_mode</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_fft</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Using circular padding without FFTs (use_fft=False) is highly inefficient. &quot;</span>
+                <span class="s2">&quot;The spatial solver must construct a massive dense Gram matrix to compute the adjoint. &quot;</span>
+                <span class="s2">&quot;Consider setting use_fft=True.&quot;</span>
+            <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the 4D kernel weights and bias tensors for sequential data.&quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_setup</span><span class="p">(</span><span class="n">global_config</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Circular padding requires stride=1 to remain mathematically perfectly &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;equivalent in the Fourier domain. Changing stride from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span><span class="si">}</span><span class="s2"> to 1.&quot;</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_init_weights_and_bias</span><span class="p">(</span>
             <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_c</span><span class="p">,)</span>
         <span class="p">)</span>
@@ -3278,17 +4055,17 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <span class="sd">            torch.Tensor: The convolved spiking video/sequence.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_circular_forward</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">circular_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">)</span>
         <span class="n">b</span> <span class="o">=</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">b</span>
             <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">use_bias</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">and</span> <span class="n">use_bias</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_bias</span><span class="p">)</span>
             <span class="k">else</span> <span class="kc">None</span>
         <span class="p">)</span>
-        <span class="n">x_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fold_time</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">x_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="n">fold_time</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">out_flat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span>
             <span class="n">x_flat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span>
         <span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold_time</span><span class="p">(</span><span class="n">out_flat</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">unfold_time</span><span class="p">(</span><span class="n">out_flat</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">adjoint_operator</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="kc">None</span>
@@ -3304,8 +4081,8 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <span class="sd">            torch.Tensor: The spatiotemporal adjoint response.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_circular_adjoint</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
-        <span class="n">target_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fold_time</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">circular_adjoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+        <span class="n">target_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="n">fold_time</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
         <span class="n">out_pad</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">original_input_shape</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">H_in</span><span class="p">,</span> <span class="n">W_in</span> <span class="o">=</span> <span class="n">original_input_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
@@ -3318,13 +4095,13 @@ input, required to perfectly reconstruct edges when strides are used.</p>
         <span class="n">out_flat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">conv_transpose2d</span><span class="p">(</span>
             <span class="n">target_flat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span><span class="p">,</span> <span class="n">output_padding</span><span class="o">=</span><span class="n">out_pad</span>
         <span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold_time</span><span class="p">(</span><span class="n">out_flat</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">unfold_time</span><span class="p">(</span><span class="n">out_flat</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_compute_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Extracts and concatenates spatial patches sequentially using im2col.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_circular_compute_P</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
-        <span class="n">a_flat</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fold_time</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">circular_compute_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">)</span>
+        <span class="n">a_flat</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">fold_time</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
         <span class="n">patches</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">unfold</span><span class="p">(</span>
             <span class="n">a_flat</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span>
         <span class="p">)</span>
@@ -3352,7 +4129,52 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="admm.layers.ADMM_SpikingConv2d.spatial_forward" class="doc doc-heading">
+<h4 id="src.admm.layers.ADMM_SpikingConv2d._setup" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_setup</span><span class="p">(</span><span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Initializes the 4D kernel weights and bias tensors for sequential data.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">401</span>
+<span class="normal">402</span>
+<span class="normal">403</span>
+<span class="normal">404</span>
+<span class="normal">405</span>
+<span class="normal">406</span>
+<span class="normal">407</span>
+<span class="normal">408</span>
+<span class="normal">409</span>
+<span class="normal">410</span>
+<span class="normal">411</span>
+<span class="normal">412</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the 4D kernel weights and bias tensors for sequential data.&quot;&quot;&quot;</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_setup</span><span class="p">(</span><span class="n">global_config</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Circular padding requires stride=1 to remain mathematically perfectly &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;equivalent in the Fourier domain. Changing stride from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span><span class="si">}</span><span class="s2"> to 1.&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_init_weights_and_bias</span><span class="p">(</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_c</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_c</span><span class="p">,)</span>
+    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.layers.ADMM_SpikingConv2d.spatial_forward" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">spatial_forward</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">use_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
 </h4>
@@ -3434,29 +4256,29 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\layers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">389</span>
-<span class="normal">390</span>
-<span class="normal">391</span>
-<span class="normal">392</span>
-<span class="normal">393</span>
-<span class="normal">394</span>
-<span class="normal">395</span>
-<span class="normal">396</span>
-<span class="normal">397</span>
-<span class="normal">398</span>
-<span class="normal">399</span>
-<span class="normal">400</span>
-<span class="normal">401</span>
-<span class="normal">402</span>
-<span class="normal">403</span>
-<span class="normal">404</span>
-<span class="normal">405</span>
-<span class="normal">406</span>
-<span class="normal">407</span>
-<span class="normal">408</span>
-<span class="normal">409</span>
-<span class="normal">410</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">spatial_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">414</span>
+<span class="normal">415</span>
+<span class="normal">416</span>
+<span class="normal">417</span>
+<span class="normal">418</span>
+<span class="normal">419</span>
+<span class="normal">420</span>
+<span class="normal">421</span>
+<span class="normal">422</span>
+<span class="normal">423</span>
+<span class="normal">424</span>
+<span class="normal">425</span>
+<span class="normal">426</span>
+<span class="normal">427</span>
+<span class="normal">428</span>
+<span class="normal">429</span>
+<span class="normal">430</span>
+<span class="normal">431</span>
+<span class="normal">432</span>
+<span class="normal">433</span>
+<span class="normal">434</span>
+<span class="normal">435</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">spatial_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Applies spatial convolution frame-by-frame across the temporal sequence.</span>
 
 <span class="sd">    Args:</span>
@@ -3467,17 +4289,17 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <span class="sd">        torch.Tensor: The convolved spiking video/sequence.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_circular_forward</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">circular_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">)</span>
     <span class="n">b</span> <span class="o">=</span> <span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">b</span>
         <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">use_bias</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">and</span> <span class="n">use_bias</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_bias</span><span class="p">)</span>
         <span class="k">else</span> <span class="kc">None</span>
     <span class="p">)</span>
-    <span class="n">x_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fold_time</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">x_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="n">fold_time</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
     <span class="n">out_flat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span>
         <span class="n">x_flat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold_time</span><span class="p">(</span><span class="n">out_flat</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">unfold_time</span><span class="p">(</span><span class="n">out_flat</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3487,7 +4309,7 @@ input, required to perfectly reconstruct edges when strides are used.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="admm.layers.ADMM_SpikingConv2d.adjoint_operator" class="doc doc-heading">
+<h4 id="src.admm.layers.ADMM_SpikingConv2d.adjoint_operator" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">adjoint_operator</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h4>
@@ -3570,36 +4392,36 @@ required to correctly reconstruct strides. Defaults to None.</p>
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\layers.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">412</span>
-<span class="normal">413</span>
-<span class="normal">414</span>
-<span class="normal">415</span>
-<span class="normal">416</span>
-<span class="normal">417</span>
-<span class="normal">418</span>
-<span class="normal">419</span>
-<span class="normal">420</span>
-<span class="normal">421</span>
-<span class="normal">422</span>
-<span class="normal">423</span>
-<span class="normal">424</span>
-<span class="normal">425</span>
-<span class="normal">426</span>
-<span class="normal">427</span>
-<span class="normal">428</span>
-<span class="normal">429</span>
-<span class="normal">430</span>
-<span class="normal">431</span>
-<span class="normal">432</span>
-<span class="normal">433</span>
-<span class="normal">434</span>
-<span class="normal">435</span>
-<span class="normal">436</span>
-<span class="normal">437</span>
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">437</span>
 <span class="normal">438</span>
 <span class="normal">439</span>
-<span class="normal">440</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">adjoint_operator</span><span class="p">(</span>
+<span class="normal">440</span>
+<span class="normal">441</span>
+<span class="normal">442</span>
+<span class="normal">443</span>
+<span class="normal">444</span>
+<span class="normal">445</span>
+<span class="normal">446</span>
+<span class="normal">447</span>
+<span class="normal">448</span>
+<span class="normal">449</span>
+<span class="normal">450</span>
+<span class="normal">451</span>
+<span class="normal">452</span>
+<span class="normal">453</span>
+<span class="normal">454</span>
+<span class="normal">455</span>
+<span class="normal">456</span>
+<span class="normal">457</span>
+<span class="normal">458</span>
+<span class="normal">459</span>
+<span class="normal">460</span>
+<span class="normal">461</span>
+<span class="normal">462</span>
+<span class="normal">463</span>
+<span class="normal">464</span>
+<span class="normal">465</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">adjoint_operator</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Maps sequential errors backwards using transposed convolutions frame-by-frame.</span>
@@ -3613,8 +4435,8 @@ required to correctly reconstruct strides. Defaults to None.</p>
 <span class="sd">        torch.Tensor: The spatiotemporal adjoint response.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_circular_adjoint</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
-    <span class="n">target_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fold_time</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">circular_adjoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+    <span class="n">target_flat</span><span class="p">,</span> <span class="n">tb_shape</span> <span class="o">=</span> <span class="n">fold_time</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
     <span class="n">out_pad</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">original_input_shape</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">H_in</span><span class="p">,</span> <span class="n">W_in</span> <span class="o">=</span> <span class="n">original_input_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
@@ -3627,7 +4449,73 @@ required to correctly reconstruct strides. Defaults to None.</p>
     <span class="n">out_flat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">conv_transpose2d</span><span class="p">(</span>
         <span class="n">target_flat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span><span class="p">,</span> <span class="n">output_padding</span><span class="o">=</span><span class="n">out_pad</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unfold_time</span><span class="p">(</span><span class="n">out_flat</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">unfold_time</span><span class="p">(</span><span class="n">out_flat</span><span class="p">,</span> <span class="n">tb_shape</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.layers.ADMM_SpikingConv2d._compute_P" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_compute_P</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Extracts and concatenates spatial patches sequentially using im2col.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">467</span>
+<span class="normal">468</span>
+<span class="normal">469</span>
+<span class="normal">470</span>
+<span class="normal">471</span>
+<span class="normal">472</span>
+<span class="normal">473</span>
+<span class="normal">474</span>
+<span class="normal">475</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_compute_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extracts and concatenates spatial patches sequentially using im2col.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">padding_mode</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">circular_compute_P</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">)</span>
+    <span class="n">a_flat</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">fold_time</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
+    <span class="n">patches</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">unfold</span><span class="p">(</span>
+        <span class="n">a_flat</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">patches</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_c</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.layers.ADMM_SpikingConv2d._get_bias_reduction_dims" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_get_bias_reduction_dims</span><span class="p">()</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Returns the reduction dimensions bounding temporal, batch, and spatial traits.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\layers.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">477</span>
+<span class="normal">478</span>
+<span class="normal">479</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_bias_reduction_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the reduction dimensions bounding temporal, batch, and spatial traits.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

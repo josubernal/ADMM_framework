@@ -14,7 +14,7 @@
         <link rel="prev" href="../manager/">
       
       
-        <link rel="next" href="../affine/">
+        <link rel="next" href="../affine_layer/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Core Logic - ADMM Optimizer</title>
+        <title>Base Layer Logic - ADMM Optimizer</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#admm.core" class="md-skip">
+        <a href="#src.admm.base_layer" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Core Logic
+              Base Layer Logic
             
           </span>
         </div>
@@ -232,7 +232,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../tutorials/linear.md" class="md-tabs__link">
+        <a href="../../tutorials/getting_started/" class="md-tabs__link">
           
   
   
@@ -363,8 +363,6 @@
       
         
       
-        
-      
     
     
     
@@ -415,42 +413,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/linear.md" class="md-nav__link">
+      <a href="../../tutorials/getting_started/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Basic Linear Networks
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tutorials/spiking_conv.md" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Spiking Convolutions
+    Getting Started
   
 
     
@@ -696,7 +666,7 @@
   <span class="md-ellipsis">
     
   
-    Core Logic
+    Base Layer Logic
   
 
     
@@ -714,7 +684,7 @@
   <span class="md-ellipsis">
     
   
-    Core Logic
+    Base Layer Logic
   
 
     
@@ -738,19 +708,19 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#admm.core" class="md-nav__link">
+  <a href="#src.admm.base_layer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        core
+        base_layer
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="core">
+    <nav class="md-nav" aria-label="base_layer">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.core.ADMM_Layer" class="md-nav__link">
+  <a href="#src.admm.base_layer.ADMM_Layer" class="md-nav__link">
     <span class="md-ellipsis">
       
         ADMM_Layer
@@ -762,7 +732,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.core.ADMM_Layer.__init__" class="md-nav__link">
+  <a href="#src.admm.base_layer.ADMM_Layer.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       
         __init__
@@ -773,7 +743,18 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.core.ADMM_Layer.forward" class="md-nav__link">
+  <a href="#src.admm.base_layer.ADMM_Layer._setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.base_layer.ADMM_Layer.forward" class="md-nav__link">
     <span class="md-ellipsis">
       
         forward
@@ -784,29 +765,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.core.ADMM_Layer.vectorized_forward" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        vectorized_forward
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#admm.core.ADMM_Layer.update_z_last" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        update_z_last
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#admm.core.ADMM_Layer.update_lambda" class="md-nav__link">
+  <a href="#src.admm.base_layer.ADMM_Layer.update_lambda" class="md-nav__link">
     <span class="md-ellipsis">
       
         update_lambda
@@ -842,14 +801,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../affine/" class="md-nav__link">
+      <a href="../affine_layer/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Affine Logic
+    Affine Layer Logic
   
 
     
@@ -898,34 +857,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../convolutional_mixin/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Convolutional Logic
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../layers/" class="md-nav__link">
         
   
@@ -954,7 +885,63 @@
   
   
     <li class="md-nav__item">
-      <a href="../activations/" class="md-nav__link">
+      <a href="../covariance_handler/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Covariance Handler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../state_handler/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    State Handler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../activation_functions/" class="md-nav__link">
         
   
   
@@ -1149,15 +1136,75 @@
   
   
   
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Functional
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Functional
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../solvers/" class="md-nav__link">
+      <a href="../weights_solvers/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Solvers
+    Weights Solvers
   
 
     
@@ -1178,14 +1225,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../temporal_helpers/" class="md-nav__link">
+      <a href="../a_update_solvers/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Helpers
+    Activation Update Solvers
   
 
     
@@ -1194,6 +1241,70 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fft_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT-Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1231,19 +1342,19 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#admm.core" class="md-nav__link">
+  <a href="#src.admm.base_layer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        core
+        base_layer
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="core">
+    <nav class="md-nav" aria-label="base_layer">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.core.ADMM_Layer" class="md-nav__link">
+  <a href="#src.admm.base_layer.ADMM_Layer" class="md-nav__link">
     <span class="md-ellipsis">
       
         ADMM_Layer
@@ -1255,7 +1366,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.core.ADMM_Layer.__init__" class="md-nav__link">
+  <a href="#src.admm.base_layer.ADMM_Layer.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       
         __init__
@@ -1266,7 +1377,18 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.core.ADMM_Layer.forward" class="md-nav__link">
+  <a href="#src.admm.base_layer.ADMM_Layer._setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.base_layer.ADMM_Layer.forward" class="md-nav__link">
     <span class="md-ellipsis">
       
         forward
@@ -1277,29 +1399,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.core.ADMM_Layer.vectorized_forward" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        vectorized_forward
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#admm.core.ADMM_Layer.update_z_last" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        update_z_last
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#admm.core.ADMM_Layer.update_lambda" class="md-nav__link">
+  <a href="#src.admm.base_layer.ADMM_Layer.update_lambda" class="md-nav__link">
     <span class="md-ellipsis">
       
         update_lambda
@@ -1336,24 +1436,26 @@
 
 
 
-  <h1>Core Logic</h1>
+  <h1>Base Layer Logic</h1>
 
 <div class="doc doc-object doc-module">
 
 
 
-<h2 id="admm.core" class="doc doc-heading">
-            <code>admm.core</code>
+<h2 id="src.admm.base_layer" class="doc doc-heading">
+            <code>src.admm.base_layer</code>
 
 
 </h2>
 
     <div class="doc doc-contents first">
 
-        <p>This module defines the absolute base for all ADMM layers.
-It manages the fundamental auxiliary variables (<span class="arithmatex">\(a\)</span> and <span class="arithmatex">\(z\)</span>), the dual variable (<span class="arithmatex">\(\lambda\)</span>),
-handles the configuration setup, and dictates the generic forward passes.</p>
-<p>It is strictly non-parametric (no weights/biases) and non-temporal.</p>
+        <p>This module defines the absolute base for all ADMM layers.</p>
+<p>It manages the dual variable (<span class="arithmatex">\(\lambda\)</span>) updates, handles the global and local
+configuration setup, and dictates the generic forward pass routing.</p>
+<p>This class is designed to be strictly non-parametric (no weights or biases)
+and non-temporal. All mathematical spatial transformations must be implemented
+by subclasses.</p>
 
 
 
@@ -1378,7 +1480,7 @@ handles the configuration setup, and dictates the generic forward passes.</p>
 
 
 
-<h3 id="admm.core.ADMM_Layer" class="doc doc-heading">
+<h3 id="src.admm.base_layer.ADMM_Layer" class="doc doc-heading">
             <code>ADMM_Layer</code>
 
 
@@ -1392,8 +1494,9 @@ handles the configuration setup, and dictates the generic forward passes.</p>
 
 
         <p>The core Base Layer Interface for all ADMM modules.</p>
-<p>Manages the fundamental auxiliary variables (<span class="arithmatex">\(a\)</span>, <span class="arithmatex">\(z\)</span>, <span class="arithmatex">\(\lambda\)</span>) and securely
-handles the localized configuration setup.</p>
+<p>Acts as the blueprint for all trainable and non-trainable ADMM layers.
+It manages the fundamental Lagrangian multiplier (<span class="arithmatex">\(\lambda\)</span>) updates and
+securely handles the localized configuration setup.</p>
 
 
 
@@ -1403,11 +1506,8 @@ handles the localized configuration setup.</p>
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>admm\core.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 21</span>
-<span class="normal"> 22</span>
-<span class="normal"> 23</span>
-<span class="normal"> 24</span>
+                <summary>Source code in <code>src\admm\base_layer.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 24</span>
 <span class="normal"> 25</span>
 <span class="normal"> 26</span>
 <span class="normal"> 27</span>
@@ -1494,47 +1594,12 @@ handles the localized configuration setup.</p>
 <span class="normal">108</span>
 <span class="normal">109</span>
 <span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
-<span class="normal">135</span>
-<span class="normal">136</span>
-<span class="normal">137</span>
-<span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span>
-<span class="normal">141</span>
-<span class="normal">142</span>
-<span class="normal">143</span>
-<span class="normal">144</span>
-<span class="normal">145</span>
-<span class="normal">146</span>
-<span class="normal">147</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Layer</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="normal">111</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Layer</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;The core Base Layer Interface for all ADMM modules.</span>
 
-<span class="sd">    Manages the fundamental auxiliary variables ($a$, $z$, $\lambda$) and securely</span>
-<span class="sd">    handles the localized configuration setup.</span>
+<span class="sd">    Acts as the blueprint for all trainable and non-trainable ADMM layers.</span>
+<span class="sd">    It manages the fundamental Lagrangian multiplier ($\lambda$) updates and</span>
+<span class="sd">    securely handles the localized configuration setup.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -1545,27 +1610,25 @@ handles the localized configuration setup.</p>
         <span class="n">thetas</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">use_reset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">h</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMMLayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMM_LayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the base layer and its constraints.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            rho (float, optional): Affine penalty parameter. Defaults to None.</span>
-<span class="sd">            beta (float, optional): Activation penalty parameter. Defaults to None.</span>
-<span class="sd">            deltas (float, optional): Temporal leakage parameter. Defaults to None.</span>
+<span class="sd">            rho (float, optional): Affine penalty parameter ($\rho$). Defaults to the one set by the [layer configuration][src.admm.dataclasses.ADMM_LayerConfig].</span>
+<span class="sd">            beta (float, optional): Activation penalty parameter ($\beta$). Defaults to None.</span>
+<span class="sd">            deltas (float, optional): Temporal leakage parameter for spiking networks. Defaults to None.</span>
 <span class="sd">            thetas (float, optional): Spiking threshold parameter. Defaults to None.</span>
 <span class="sd">            use_reset (bool, optional): Whether to apply spike resets. Defaults to None.</span>
-<span class="sd">            h (nn.Module, optional): The activation function module. Defaults to ADMM_Identity.</span>
-<span class="sd">            config (ADMMLayerConfig, optional): Layer configuration object. Defaults to None.</span>
+<span class="sd">            h (nn.Module, optional): The [activation function][src.admm.activation_functions] module. Defaults to [ADMM_Identity][src.admm.activation_functions.ADMM_Identity].</span>
+<span class="sd">            config (ADMM_LayerConfig, optional): Local [layer configuration object][src.admm.dataclasses.ADMM_LayerConfig]. Defaults to standard configuration.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">lambda_lagrange</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">z</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">global_config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMM_Config</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">h</span> <span class="o">=</span> <span class="n">h</span> <span class="k">if</span> <span class="n">h</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ADMM_Identity</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span> <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ADMMLayerConfig</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span> <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ADMM_LayerConfig</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span> <span class="o">=</span> <span class="n">rho</span> <span class="k">if</span> <span class="n">rho</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="n">beta</span> <span class="k">if</span> <span class="n">beta</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">beta</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">deltas</span> <span class="o">=</span> <span class="n">deltas</span> <span class="k">if</span> <span class="n">deltas</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">deltas</span>
@@ -1574,38 +1637,27 @@ handles the localized configuration setup.</p>
             <span class="n">use_reset</span> <span class="k">if</span> <span class="n">use_reset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_reset</span>
         <span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMMConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Cascades configuration setup to child modules.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMM_Config</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Cascades the [global configuration][src.admm.dataclasses.ADMM_Config] setup to this layer and its child modules.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            global_config (ADMM_Config, optional): The network-wide configuration orchestrator.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">global_config</span> <span class="o">=</span> <span class="n">global_config</span>
 
         <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;h&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="p">,</span> <span class="s2">&quot;_setup&quot;</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="o">.</span><span class="n">_setup</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_broadcast_to_match</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">target_tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Helper method to safely align tensor dimensions for element-wise operations.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            tensor (torch.Tensor): The tensor to be broadcasted.</span>
-<span class="sd">            target_tensor (torch.Tensor): The reference tensor whose dimensions are matched.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            torch.Tensor: The broadcasted tensor matching the target&#39;s dimensionality.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">tensor</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">target_tensor</span><span class="o">.</span><span class="n">dim</span><span class="p">():</span>
-            <span class="n">missing_dims</span> <span class="o">=</span> <span class="n">target_tensor</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">-</span> <span class="n">tensor</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span>
-            <span class="k">return</span> <span class="n">tensor</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="o">*</span><span class="p">([</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">missing_dims</span><span class="p">))</span>
-        <span class="k">return</span> <span class="n">tensor</span>
-
     <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Standard sequential pass for initialization or inference.</span>
 
-<span class="sd">        * For Static Networks: Simply returns the spatial transformation ($y = Wx$).</span>
-<span class="sd">        * For Spiking Networks (SNNs): Simulates the mechanics step-by-step.</span>
+<span class="sd">        * For Static Networks: Simply returns the spatial transformation ($z_l = F_l(a_{l-1})$).</span>
+<span class="sd">        * For Spiking Networks (SNNs): Simulates the LIF mechanics.</span>
+
+<span class="sd">        To refer to its spiking counterpart, see [forward][src.admm.spiking_mixin.ADMM_Spiking.forward].</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            a_prev (torch.Tensor): The input tensor.</span>
+<span class="sd">            a_prev (torch.Tensor): The input tensor from the previous layer.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            torch.Tensor: The output tensor after the spatial pass.</span>
@@ -1613,50 +1665,23 @@ handles the localized configuration setup.</p>
         <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">y</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">vectorized_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Vectorized ADMM pass for optimization and constraint evaluation.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            a_prev (torch.Tensor): The previous layer&#39;s activations.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            torch.Tensor: The evaluated constraints including temporal dependencies.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">y</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">update_z_last</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">loss_f</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delegates the final layer&#39;s $z$ update to the active loss function.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            a_prev (torch.Tensor): The previous layer&#39;s activations.</span>
-<span class="sd">            labels (torch.Tensor): The ground truth target labels.</span>
-<span class="sd">            loss_f (ADMM_Loss, optional): The objective function managing the update. Defaults to None.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">forward</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vectorized_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
-        <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_broadcast_to_match</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">forward</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_lagrange</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_lagrange</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">lam</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_broadcast_to_match</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="p">,</span> <span class="n">forward</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">lam</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">forward</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="o">.</span><span class="n">copy_</span><span class="p">(</span><span class="n">loss_f</span><span class="o">.</span><span class="n">update_z_last_core</span><span class="p">(</span><span class="n">forward</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">lam</span><span class="p">))</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">update_lambda</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_lambda</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Updates the Lagrange multiplier ($\lambda$) based on the current layer constraints.</span>
 
 <span class="sd">        Formula evaluated:</span>
-<span class="sd">        $\lambda^{k+1}_l = \lambda^{k}_l + \rho_l (z_l - \text{forward}(a_{l-1}))$</span>
+<span class="sd">        $\lambda_l \leftarrow \lambda_l + \rho_l \big(z_l - F_l(a_{l-1})\big)$</span>
+
+<span class="sd">        You can find the corresponding spiking version [update_lambda][src.admm.spiking_mixin.ADMM_Spiking.update_lambda] in the [Spiking Mixin][src.admm.spiking_mixin] module.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            a_prev (torch.Tensor): The activations from the previous layer.</span>
+<span class="sd">            state (ADMM_LayerState): The [specific state][src.admm.dataclasses.ADMM_LayerState] object for the current layer containing the current dual variable.</span>
+<span class="sd">            a_prev (torch.Tensor): The activations from the previous layer to compute the forward constraint.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_lagrange</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_lagrange</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_lagrange</span> <span class="ow">or</span> <span class="n">state</span><span class="o">.</span><span class="n">lambda_lagrange</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span>
         <span class="n">forward</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">forward</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">z</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">forward</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -1676,7 +1701,7 @@ handles the localized configuration setup.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="admm.core.ADMM_Layer.__init__" class="doc doc-heading">
+<h4 id="src.admm.base_layer.ADMM_Layer.__init__" class="doc doc-heading">
             <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">rho</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">deltas</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">thetas</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_reset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h4>
@@ -1707,7 +1732,13 @@ handles the localized configuration setup.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Affine penalty parameter. Defaults to None.</p>
+                <p>Affine penalty parameter ($
+ho$). Defaults to the one set by the <a class="autorefs autorefs-internal" title="ADMM_LayerConfig
+
+
+  
+      dataclass
+  " href="../dataclasses/#src.admm.dataclasses.ADMM_LayerConfig">layer configuration</a>.</p>
               </div>
             </td>
             <td>
@@ -1723,7 +1754,7 @@ handles the localized configuration setup.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Activation penalty parameter. Defaults to None.</p>
+                <p>Activation penalty parameter (<span class="arithmatex">\(eta\)</span>). Defaults to None.</p>
               </div>
             </td>
             <td>
@@ -1739,7 +1770,7 @@ handles the localized configuration setup.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Temporal leakage parameter. Defaults to None.</p>
+                <p>Temporal leakage parameter for spiking networks. Defaults to None.</p>
               </div>
             </td>
             <td>
@@ -1787,7 +1818,7 @@ handles the localized configuration setup.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The activation function module. Defaults to ADMM_Identity.</p>
+                <p>The <a class="autorefs autorefs-internal" title="src.admm.activation_functions" href="../activation_functions/#src.admm.activation_functions">activation function</a> module. Defaults to <a class="autorefs autorefs-internal" href="../activation_functions/#src.admm.activation_functions.ADMM_Identity">ADMM_Identity</a>.</p>
               </div>
             </td>
             <td>
@@ -1799,16 +1830,21 @@ handles the localized configuration setup.</p>
                 <code>config</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="ADMMLayerConfig
+                  <code><a class="autorefs autorefs-internal" title="ADMM_LayerConfig
 
 
   
       dataclass
-   (admm.dataclasses.ADMMLayerConfig)" href="../dataclasses/#admm.dataclasses.ADMMLayerConfig">ADMMLayerConfig</a></code>
+   (src.admm.dataclasses.ADMM_LayerConfig)" href="../dataclasses/#src.admm.dataclasses.ADMM_LayerConfig">ADMM_LayerConfig</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Layer configuration object. Defaults to None.</p>
+                <p>Local <a class="autorefs autorefs-internal" title="ADMM_LayerConfig
+
+
+  
+      dataclass
+  " href="../dataclasses/#src.admm.dataclasses.ADMM_LayerConfig">layer configuration object</a>. Defaults to standard configuration.</p>
               </div>
             </td>
             <td>
@@ -1820,12 +1856,8 @@ handles the localized configuration setup.</p>
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\core.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
-<span class="normal">29</span>
-<span class="normal">30</span>
-<span class="normal">31</span>
-<span class="normal">32</span>
+              <summary>Source code in <code>src\admm\base_layer.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">32</span>
 <span class="normal">33</span>
 <span class="normal">34</span>
 <span class="normal">35</span>
@@ -1856,7 +1888,9 @@ handles the localized configuration setup.</p>
 <span class="normal">60</span>
 <span class="normal">61</span>
 <span class="normal">62</span>
-<span class="normal">63</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">rho</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">beta</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1864,27 +1898,25 @@ handles the localized configuration setup.</p>
     <span class="n">thetas</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">use_reset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">h</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMMLayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMM_LayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the base layer and its constraints.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        rho (float, optional): Affine penalty parameter. Defaults to None.</span>
-<span class="sd">        beta (float, optional): Activation penalty parameter. Defaults to None.</span>
-<span class="sd">        deltas (float, optional): Temporal leakage parameter. Defaults to None.</span>
+<span class="sd">        rho (float, optional): Affine penalty parameter ($\rho$). Defaults to the one set by the [layer configuration][src.admm.dataclasses.ADMM_LayerConfig].</span>
+<span class="sd">        beta (float, optional): Activation penalty parameter ($\beta$). Defaults to None.</span>
+<span class="sd">        deltas (float, optional): Temporal leakage parameter for spiking networks. Defaults to None.</span>
 <span class="sd">        thetas (float, optional): Spiking threshold parameter. Defaults to None.</span>
 <span class="sd">        use_reset (bool, optional): Whether to apply spike resets. Defaults to None.</span>
-<span class="sd">        h (nn.Module, optional): The activation function module. Defaults to ADMM_Identity.</span>
-<span class="sd">        config (ADMMLayerConfig, optional): Layer configuration object. Defaults to None.</span>
+<span class="sd">        h (nn.Module, optional): The [activation function][src.admm.activation_functions] module. Defaults to [ADMM_Identity][src.admm.activation_functions.ADMM_Identity].</span>
+<span class="sd">        config (ADMM_LayerConfig, optional): Local [layer configuration object][src.admm.dataclasses.ADMM_LayerConfig]. Defaults to standard configuration.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="bp">self</span><span class="o">.</span><span class="n">lambda_lagrange</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">z</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">global_config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMM_Config</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">h</span> <span class="o">=</span> <span class="n">h</span> <span class="k">if</span> <span class="n">h</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ADMM_Identity</span><span class="p">()</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span> <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ADMMLayerConfig</span><span class="p">()</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span> <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ADMM_LayerConfig</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span> <span class="o">=</span> <span class="n">rho</span> <span class="k">if</span> <span class="n">rho</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="n">beta</span> <span class="k">if</span> <span class="n">beta</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">beta</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">deltas</span> <span class="o">=</span> <span class="n">deltas</span> <span class="k">if</span> <span class="n">deltas</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">deltas</span>
@@ -1901,7 +1933,89 @@ handles the localized configuration setup.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="admm.core.ADMM_Layer.forward" class="doc doc-heading">
+<h4 id="src.admm.base_layer.ADMM_Layer._setup" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_setup</span><span class="p">(</span><span class="n">global_config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Cascades the <a class="autorefs autorefs-internal" title="ADMM_Config
+
+
+  
+      dataclass
+  " href="../dataclasses/#src.admm.dataclasses.ADMM_Config">global configuration</a> setup to this layer and its child modules.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>global_config</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ADMM_Config
+
+
+  
+      dataclass
+   (src.admm.dataclasses.ADMM_Config)" href="../dataclasses/#src.admm.dataclasses.ADMM_Config">ADMM_Config</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The network-wide configuration orchestrator.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\base_layer.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMM_Config</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cascades the [global configuration][src.admm.dataclasses.ADMM_Config] setup to this layer and its child modules.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        global_config (ADMM_Config, optional): The network-wide configuration orchestrator.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">global_config</span> <span class="o">=</span> <span class="n">global_config</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;h&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="p">,</span> <span class="s2">&quot;_setup&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">h</span><span class="o">.</span><span class="n">_setup</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.base_layer.ADMM_Layer.forward" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span></code>
 
 </h4>
@@ -1911,9 +2025,10 @@ handles the localized configuration setup.</p>
 
         <p>Standard sequential pass for initialization or inference.</p>
 <ul>
-<li>For Static Networks: Simply returns the spatial transformation (<span class="arithmatex">\(y = Wx\)</span>).</li>
-<li>For Spiking Networks (SNNs): Simulates the mechanics step-by-step.</li>
+<li>For Static Networks: Simply returns the spatial transformation (<span class="arithmatex">\(z_l = F_l(a_{l-1})\)</span>).</li>
+<li>For Spiking Networks (SNNs): Simulates the LIF mechanics.</li>
 </ul>
+<p>To refer to its spiking counterpart, see <a class="autorefs autorefs-internal" title="forward(a_prev, z_tminus1, a_tminus1)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking.forward">forward</a>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1936,7 +2051,7 @@ handles the localized configuration setup.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The input tensor.</p>
+                <p>The input tensor from the previous layer.</p>
               </div>
             </td>
             <td>
@@ -1971,28 +2086,32 @@ handles the localized configuration setup.</p>
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\core.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 89</span>
-<span class="normal"> 90</span>
-<span class="normal"> 91</span>
-<span class="normal"> 92</span>
-<span class="normal"> 93</span>
-<span class="normal"> 94</span>
-<span class="normal"> 95</span>
-<span class="normal"> 96</span>
-<span class="normal"> 97</span>
-<span class="normal"> 98</span>
-<span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+              <summary>Source code in <code>src\admm\base_layer.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span>
+<span class="normal">93</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Standard sequential pass for initialization or inference.</span>
 
-<span class="sd">    * For Static Networks: Simply returns the spatial transformation ($y = Wx$).</span>
-<span class="sd">    * For Spiking Networks (SNNs): Simulates the mechanics step-by-step.</span>
+<span class="sd">    * For Static Networks: Simply returns the spatial transformation ($z_l = F_l(a_{l-1})$).</span>
+<span class="sd">    * For Spiking Networks (SNNs): Simulates the LIF mechanics.</span>
+
+<span class="sd">    To refer to its spiking counterpart, see [forward][src.admm.spiking_mixin.ADMM_Spiking.forward].</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        a_prev (torch.Tensor): The input tensor.</span>
+<span class="sd">        a_prev (torch.Tensor): The input tensor from the previous layer.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        torch.Tensor: The output tensor after the spatial pass.</span>
@@ -2008,223 +2127,8 @@ handles the localized configuration setup.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="admm.core.ADMM_Layer.vectorized_forward" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">vectorized_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Vectorized ADMM pass for optimization and constraint evaluation.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>a_prev</code>
-            </td>
-            <td>
-                  <code><span title="torch.Tensor">Tensor</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The previous layer's activations.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="torch.Tensor">Tensor</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>torch.Tensor: The evaluated constraints including temporal dependencies.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\core.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">104</span>
-<span class="normal">105</span>
-<span class="normal">106</span>
-<span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">vectorized_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Vectorized ADMM pass for optimization and constraint evaluation.</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        a_prev (torch.Tensor): The previous layer&#39;s activations.</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        torch.Tensor: The evaluated constraints including temporal dependencies.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">y</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="admm.core.ADMM_Layer.update_z_last" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">update_z_last</span><span class="p">(</span><span class="n">a_prev</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">loss_f</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Delegates the final layer's <span class="arithmatex">\(z\)</span> update to the active loss function.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>a_prev</code>
-            </td>
-            <td>
-                  <code><span title="torch.Tensor">Tensor</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The previous layer's activations.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>labels</code>
-            </td>
-            <td>
-                  <code><span title="torch.Tensor">Tensor</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The ground truth target labels.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>loss_f</code>
-            </td>
-            <td>
-                  <code><span title="ADMM_Loss">ADMM_Loss</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The objective function managing the update. Defaults to None.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-            <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\core.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_z_last</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">loss_f</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delegates the final layer&#39;s $z$ update to the active loss function.</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        a_prev (torch.Tensor): The previous layer&#39;s activations.</span>
-<span class="sd">        labels (torch.Tensor): The ground truth target labels.</span>
-<span class="sd">        loss_f (ADMM_Loss, optional): The objective function managing the update. Defaults to None.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">forward</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vectorized_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
-    <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_broadcast_to_match</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">forward</span><span class="p">)</span>
-    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_lagrange</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_lagrange</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">lam</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_broadcast_to_match</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="p">,</span> <span class="n">forward</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">lam</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">forward</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="o">.</span><span class="n">copy_</span><span class="p">(</span><span class="n">loss_f</span><span class="o">.</span><span class="n">update_z_last_core</span><span class="p">(</span><span class="n">forward</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">lam</span><span class="p">))</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="admm.core.ADMM_Layer.update_lambda" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">update_lambda</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span></code>
+<h4 id="src.admm.base_layer.ADMM_Layer.update_lambda" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">update_lambda</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">)</span></code>
 
 </h4>
 
@@ -2233,7 +2137,8 @@ handles the localized configuration setup.</p>
 
         <p>Updates the Lagrange multiplier (<span class="arithmatex">\(\lambda\)</span>) based on the current layer constraints.</p>
 <p>Formula evaluated:
-<span class="arithmatex">\(\lambda^{k+1}_l = \lambda^{k}_l + \rho_l (z_l - \text{forward}(a_{l-1}))\)</span></p>
+<span class="arithmatex">\(\lambda_l \leftarrow \lambda_l + \rho_l \big(z_l - F_l(a_{l-1})\big)\)</span></p>
+<p>You can find the corresponding spiking version <a class="autorefs autorefs-internal" title="update_lambda(state, a_prev)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking.update_lambda">update_lambda</a> in the <a class="autorefs autorefs-internal" title="src.admm.spiking_mixin" href="../spiking_mixin/#src.admm.spiking_mixin">Spiking Mixin</a> module.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2249,6 +2154,32 @@ handles the localized configuration setup.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
+                <code>state</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ADMM_LayerState
+
+
+  
+      dataclass
+   (src.admm.dataclasses.ADMM_LayerState)" href="../dataclasses/#src.admm.dataclasses.ADMM_LayerState">ADMM_LayerState</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The <a class="autorefs autorefs-internal" title="ADMM_LayerState
+
+
+  
+      dataclass
+  " href="../dataclasses/#src.admm.dataclasses.ADMM_LayerState">specific state</a> object for the current layer containing the current dual variable.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
                 <code>a_prev</code>
             </td>
             <td>
@@ -2256,7 +2187,7 @@ handles the localized configuration setup.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The activations from the previous layer.</p>
+                <p>The activations from the previous layer to compute the forward constraint.</p>
               </div>
             </td>
             <td>
@@ -2268,34 +2199,40 @@ handles the localized configuration setup.</p>
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\core.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">134</span>
-<span class="normal">135</span>
-<span class="normal">136</span>
-<span class="normal">137</span>
-<span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span>
-<span class="normal">141</span>
-<span class="normal">142</span>
-<span class="normal">143</span>
-<span class="normal">144</span>
-<span class="normal">145</span>
-<span class="normal">146</span>
-<span class="normal">147</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_lambda</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <summary>Source code in <code>src\admm\base_layer.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_lambda</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Updates the Lagrange multiplier ($\lambda$) based on the current layer constraints.</span>
 
 <span class="sd">    Formula evaluated:</span>
-<span class="sd">    $\lambda^{k+1}_l = \lambda^{k}_l + \rho_l (z_l - \text{forward}(a_{l-1}))$</span>
+<span class="sd">    $\lambda_l \leftarrow \lambda_l + \rho_l \big(z_l - F_l(a_{l-1})\big)$</span>
+
+<span class="sd">    You can find the corresponding spiking version [update_lambda][src.admm.spiking_mixin.ADMM_Spiking.update_lambda] in the [Spiking Mixin][src.admm.spiking_mixin] module.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        a_prev (torch.Tensor): The activations from the previous layer.</span>
+<span class="sd">        state (ADMM_LayerState): The [specific state][src.admm.dataclasses.ADMM_LayerState] object for the current layer containing the current dual variable.</span>
+<span class="sd">        a_prev (torch.Tensor): The activations from the previous layer to compute the forward constraint.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_lagrange</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">lambda_lagrange</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_lagrange</span> <span class="ow">or</span> <span class="n">state</span><span class="o">.</span><span class="n">lambda_lagrange</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span>
     <span class="n">forward</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">forward</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
+    <span class="n">state</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">z</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
+    <span class="n">state</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">forward</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

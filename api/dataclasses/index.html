@@ -14,7 +14,7 @@
         <link rel="prev" href="../scheduler/">
       
       
-        <link rel="next" href="../solvers/">
+        <link rel="next" href="../weights_solvers/">
       
       
         
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#admm.dataclasses" class="md-skip">
+        <a href="#src.admm.dataclasses" class="md-skip">
           Skip to content
         </a>
       
@@ -232,7 +232,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../tutorials/linear.md" class="md-tabs__link">
+        <a href="../../tutorials/getting_started/" class="md-tabs__link">
           
   
   
@@ -363,8 +363,6 @@
       
         
       
-        
-      
     
     
     
@@ -415,42 +413,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/linear.md" class="md-nav__link">
+      <a href="../../tutorials/getting_started/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Basic Linear Networks
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tutorials/spiking_conv.md" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Spiking Convolutions
+    Getting Started
   
 
     
@@ -682,14 +652,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../core/" class="md-nav__link">
+      <a href="../base_layer/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Core Logic
+    Base Layer Logic
   
 
     
@@ -710,14 +680,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../affine/" class="md-nav__link">
+      <a href="../affine_layer/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Affine Logic
+    Affine Layer Logic
   
 
     
@@ -766,34 +736,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../convolutional_mixin/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Convolutional Logic
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../layers/" class="md-nav__link">
         
   
@@ -822,7 +764,63 @@
   
   
     <li class="md-nav__item">
-      <a href="../activations/" class="md-nav__link">
+      <a href="../covariance_handler/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Covariance Handler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../state_handler/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    State Handler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../activation_functions/" class="md-nav__link">
         
   
   
@@ -1046,7 +1044,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#admm.dataclasses" class="md-nav__link">
+  <a href="#src.admm.dataclasses" class="md-nav__link">
     <span class="md-ellipsis">
       
         dataclasses
@@ -1058,10 +1056,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.dataclasses.ADMMConfig" class="md-nav__link">
+  <a href="#src.admm.dataclasses.ADMM_Config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ADMMConfig
+        ADMM_Config
       
     </span>
   </a>
@@ -1069,10 +1067,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.dataclasses.ADMMLayerConfig" class="md-nav__link">
+  <a href="#src.admm.dataclasses.ADMM_LayerConfig" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ADMMLayerConfig
+        ADMM_LayerConfig
       
     </span>
   </a>
@@ -1080,10 +1078,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.dataclasses.ADMMState" class="md-nav__link">
+  <a href="#src.admm.dataclasses.ADMM_LayerState" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ADMMState
+        ADMM_LayerState
       
     </span>
   </a>
@@ -1091,7 +1089,29 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.dataclasses.TemporalCache" class="md-nav__link">
+  <a href="#src.admm.dataclasses.ADMM_BatchState" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADMM_BatchState
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.dataclasses.ADMM_LayerCovariance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADMM_LayerCovariance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.dataclasses.TemporalCache" class="md-nav__link">
     <span class="md-ellipsis">
       
         TemporalCache
@@ -1103,7 +1123,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.dataclasses.TemporalCache.build" class="md-nav__link">
+  <a href="#src.admm.dataclasses.TemporalCache.build" class="md-nav__link">
     <span class="md-ellipsis">
       
         build
@@ -1138,15 +1158,75 @@
   
   
   
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Functional
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Functional
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../solvers/" class="md-nav__link">
+      <a href="../weights_solvers/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Solvers
+    Weights Solvers
   
 
     
@@ -1167,14 +1247,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../temporal_helpers/" class="md-nav__link">
+      <a href="../a_update_solvers/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Helpers
+    Activation Update Solvers
   
 
     
@@ -1183,6 +1263,70 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fft_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FFT-Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1220,7 +1364,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#admm.dataclasses" class="md-nav__link">
+  <a href="#src.admm.dataclasses" class="md-nav__link">
     <span class="md-ellipsis">
       
         dataclasses
@@ -1232,10 +1376,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.dataclasses.ADMMConfig" class="md-nav__link">
+  <a href="#src.admm.dataclasses.ADMM_Config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ADMMConfig
+        ADMM_Config
       
     </span>
   </a>
@@ -1243,10 +1387,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.dataclasses.ADMMLayerConfig" class="md-nav__link">
+  <a href="#src.admm.dataclasses.ADMM_LayerConfig" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ADMMLayerConfig
+        ADMM_LayerConfig
       
     </span>
   </a>
@@ -1254,10 +1398,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.dataclasses.ADMMState" class="md-nav__link">
+  <a href="#src.admm.dataclasses.ADMM_LayerState" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ADMMState
+        ADMM_LayerState
       
     </span>
   </a>
@@ -1265,7 +1409,29 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#admm.dataclasses.TemporalCache" class="md-nav__link">
+  <a href="#src.admm.dataclasses.ADMM_BatchState" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADMM_BatchState
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.dataclasses.ADMM_LayerCovariance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADMM_LayerCovariance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.dataclasses.TemporalCache" class="md-nav__link">
     <span class="md-ellipsis">
       
         TemporalCache
@@ -1277,7 +1443,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#admm.dataclasses.TemporalCache.build" class="md-nav__link">
+  <a href="#src.admm.dataclasses.TemporalCache.build" class="md-nav__link">
     <span class="md-ellipsis">
       
         build
@@ -1320,8 +1486,8 @@
 
 
 
-<h2 id="admm.dataclasses" class="doc doc-heading">
-            <code>admm.dataclasses</code>
+<h2 id="src.admm.dataclasses" class="doc doc-heading">
+            <code>src.admm.dataclasses</code>
 
 
 </h2>
@@ -1356,8 +1522,8 @@ and dynamic optimization states.</p>
 
 
 
-<h3 id="admm.dataclasses.ADMMConfig" class="doc doc-heading">
-            <code>ADMMConfig</code>
+<h3 id="src.admm.dataclasses.ADMM_Config" class="doc doc-heading">
+            <code>ADMM_Config</code>
 
 
   <span class="doc doc-labels">
@@ -1388,7 +1554,7 @@ mathematical solver methods are deployed.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMConfig.init">init</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_Config.init">init</span></code></td>
             <td>
                   <code><span title="str">str</span></code>
             </td>
@@ -1397,12 +1563,12 @@ mathematical solver methods are deployed.</p>
                 <p>The strategy used to initialize the auxiliary states (<span class="arithmatex">\(z\)</span> and <span class="arithmatex">\(a\)</span>)
 before the first optimization step. Options include <code>"zeros"</code>, <code>"xavier"</code>,
 <code>"pytorch"</code>, <code>"z-uniform"</code>, <code>"s-uniform"</code>, and <code>"relaxed"</code>. Defaults to <code>"s-uniform"</code>.
-For specific information on each strategy, refer to the <a class="autorefs autorefs-internal" title="admm.initializers" href="../initializers/#admm.initializers">initializers</a>.</p>
+For specific information on each strategy, refer to the <a class="autorefs autorefs-internal" title="src.admm.initializers" href="../initializers/#src.admm.initializers">initializers</a>.</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMConfig.train_method">train_method</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_Config.train_method">train_method</span></code></td>
             <td>
                   <code><span title="str">str</span></code>
             </td>
@@ -1416,7 +1582,7 @@ Defaults to <code>"decoupled-backwards"</code>.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMConfig.layer_order">layer_order</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_Config.layer_order">layer_order</span></code></td>
             <td>
                   <code><span title="str">str</span></code>
             </td>
@@ -1429,7 +1595,7 @@ and <code>"random-last"</code>. Defaults to <code>"backwards"</code>.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMConfig.update_z_first">update_z_first</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_Config.update_z_first">update_z_first</span></code></td>
             <td>
                   <code><span title="bool">bool</span></code>
             </td>
@@ -1438,6 +1604,18 @@ and <code>"random-last"</code>. Defaults to <code>"backwards"</code>.</p>
                 <p>A boolean flag determining the sub-step order. If True,
 the pre-activations (<span class="arithmatex">\(z\)</span>) are updated before the activations (<span class="arithmatex">\(a\)</span>).
 Defaults to <code>False</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.ADMM_Config.solver">solver</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The solver used in to compute the weight update. Options are <code>"standard"</code>, <code>"conjugate-gradient"</code>, <code>"cholesky"</code>.
+Defaults to <code>"standard"</code>. For specific information on each solver, refer to the <a class="autorefs autorefs-internal" title="src.admm.functional.weights_solvers" href="../weights_solvers/#src.admm.functional.weights_solvers">weights solvers</a>.</p>
               </div>
             </td>
           </tr>
@@ -1452,7 +1630,7 @@ Defaults to <code>False</code>.</p>
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>admm\dataclasses.py</code></summary>
+                <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">14</span>
 <span class="normal">15</span>
 <span class="normal">16</span>
@@ -1523,8 +1701,18 @@ Defaults to <code>False</code>.</p>
 <span class="normal">81</span>
 <span class="normal">82</span>
 <span class="normal">83</span>
-<span class="normal">84</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">ADMMConfig</span><span class="p">:</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span>
+<span class="normal">93</span>
+<span class="normal">94</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Config</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Universal global configuration class for the ADMM Manager.</span>
 
 <span class="sd">    Defines the global behavior of the ADMM optimization loop, dictating how</span>
@@ -1535,7 +1723,7 @@ Defaults to <code>False</code>.</p>
 <span class="sd">        init (str): The strategy used to initialize the auxiliary states ($z$ and $a$)</span>
 <span class="sd">            before the first optimization step. Options include `&quot;zeros&quot;`, `&quot;xavier&quot;`,</span>
 <span class="sd">            `&quot;pytorch&quot;`, `&quot;z-uniform&quot;`, `&quot;s-uniform&quot;`, and `&quot;relaxed&quot;`. Defaults to `&quot;s-uniform&quot;`.</span>
-<span class="sd">            For specific information on each strategy, refer to the [initializers][admm.initializers].</span>
+<span class="sd">            For specific information on each strategy, refer to the [initializers][src.admm.initializers].</span>
 <span class="sd">        train_method (str): The specific algorithmic sequence used to update the network.</span>
 <span class="sd">            For static networks, this must be `&quot;vectorized&quot;`, `&quot;unrolled-random&quot;`, `&quot;unrolled-sequential&quot;`,</span>
 <span class="sd">            `&quot;decoupled-random&quot;`, `&quot;decoupled-sequential&quot;`, `&quot;unrolled-backwards&quot;` and `&quot;decoupled-backwards&quot;`.</span>
@@ -1546,12 +1734,15 @@ Defaults to <code>False</code>.</p>
 <span class="sd">        update_z_first (bool): A boolean flag determining the sub-step order. If True,</span>
 <span class="sd">            the pre-activations ($z$) are updated before the activations ($a$).</span>
 <span class="sd">            Defaults to `False`.</span>
+<span class="sd">        solver (str): The solver used in to compute the weight update. Options are `&quot;standard&quot;`, `&quot;conjugate-gradient&quot;`, `&quot;cholesky&quot;`.</span>
+<span class="sd">            Defaults to `&quot;standard&quot;`. For specific information on each solver, refer to the [weights solvers][src.admm.functional.weights_solvers].</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">init</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;s-uniform&quot;</span>
     <span class="n">train_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;decoupled-backwards&quot;</span>
     <span class="n">layer_order</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;backwards&quot;</span>
     <span class="n">update_z_first</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">solver</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;standard&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># Validate initialization strategies</span>
@@ -1589,6 +1780,13 @@ Defaults to <code>False</code>.</p>
                 <span class="sa">f</span><span class="s2">&quot;Invalid layer_order &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">layer_order</span><span class="si">}</span><span class="s2">&#39;. Allowed: </span><span class="si">{</span><span class="n">valid_orders</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
 
+        <span class="c1"># Validate solver</span>
+        <span class="n">valid_solvers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;standard&quot;</span><span class="p">,</span> <span class="s2">&quot;conjugate-gradient&quot;</span><span class="p">,</span> <span class="s2">&quot;cholesky&quot;</span><span class="p">}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solver</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_solvers</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid solver &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">solver</span><span class="si">}</span><span class="s2">&#39;. Allowed: </span><span class="si">{</span><span class="n">valid_solvers</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
         <span class="c1"># Enforce boolean types</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_z_first</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
@@ -1622,8 +1820,8 @@ Defaults to <code>False</code>.</p>
 
 
 
-<h3 id="admm.dataclasses.ADMMLayerConfig" class="doc doc-heading">
-            <code>ADMMLayerConfig</code>
+<h3 id="src.admm.dataclasses.ADMM_LayerConfig" class="doc doc-heading">
+            <code>ADMM_LayerConfig</code>
 
 
   <span class="doc doc-labels">
@@ -1653,7 +1851,7 @@ configuration, allowing for localized tuning of ADMM penalties and physics param
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMLayerConfig.rho">rho</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerConfig.rho">rho</span></code></td>
             <td>
                   <code><span title="float">float</span></code>
             </td>
@@ -1666,7 +1864,7 @@ Defaults to <code>1.0</code>.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMLayerConfig.beta">beta</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerConfig.beta">beta</span></code></td>
             <td>
                   <code><span title="float">float</span></code>
             </td>
@@ -1679,7 +1877,7 @@ Defaults to <code>1.0</code>.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMLayerConfig.thetas">thetas</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerConfig.thetas">thetas</span></code></td>
             <td>
                   <code><span title="float">float</span></code>
             </td>
@@ -1692,7 +1890,7 @@ to emit a spike. Defaults to <code>None</code>.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMLayerConfig.deltas">deltas</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerConfig.deltas">deltas</span></code></td>
             <td>
                   <code><span title="float">float</span></code>
             </td>
@@ -1704,7 +1902,7 @@ how much membrane potential is retained between time steps. Defaults to <code>No
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMLayerConfig.use_lagrange">use_lagrange</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerConfig.use_lagrange">use_lagrange</span></code></td>
             <td>
                   <code><span title="bool">bool</span></code>
             </td>
@@ -1716,7 +1914,7 @@ If disabled, the algorithm operates as an unconstrained penalty method. Defaults
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMLayerConfig.use_bias">use_bias</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerConfig.use_bias">use_bias</span></code></td>
             <td>
                   <code><span title="bool">bool</span></code>
             </td>
@@ -1728,7 +1926,7 @@ optimize a trainable bias vector. Defaults to <code>False</code>.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMLayerConfig.use_reset">use_reset</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerConfig.use_reset">use_reset</span></code></td>
             <td>
                   <code><span title="bool">bool</span></code>
             </td>
@@ -1736,18 +1934,6 @@ optimize a trainable bias vector. Defaults to <code>False</code>.</p>
               <div class="doc-md-description">
                 <p>Flag determining if the layer should apply a voltage reset
 penalty after a spike is emitted (soft-reset mechanics). Defaults to <code>True</code>. Only applicable for SNNs.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMLayerConfig.use_cholesky">use_cholesky</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Flag indicating if the spatial weights solver should use
-a Cholesky decomposition (faster) instead of a standard Pseudo-Inverse. Defaults to <code>True</code>.</p>
               </div>
             </td>
           </tr>
@@ -1762,18 +1948,8 @@ a Cholesky decomposition (faster) instead of a standard Pseudo-Inverse. Defaults
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 87</span>
-<span class="normal"> 88</span>
-<span class="normal"> 89</span>
-<span class="normal"> 90</span>
-<span class="normal"> 91</span>
-<span class="normal"> 92</span>
-<span class="normal"> 93</span>
-<span class="normal"> 94</span>
-<span class="normal"> 95</span>
-<span class="normal"> 96</span>
-<span class="normal"> 97</span>
+                <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
 <span class="normal">100</span>
@@ -1818,8 +1994,16 @@ a Cholesky decomposition (faster) instead of a standard Pseudo-Inverse. Defaults
 <span class="normal">139</span>
 <span class="normal">140</span>
 <span class="normal">141</span>
-<span class="normal">142</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">ADMMLayerConfig</span><span class="p">:</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ADMM_LayerConfig</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Universal configuration container for layer-specific ADMM hyperparameters.</span>
 
 <span class="sd">    Each mathematical layer in the network maintains its own instance of this</span>
@@ -1843,8 +2027,6 @@ a Cholesky decomposition (faster) instead of a standard Pseudo-Inverse. Defaults
 <span class="sd">            optimize a trainable bias vector. Defaults to `False`.</span>
 <span class="sd">        use_reset (bool): Flag determining if the layer should apply a voltage reset</span>
 <span class="sd">            penalty after a spike is emitted (soft-reset mechanics). Defaults to `True`. Only applicable for SNNs.</span>
-<span class="sd">        use_cholesky (bool): Flag indicating if the spatial weights solver should use</span>
-<span class="sd">            a Cholesky decomposition (faster) instead of a standard Pseudo-Inverse. Defaults to `True`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">rho</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
@@ -1853,8 +2035,8 @@ a Cholesky decomposition (faster) instead of a standard Pseudo-Inverse. Defaults
     <span class="n">deltas</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">use_lagrange</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="n">use_bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">use_reset</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="n">use_cholesky</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">use_reset</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># This should be updated in the future to be authomatic. Maybe creating some kind of computation graph</span>
+    <span class="n">use_fft</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># Only applicable for convolutional layers</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># Validate math penalties (must be strictly positive)</span>
@@ -1870,7 +2052,7 @@ a Cholesky decomposition (faster) instead of a standard Pseudo-Inverse. Defaults
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;deltas must be a numeric value, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">deltas</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="c1"># Strictly enforce booleans for flags to prevent silent type-casting bugs</span>
-        <span class="k">for</span> <span class="n">flag</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;use_lagrange&quot;</span><span class="p">,</span> <span class="s2">&quot;use_bias&quot;</span><span class="p">,</span> <span class="s2">&quot;use_reset&quot;</span><span class="p">,</span> <span class="s2">&quot;use_cholesky&quot;</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">flag</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;use_lagrange&quot;</span><span class="p">,</span> <span class="s2">&quot;use_bias&quot;</span><span class="p">,</span> <span class="s2">&quot;use_reset&quot;</span><span class="p">]:</span>
             <span class="n">val</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">flag</span><span class="si">}</span><span class="s2"> must be a boolean, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -1902,8 +2084,8 @@ a Cholesky decomposition (faster) instead of a standard Pseudo-Inverse. Defaults
 
 
 
-<h3 id="admm.dataclasses.ADMMState" class="doc doc-heading">
-            <code>ADMMState</code>
+<h3 id="src.admm.dataclasses.ADMM_LayerState" class="doc doc-heading">
+            <code>ADMM_LayerState</code>
 
 
   <span class="doc doc-labels">
@@ -1917,7 +2099,7 @@ a Cholesky decomposition (faster) instead of a standard Pseudo-Inverse. Defaults
 
 
 
-        <p>Universal container for dynamic ADMM variables passed during activation updates.</p>
+        <p>Holds the persistent ADMM memory for a single layer for a specific batch.</p>
 
 
 <p><span class="doc-section-title">Attributes:</span></p>
@@ -1931,47 +2113,35 @@ a Cholesky decomposition (faster) instead of a standard Pseudo-Inverse. Defaults
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMState.forward">forward</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerState.z">z</span></code></td>
             <td>
                   <code><span title="torch.Tensor">Tensor</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The spatial forward pass tensor (<span class="arithmatex">\(y = Wx + b\)</span>).</p>
+                <p>The pre-activation / membrane potential tensor.</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMState.a">a</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerState.a">a</span></code></td>
             <td>
                   <code><span title="torch.Tensor">Tensor</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The current activation tensor from the layer.</p>
+                <p>The activation / spike tensor.</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMState.z">z</span></code></td>
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerState.lambda_lagrange">lambda_lagrange</span></code></td>
             <td>
                   <code><span title="torch.Tensor">Tensor</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The pre-activation / membrane potential tensor. Defaults to <code>None</code>.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.ADMMState.z_minus_forward">z_minus_forward</span></code></td>
-            <td>
-                  <code><span title="torch.Tensor">Tensor</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The calculated temporal residual used
-in recurrent SNN updates. Defaults to <code>None</code>.</p>
+                <p>The dual variable (Lagrange multiplier) tensor.</p>
               </div>
             </td>
           </tr>
@@ -1986,38 +2156,32 @@ in recurrent SNN updates. Defaults to <code>None</code>.</p>
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">145</span>
-<span class="normal">146</span>
-<span class="normal">147</span>
-<span class="normal">148</span>
-<span class="normal">149</span>
-<span class="normal">150</span>
-<span class="normal">151</span>
-<span class="normal">152</span>
-<span class="normal">153</span>
+                <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">153</span>
 <span class="normal">154</span>
 <span class="normal">155</span>
 <span class="normal">156</span>
 <span class="normal">157</span>
 <span class="normal">158</span>
 <span class="normal">159</span>
-<span class="normal">160</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">ADMMState</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Universal container for dynamic ADMM variables passed during activation updates.</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ADMM_LayerState</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Holds the persistent ADMM memory for a single layer for a specific batch.</span>
 
 <span class="sd">    Attributes:</span>
-<span class="sd">        forward (torch.Tensor): The spatial forward pass tensor ($y = Wx + b$).</span>
-<span class="sd">        a (torch.Tensor): The current activation tensor from the layer.</span>
-<span class="sd">        z (torch.Tensor, optional): The pre-activation / membrane potential tensor. Defaults to `None`.</span>
-<span class="sd">        z_minus_forward (torch.Tensor, optional): The calculated temporal residual used</span>
-<span class="sd">            in recurrent SNN updates. Defaults to `None`.</span>
+<span class="sd">        z (torch.Tensor): The pre-activation / membrane potential tensor.</span>
+<span class="sd">        a (torch.Tensor): The activation / spike tensor.</span>
+<span class="sd">        lambda_lagrange (torch.Tensor, optional): The dual variable (Lagrange multiplier) tensor.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">forward</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
-    <span class="n">a</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
-    <span class="n">z</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">z_minus_forward</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">z</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">a</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">lambda_lagrange</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -2046,7 +2210,282 @@ in recurrent SNN updates. Defaults to <code>None</code>.</p>
 
 
 
-<h3 id="admm.dataclasses.TemporalCache" class="doc doc-heading">
+<h3 id="src.admm.dataclasses.ADMM_BatchState" class="doc doc-heading">
+            <code>ADMM_BatchState</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>Holds the complete network state for a single batch of data.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.ADMM_BatchState.batch_id">batch_id</span></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifier for this batch on the hard drive.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.ADMM_BatchState.layer_states">layer_states</span></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="ADMM_LayerState
+
+
+  
+      dataclass
+   (src.admm.dataclasses.ADMM_LayerState)" href="#src.admm.dataclasses.ADMM_LayerState">ADMM_LayerState</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The memory states for each layer,
+ordered from input (layer 0) to output (layer L-1).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+              <details class="mkdocstrings-source">
+                <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ADMM_BatchState</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Holds the complete network state for a single batch of data.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        batch_id (int): The unique identifier for this batch on the hard drive.</span>
+<span class="sd">        layer_states (list[ADMM_LayerState]): The memory states for each layer,</span>
+<span class="sd">            ordered from input (layer 0) to output (layer L-1).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">batch_id</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">layer_states</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ADMM_LayerState</span><span class="p">]</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="src.admm.dataclasses.ADMM_LayerCovariance" class="doc doc-heading">
+            <code>ADMM_LayerCovariance</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>Holds the global accumulated matrices for a layer's parameter (weights and bias) updates.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerCovariance.numerator">numerator</span></code></td>
+            <td>
+                  <code><span title="typing.Union">Union</span>[<span title="float">float</span>, <span title="torch.Tensor">Tensor</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The accumulated <span class="arithmatex">\(Y^T P\)</span> numerator matrix.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerCovariance.denominator">denominator</span></code></td>
+            <td>
+                  <code><span title="typing.Union">Union</span>[<span title="float">float</span>, <span title="torch.Tensor">Tensor</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The accumulated <span class="arithmatex">\(P^T P\)</span> denominator matrix.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerCovariance.bias_sum">bias_sum</span></code></td>
+            <td>
+                  <code><span title="typing.Union">Union</span>[<span title="float">float</span>, <span title="torch.Tensor">Tensor</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The accumulated residual sum for bias updates.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerCovariance.bias_count">bias_count</span></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The number of elements accumulated in the bias sum.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.ADMM_LayerCovariance.pinv">pinv</span></code></td>
+            <td>
+                  <code><span title="torch.Tensor">Tensor</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The cached pseudo-inverse matrix to speed up solves.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+              <details class="mkdocstrings-source">
+                <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ADMM_LayerCovariance</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Holds the global accumulated matrices for a layer&#39;s parameter (weights and bias) updates.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        numerator (Union[float, torch.Tensor]): The accumulated $Y^T P$ numerator matrix.</span>
+<span class="sd">        denominator (Union[float, torch.Tensor]): The accumulated $P^T P$ denominator matrix.</span>
+<span class="sd">        bias_sum (Union[float, torch.Tensor]): The accumulated residual sum for bias updates.</span>
+<span class="sd">        bias_count (int): The number of elements accumulated in the bias sum.</span>
+<span class="sd">        pinv (torch.Tensor, optional): The cached pseudo-inverse matrix to speed up solves.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">numerator</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">denominator</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">bias_sum</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">bias_count</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">pinv</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="src.admm.dataclasses.TemporalCache" class="doc doc-heading">
             <code>TemporalCache</code>
 
 
@@ -2077,7 +2516,7 @@ matrix calculations during time-step iterations.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.TemporalCache.forward_pass">forward_pass</span></code></td>
+            <td><code><span title="src.admm.dataclasses.TemporalCache.forward_pass">forward_pass</span></code></td>
             <td>
                   <code><span title="torch.Tensor">Tensor</span></code>
             </td>
@@ -2088,7 +2527,18 @@ matrix calculations during time-step iterations.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.TemporalCache.denominator_main">denominator_main</span></code></td>
+            <td><code><span title="src.admm.dataclasses.TemporalCache.W_expanded">W_expanded</span></code></td>
+            <td>
+                  <code><span title="torch.Tensor">Tensor</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The expanded weight matrix of the next layer.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.TemporalCache.denominator_main">denominator_main</span></code></td>
             <td>
                   <code><span title="torch.Tensor">Tensor</span></code>
             </td>
@@ -2099,7 +2549,7 @@ matrix calculations during time-step iterations.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.TemporalCache.denominator_last">denominator_last</span></code></td>
+            <td><code><span title="src.admm.dataclasses.TemporalCache.denominator_last">denominator_last</span></code></td>
             <td>
                   <code><span title="torch.Tensor">Tensor</span></code>
             </td>
@@ -2110,13 +2560,24 @@ matrix calculations during time-step iterations.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="admm.dataclasses.TemporalCache.adjoint">adjoint</span></code></td>
+            <td><code><span title="src.admm.dataclasses.TemporalCache.adjoint">adjoint</span></code></td>
             <td>
                   <code><span title="torch.Tensor">Tensor</span></code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>The precomputed adjoint operator mapping the next layer's errors backwards.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.TemporalCache.route">route</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Solving strategy for the activation parameter.</p>
               </div>
             </td>
           </tr>
@@ -2131,46 +2592,8 @@ matrix calculations during time-step iterations.</p>
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">163</span>
-<span class="normal">164</span>
-<span class="normal">165</span>
-<span class="normal">166</span>
-<span class="normal">167</span>
-<span class="normal">168</span>
-<span class="normal">169</span>
-<span class="normal">170</span>
-<span class="normal">171</span>
-<span class="normal">172</span>
-<span class="normal">173</span>
-<span class="normal">174</span>
-<span class="normal">175</span>
-<span class="normal">176</span>
-<span class="normal">177</span>
-<span class="normal">178</span>
-<span class="normal">179</span>
-<span class="normal">180</span>
-<span class="normal">181</span>
-<span class="normal">182</span>
-<span class="normal">183</span>
-<span class="normal">184</span>
-<span class="normal">185</span>
-<span class="normal">186</span>
-<span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
-<span class="normal">192</span>
-<span class="normal">193</span>
-<span class="normal">194</span>
-<span class="normal">195</span>
-<span class="normal">196</span>
-<span class="normal">197</span>
-<span class="normal">198</span>
-<span class="normal">199</span>
-<span class="normal">200</span>
-<span class="normal">201</span>
+                <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">201</span>
 <span class="normal">202</span>
 <span class="normal">203</span>
 <span class="normal">204</span>
@@ -2190,7 +2613,98 @@ matrix calculations during time-step iterations.</p>
 <span class="normal">218</span>
 <span class="normal">219</span>
 <span class="normal">220</span>
-<span class="normal">221</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">TemporalCache</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Holds precomputed tensors to accelerate unrolled SNN temporal loops.</span>
 
@@ -2199,19 +2713,28 @@ matrix calculations during time-step iterations.</p>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        forward_pass (torch.Tensor): The precomputed spatial forward pass for the entire sequence.</span>
+<span class="sd">        W_expanded (torch.Tensor): The expanded weight matrix of the next layer.</span>
 <span class="sd">        denominator_main (torch.Tensor): The left-hand side (LHS) system matrix for time steps $t &lt; T$.</span>
 <span class="sd">        denominator_last (torch.Tensor): The left-hand side (LHS) system matrix for time step $t = T$.</span>
 <span class="sd">        adjoint (torch.Tensor): The precomputed adjoint operator mapping the next layer&#39;s errors backwards.</span>
+<span class="sd">        route (str): Solving strategy for the activation parameter.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">forward_pass</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
-    <span class="n">denominator_main</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
-    <span class="n">denominator_last</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">W_expanded</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
     <span class="n">adjoint</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">route</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">denominator_main</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">denominator_last</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span>
-        <span class="bp">cls</span><span class="p">,</span> <span class="n">layer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="n">next_layer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">layer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+        <span class="n">next_layer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+        <span class="n">next_state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span>
+        <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;TemporalCache&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Precomputes and distributes operations to accelerate the unrolled loop.</span>
 
@@ -2222,29 +2745,73 @@ matrix calculations during time-step iterations.</p>
 <span class="sd">            layer (nn.Module): The current layer.</span>
 <span class="sd">            next_layer (nn.Module): The subsequent layer in the network.</span>
 <span class="sd">            a_prev (torch.Tensor): The previous layer&#39;s activations.</span>
+<span class="sd">            state (ADMM_LayerState): The current layer state.</span>
+<span class="sd">            next_state (ADMM_LayerState): The subsequent layer state.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            TemporalCache: A typed data class containing the precomputed matrices.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Delay the import to prevent circular dependencies</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.functional.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">should_use_woodbury</span>
+
         <span class="c1"># 1- Forward Pass</span>
         <span class="n">forward_pass</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">spatial_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
 
-        <span class="c1"># 2- Denominator</span>
-        <span class="n">denominator_main</span><span class="p">,</span> <span class="n">denominator_last</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">_get_a_denominator</span><span class="p">(</span>
-            <span class="n">beta_current</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">beta</span><span class="p">,</span>
-            <span class="n">rho_current</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">,</span>
-            <span class="n">thetas_current</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span><span class="p">,</span>
-            <span class="n">a_shape</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
-            <span class="n">unrolled</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="c1"># Expand weights for the next layer</span>
+        <span class="n">W_expanded</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">pool_op</span><span class="o">.</span><span class="n">expand_weights</span><span class="p">(</span><span class="n">next_layer</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 
-        <span class="c1"># 3- Term 2</span>
-        <span class="n">adjoint</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">_get_a_adjoint</span><span class="p">(</span>
-            <span class="n">next_layer</span><span class="o">=</span><span class="n">next_layer</span>
-        <span class="p">)</span>  <span class="c1"># forward_pass=forward_pass)  DEPRECATED</span>
+        <span class="c1"># 3- Denominator</span>
+        <span class="n">denominator_main</span><span class="p">,</span> <span class="n">denominator_last</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_fft</span>
+            <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;convolution&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">next_layer</span><span class="p">,</span> <span class="s2">&quot;convolution&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="n">route</span> <span class="o">=</span> <span class="s2">&quot;fft&quot;</span>
+            <span class="n">den_main</span><span class="p">,</span> <span class="n">den_last</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">_get_fft_a_denominator</span><span class="p">(</span>
+                <span class="n">config_prev</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">a_shape</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span>
+            <span class="p">)</span>
+            <span class="c1"># We want to cached it inverted</span>
+            <span class="n">denominator_main</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">den_main</span>
+            <span class="n">denominator_last</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">den_last</span>
+
+        <span class="k">elif</span> <span class="n">should_use_woodbury</span><span class="p">(</span><span class="n">W</span><span class="o">=</span><span class="n">next_layer</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">W_expanded</span><span class="o">=</span><span class="n">W_expanded</span><span class="p">):</span>
+            <span class="n">route</span> <span class="o">=</span> <span class="s2">&quot;woodbury&quot;</span>
+            <span class="c1"># Main timesteps (t &lt; T) absorb the SNN temporal reset penalty directly into β.</span>
+            <span class="n">temporal_penalty</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span> <span class="o">*</span> <span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">beta_main</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">beta</span> <span class="o">+</span> <span class="n">temporal_penalty</span>
+            <span class="n">beta_last</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">beta</span>
+            <span class="c1"># ρ_{l+1} * W_{l+1} * W_{l+1}^T</span>
+            <span class="n">WtW</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">W_expanded</span><span class="p">,</span> <span class="n">W_expanded</span><span class="o">.</span><span class="n">t</span><span class="p">())</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">next_layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
+
+            <span class="c1"># (β* I_M + ρ_{l+1} * W_{l+1} * W_{l+1}^T)^{-1}</span>
+            <span class="n">mat_main</span> <span class="o">=</span> <span class="n">WtW</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+            <span class="n">mat_main</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">beta_main</span><span class="p">)</span>
+            <span class="n">denominator_main</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">mat_main</span><span class="p">)</span>
+
+            <span class="n">mat_last</span> <span class="o">=</span> <span class="n">WtW</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+            <span class="n">mat_last</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">beta_last</span><span class="p">)</span>
+            <span class="n">denominator_last</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">mat_last</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">route</span> <span class="o">=</span> <span class="s2">&quot;standard&quot;</span>
+            <span class="n">denominator_main</span><span class="p">,</span> <span class="n">denominator_last</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">_get_a_denominator</span><span class="p">(</span>
+                <span class="n">config_prev</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
+                <span class="n">W_expanded</span><span class="o">=</span><span class="n">W_expanded</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="c1"># We want to cached the inverted matrix</span>
+            <span class="n">denominator_main</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">denominator_main</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">denominator_last</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">denominator_last</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># 3- Adjoint</span>
+        <span class="n">inside_adjoint</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">get_v</span><span class="p">(</span><span class="n">next_state</span><span class="p">)</span>
+        <span class="n">adjoint</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">adjoint_operator</span><span class="p">(</span>
+            <span class="n">inside_adjoint</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span>
+        <span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
             <span class="n">forward_pass</span><span class="o">=</span><span class="n">forward_pass</span><span class="p">,</span>
+            <span class="n">W_expanded</span><span class="o">=</span><span class="n">W_expanded</span><span class="p">,</span>
+            <span class="n">route</span><span class="o">=</span><span class="n">route</span><span class="p">,</span>
             <span class="n">denominator_main</span><span class="o">=</span><span class="n">denominator_main</span><span class="p">,</span>
             <span class="n">denominator_last</span><span class="o">=</span><span class="n">denominator_last</span><span class="p">,</span>
             <span class="n">adjoint</span><span class="o">=</span><span class="n">adjoint</span><span class="p">,</span>
@@ -2268,8 +2835,8 @@ matrix calculations during time-step iterations.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="admm.dataclasses.TemporalCache.build" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">build</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">next_layer</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">)</span></code>
+<h4 id="src.admm.dataclasses.TemporalCache.build" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">build</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">next_layer</span><span class="p">,</span> <span class="n">next_state</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -2344,6 +2911,48 @@ update that do not change during the unrolled sequence.</p>
                 <em>required</em>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>state</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ADMM_LayerState
+
+
+  
+      dataclass
+   (src.admm.dataclasses.ADMM_LayerState)" href="#src.admm.dataclasses.ADMM_LayerState">ADMM_LayerState</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The current layer state.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>next_state</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ADMM_LayerState
+
+
+  
+      dataclass
+   (src.admm.dataclasses.ADMM_LayerState)" href="#src.admm.dataclasses.ADMM_LayerState">ADMM_LayerState</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The subsequent layer state.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -2364,7 +2973,7 @@ update that do not change during the unrolled sequence.</p>
 
   
       dataclass
-   (admm.dataclasses.TemporalCache)" href="#admm.dataclasses.TemporalCache">TemporalCache</a></code>
+   (src.admm.dataclasses.TemporalCache)" href="#src.admm.dataclasses.TemporalCache">TemporalCache</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2377,49 +2986,103 @@ update that do not change during the unrolled sequence.</p>
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>admm\dataclasses.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">182</span>
-<span class="normal">183</span>
-<span class="normal">184</span>
-<span class="normal">185</span>
-<span class="normal">186</span>
-<span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
-<span class="normal">192</span>
-<span class="normal">193</span>
-<span class="normal">194</span>
-<span class="normal">195</span>
-<span class="normal">196</span>
-<span class="normal">197</span>
-<span class="normal">198</span>
-<span class="normal">199</span>
-<span class="normal">200</span>
-<span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span>
-<span class="normal">206</span>
-<span class="normal">207</span>
-<span class="normal">208</span>
-<span class="normal">209</span>
-<span class="normal">210</span>
-<span class="normal">211</span>
-<span class="normal">212</span>
-<span class="normal">213</span>
-<span class="normal">214</span>
-<span class="normal">215</span>
-<span class="normal">216</span>
-<span class="normal">217</span>
-<span class="normal">218</span>
-<span class="normal">219</span>
-<span class="normal">220</span>
-<span class="normal">221</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+              <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span>
-    <span class="bp">cls</span><span class="p">,</span> <span class="n">layer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="n">next_layer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="bp">cls</span><span class="p">,</span>
+    <span class="n">layer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+    <span class="n">next_layer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+    <span class="n">next_state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span>
+    <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;TemporalCache&quot;</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Precomputes and distributes operations to accelerate the unrolled loop.</span>
 
@@ -2430,29 +3093,73 @@ update that do not change during the unrolled sequence.</p>
 <span class="sd">        layer (nn.Module): The current layer.</span>
 <span class="sd">        next_layer (nn.Module): The subsequent layer in the network.</span>
 <span class="sd">        a_prev (torch.Tensor): The previous layer&#39;s activations.</span>
+<span class="sd">        state (ADMM_LayerState): The current layer state.</span>
+<span class="sd">        next_state (ADMM_LayerState): The subsequent layer state.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        TemporalCache: A typed data class containing the precomputed matrices.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Delay the import to prevent circular dependencies</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.functional.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">should_use_woodbury</span>
+
     <span class="c1"># 1- Forward Pass</span>
     <span class="n">forward_pass</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">spatial_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
 
-    <span class="c1"># 2- Denominator</span>
-    <span class="n">denominator_main</span><span class="p">,</span> <span class="n">denominator_last</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">_get_a_denominator</span><span class="p">(</span>
-        <span class="n">beta_current</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">beta</span><span class="p">,</span>
-        <span class="n">rho_current</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">,</span>
-        <span class="n">thetas_current</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span><span class="p">,</span>
-        <span class="n">a_shape</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
-        <span class="n">unrolled</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="p">)</span>
+    <span class="c1"># Expand weights for the next layer</span>
+    <span class="n">W_expanded</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">pool_op</span><span class="o">.</span><span class="n">expand_weights</span><span class="p">(</span><span class="n">next_layer</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 
-    <span class="c1"># 3- Term 2</span>
-    <span class="n">adjoint</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">_get_a_adjoint</span><span class="p">(</span>
-        <span class="n">next_layer</span><span class="o">=</span><span class="n">next_layer</span>
-    <span class="p">)</span>  <span class="c1"># forward_pass=forward_pass)  DEPRECATED</span>
+    <span class="c1"># 3- Denominator</span>
+    <span class="n">denominator_main</span><span class="p">,</span> <span class="n">denominator_last</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_fft</span>
+        <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="s2">&quot;convolution&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">next_layer</span><span class="p">,</span> <span class="s2">&quot;convolution&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="n">route</span> <span class="o">=</span> <span class="s2">&quot;fft&quot;</span>
+        <span class="n">den_main</span><span class="p">,</span> <span class="n">den_last</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">_get_fft_a_denominator</span><span class="p">(</span>
+            <span class="n">config_prev</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">a_shape</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span>
+        <span class="p">)</span>
+        <span class="c1"># We want to cached it inverted</span>
+        <span class="n">denominator_main</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">den_main</span>
+        <span class="n">denominator_last</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">den_last</span>
+
+    <span class="k">elif</span> <span class="n">should_use_woodbury</span><span class="p">(</span><span class="n">W</span><span class="o">=</span><span class="n">next_layer</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">W_expanded</span><span class="o">=</span><span class="n">W_expanded</span><span class="p">):</span>
+        <span class="n">route</span> <span class="o">=</span> <span class="s2">&quot;woodbury&quot;</span>
+        <span class="c1"># Main timesteps (t &lt; T) absorb the SNN temporal reset penalty directly into β.</span>
+        <span class="n">temporal_penalty</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span> <span class="o">*</span> <span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">beta_main</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">beta</span> <span class="o">+</span> <span class="n">temporal_penalty</span>
+        <span class="n">beta_last</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">beta</span>
+        <span class="c1"># ρ_{l+1} * W_{l+1} * W_{l+1}^T</span>
+        <span class="n">WtW</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">W_expanded</span><span class="p">,</span> <span class="n">W_expanded</span><span class="o">.</span><span class="n">t</span><span class="p">())</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">next_layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
+
+        <span class="c1"># (β* I_M + ρ_{l+1} * W_{l+1} * W_{l+1}^T)^{-1}</span>
+        <span class="n">mat_main</span> <span class="o">=</span> <span class="n">WtW</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">mat_main</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">beta_main</span><span class="p">)</span>
+        <span class="n">denominator_main</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">mat_main</span><span class="p">)</span>
+
+        <span class="n">mat_last</span> <span class="o">=</span> <span class="n">WtW</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">mat_last</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">beta_last</span><span class="p">)</span>
+        <span class="n">denominator_last</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">mat_last</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">route</span> <span class="o">=</span> <span class="s2">&quot;standard&quot;</span>
+        <span class="n">denominator_main</span><span class="p">,</span> <span class="n">denominator_last</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">_get_a_denominator</span><span class="p">(</span>
+            <span class="n">config_prev</span><span class="o">=</span><span class="n">layer</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
+            <span class="n">W_expanded</span><span class="o">=</span><span class="n">W_expanded</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># We want to cached the inverted matrix</span>
+        <span class="n">denominator_main</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">denominator_main</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">denominator_last</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">denominator_last</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># 3- Adjoint</span>
+    <span class="n">inside_adjoint</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">get_v</span><span class="p">(</span><span class="n">next_state</span><span class="p">)</span>
+    <span class="n">adjoint</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">adjoint_operator</span><span class="p">(</span>
+        <span class="n">inside_adjoint</span><span class="p">,</span> <span class="n">original_input_shape</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span>
+    <span class="p">)</span>
 
     <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
         <span class="n">forward_pass</span><span class="o">=</span><span class="n">forward_pass</span><span class="p">,</span>
+        <span class="n">W_expanded</span><span class="o">=</span><span class="n">W_expanded</span><span class="p">,</span>
+        <span class="n">route</span><span class="o">=</span><span class="n">route</span><span class="p">,</span>
         <span class="n">denominator_main</span><span class="o">=</span><span class="n">denominator_main</span><span class="p">,</span>
         <span class="n">denominator_last</span><span class="o">=</span><span class="n">denominator_last</span><span class="p">,</span>
         <span class="n">adjoint</span><span class="o">=</span><span class="n">adjoint</span><span class="p">,</span>
