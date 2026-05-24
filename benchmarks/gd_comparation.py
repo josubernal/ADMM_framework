@@ -5,7 +5,6 @@ import os
 import snntorch as snn
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 from benchmarks.utils.dataset import get_data, get_dataset
@@ -189,12 +188,12 @@ for model_name in model_types:
     #########################################
     # DATA
     if model_name in ["linear", "conv"]:
-        train_loader = get_dataset(batch_size_static, 1, spiking=False, seed=seed)
+        train_loader = get_dataset(model_name, batch_size_static, 1, seed=seed)
     else:
         train_loader = get_dataset(
+            model_name,
             batch_size_spiking,
             1,
-            spiking=True,
             n_timesteps=n_timesteps,
             seed=seed,
         )
@@ -237,7 +236,7 @@ for model_name in model_types:
             admm_model = get_model(
                 model_name=model_name,
                 init="s-uniform",
-                train_method="decoupled-backwards",
+                train_method="unrolled-backwards",
                 layer_order="backwards",
                 loss=ADMM_CrossEntropy_Taylor(),
                 z_first=False,
@@ -247,7 +246,7 @@ for model_name in model_types:
             admm_model = get_model(
                 model_name=model_name,
                 init="s-uniform",
-                train_method="decoupled-backwards",
+                train_method="unrolled-backwards",
                 layer_order="backwards",
                 loss=ADMM_CrossEntropy_Taylor(),
                 z_first=False,
@@ -263,34 +262,25 @@ for model_name in model_types:
         if epoch % 1 == 0:
             with torch.no_grad():
                 m.save_metrics()
+                print(
+                    f"Epoch {epoch} | W_norm: {admm_model.layers[0].W.norm().item():.2f}"
+                )
                 print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
 
     #########################################
     # GRADIENT DESCENT TRAINING LOOP
     criterion = nn.CrossEntropyLoss()
     # DATA
-    if model_name in ["linear", "conv"]:
-        batch_size = batch_size_static
-        images, labels = get_data(batch_size, spiking=False, device=device, seed=seed)
-    else:
-        batch_size = batch_size_spiking
-        images, labels = get_data(
-            batch_size,
-            spiking=True,
-            device=device,
-            n_timesteps=n_timesteps,
-            seed=seed,
-        )
+    images, labels = get_data(
+        model_name=model_name,
+        batch_size=batch_size,
+        device=device,
+        n_timesteps=n_timesteps,
+        seed=seed,
+    )
 
-    match model_name:
-        case "linear":
-            images = images.view(images.size(0), -1)
-        case "spiking-linear":
-            images = images.view(images.size(0), images.size(1), -1).permute(1, 0, 2)
-        case "spiking-conv":
-            images = images.permute(1, 0, 2, 3, 4)
-
-    labels_one_hot = F.one_hot(labels.long(), num_classes=10).float()
+    if labels.dim() > 1:
+        labels = labels.argmax(dim=1)
 
     optimizer = optim.Adam(model.parameters(), lr=lr)
 

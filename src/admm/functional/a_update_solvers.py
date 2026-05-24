@@ -104,16 +104,22 @@ def solve_woodbury_system_static(
 ) -> torch.Tensor:
     r"""Solves the system $(\beta_l  I_N + \rho_{l+1} \mathcal{A}_{l+1}^* \circ \mathcal{A}_{l+1}) x = numerator$ using the Woodbury Matrix Identity.
 
-    Inverting a massive N x N matrix takes O(N^3) memory and time. Woodbury allows us
-    to instead invert a tiny M x M matrix, dropping complexity to O(M^3).
+    Inverting a massive $N \times N$ matrix takes $O(N^3)$ memory and time. Woodbury allows us
+    to instead invert a tiny $M \times M$ matrix, dropping complexity to $O(M^3)$.
 
     Mathematical Derivation:
-    1. Standard Woodbury Formula:
-       (A + UCV)^-1 = A^-1 - A^-1 U (C^-1 + V A^-1 U)^-1 V A^-1
-    2. Our Substitutions:
-       A = beta * I_N, U = W^T, C = rho * I_M, V = W
-    3. The Simplified Result applied to the numerator:
-       x = (1/beta)numerator - (rho/beta) W^T (beta * I_M + rho * W W^T)^-1 W numerator
+
+    * Standard Woodbury Formula: $(A + UCV)^{-1} = A^{-1} - A^{-1} U (C^{-1} + V A^{-1} U)^{-1} V A^{-1}$
+    * Our Substitutions:
+
+        - $A = \beta  I_N$,
+        - $U = W^T$,
+        - $C = \rho I_M$,
+        - $V = W$
+
+    * The Simplified Result applied to the numerator:
+
+    $$ x = \frac{1}{\beta}\text{numerator} - \frac{\rho}{\beta} W^T (\beta I_M + \rho W W^T)^{-1} W \text{numerator} $$
 
     Args:
         W_expanded (torch.Tensor): Weight matrix of shape [out_features, in_features].
@@ -212,7 +218,8 @@ def solve_woodbury_system_unrolled(
     r"""Executes the unrolled Woodbury step using a pre-inverted cached matrix.
 
     Formula evaluated:
-    $x = \frac{1}{\beta_{eff}} numerator - \frac{\rho}{\beta_{eff}} W^T \cdot \text{inv\_denominator} \cdot (W numerator)$
+
+    $$ x = \frac{1}{\beta_{eff}} numerator - \frac{\rho}{\beta_{eff}} W^T \cdot \text{inv_denominator} \cdot (W numerator) $$
 
     Args:
         numerator (torch.Tensor): Target tensor to solve against ($u$).

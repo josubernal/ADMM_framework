@@ -52,7 +52,10 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
 
     match model_name:
         case "linear":
-            layer_config = ADMM_LayerConfig(
+            hidden_layer_config = ADMM_LayerConfig(
+                rho=linear_rho, beta=linear_beta, use_bias=True
+            )
+            out_layer_config = ADMM_LayerConfig(
                 rho=linear_rho, beta=linear_beta, use_bias=True
             )
             linear_layers = nn.ModuleList(
@@ -61,13 +64,13 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                         in_f=input_size,
                         out_f=hidden_size_static,
                         h=ADMM_ReLU(),
-                        config=layer_config,
+                        config=hidden_layer_config,
                     ),
                     ADMM_Linear(
                         in_f=hidden_size_static,
                         out_f=10,
                         h=ADMM_ReLU(),
-                        config=layer_config,
+                        config=out_layer_config,
                     ),
                 ]
             )
@@ -86,7 +89,10 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
         case "conv":
             spatial_dim = int(calc_spatial_out(28, k, p, s))
             lin_in_dim = hidden_channels_static * spatial_dim * spatial_dim
-            layer_config = ADMM_LayerConfig(
+            hidden_layer_config = ADMM_LayerConfig(
+                rho=conv_rho, beta=conv_beta, use_bias=True, use_fft=False
+            )
+            out_layer_config = ADMM_LayerConfig(
                 rho=conv_rho, beta=conv_beta, use_bias=True, use_fft=False
             )
             conv_layers = nn.ModuleList(
@@ -98,7 +104,7 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                         p=p,
                         s=s,
                         h=ADMM_ReLU(),
-                        config=layer_config,
+                        config=hidden_layer_config,
                         padding_mode="zeros",
                     ),
                     ADMM_Linear(
@@ -106,7 +112,7 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                         out_f=10,
                         h=ADMM_ReLU(),
                         pool_op=ADMM_Flatten(),
-                        config=layer_config,
+                        config=out_layer_config,
                     ),
                 ]
             )
@@ -122,27 +128,35 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                 config=config,
             ).to(device)
         case "spiking-linear":
-            layer_config = ADMM_LayerConfig(
+            hidden_layer_config = ADMM_LayerConfig(
                 rho=splinear_rho,
                 beta=splinear_beta,
                 use_bias=False,
                 deltas=deltas,
                 thetas=thetas,
+                use_reset=True,
+            )
+            out_layer_config = ADMM_LayerConfig(
+                rho=splinear_rho,
+                beta=splinear_beta,
+                use_bias=False,
+                deltas=deltas,
+                thetas=thetas,
+                use_reset=False,
             )
             splinear_layers = nn.ModuleList(
                 [
                     ADMM_SpikingLinear(
                         in_f=34 * 34 * 2,
                         out_f=hidden_size_spiking,
-                        h=ADMM_Heaviside(),
-                        config=layer_config,
+                        h=ADMM_Heaviside(thetas=thetas),
+                        config=hidden_layer_config,
                     ),
                     ADMM_SpikingLinear(
                         in_f=hidden_size_spiking,
                         out_f=10,
                         h=None,
-                        config=layer_config,
-                        use_reset=False,
+                        config=out_layer_config,
                     ),
                 ]
             )
@@ -161,13 +175,23 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
         case "spiking-conv":
             spatial_dim = int(calc_spatial_out(34, k, p, s))
             lin_in_dim = hidden_channels_spiking * spatial_dim * spatial_dim
-            layer_config = ADMM_LayerConfig(
+            hidden_layer_config = ADMM_LayerConfig(
                 rho=spconv_rho,
                 beta=spconv_beta,
                 thetas=thetas,
                 deltas=deltas,
                 use_bias=False,
                 use_fft=False,
+                use_reset=True,
+            )
+            out_layer_config = ADMM_LayerConfig(
+                rho=spconv_rho,
+                beta=spconv_beta,
+                thetas=thetas,
+                deltas=deltas,
+                use_bias=False,
+                use_fft=False,
+                use_reset=False,
             )
             spconv_layers = nn.ModuleList(
                 [
@@ -177,8 +201,8 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                         k=k,
                         p=p,
                         s=s,
-                        h=ADMM_Heaviside(),
-                        config=layer_config,
+                        h=ADMM_Heaviside(thetas=thetas),
+                        config=hidden_layer_config,
                         padding_mode="zeros",
                     ),
                     ADMM_SpikingLinear(
@@ -186,8 +210,7 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                         pool_op=ADMM_Flatten(),
                         out_f=10,
                         h=None,
-                        config=layer_config,
-                        use_reset=False,
+                        config=out_layer_config,
                     ),
                 ]
             )

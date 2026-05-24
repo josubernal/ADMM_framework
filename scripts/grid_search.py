@@ -7,16 +7,17 @@ import time
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from benchmarks.utils.dataset import get_data
+from benchmarks.utils.dataset import get_dataset
 from src.admm import (
     ADMM,
     ADMM_SSE,
+    ADMM_Config,
     ADMM_Conv2d,
     ADMM_CrossEntropy_Taylor,
     ADMM_Flatten,
     ADMM_Heaviside,
+    ADMM_LayerConfig,
     ADMM_Linear,
     ADMM_Metrics,
     ADMM_ReLU,
@@ -62,7 +63,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     config = configparser.ConfigParser()
-    config.read("config/config.ini")
+    config.read("scripts/config/config.ini")
 
     # --- Smart Config Parsing ---
     grid_params = {}
@@ -118,6 +119,7 @@ if __name__ == "__main__":
         epochs = cfg.get("epochs", 20)
         warming_iters = cfg.get("warming_iters", 6)
         batch_size = cfg.get("batch_size", 50)
+        n_batches = cfg.get("n_batches", 1)
         init = cfg.get("init", "s-uniform")
         bias = cfg.get("bias", False)
         train_method = cfg.get("train_method", "unrolled-sequential")
@@ -142,25 +144,30 @@ if __name__ == "__main__":
         # ---------------------------------------------------------
 
         if model_name in ["linear", "conv"]:
-            data, targets = get_data(
-                batch_size, spiking=False, device=device, seed=seed
-            )
+            train_loader = get_dataset(model_name, batch_size, n_batches, seed=seed)
         else:
-            data, targets = get_data(
+            train_loader = get_dataset(
+                model_name,
                 batch_size,
-                spiking=True,
-                device=device,
+                n_batches,
                 n_timesteps=n_timesteps,
                 seed=seed,
             )
 
-        targets = F.one_hot(targets.long(), num_classes=10).float()
         # ---------------------------------------------------------
         # 2. INITIALIZE ARCHITECTURE
         # ---------------------------------------------------------
         hidden_dims = int(cfg.get("hidden_dims", 100))
         hidden_channels = int(cfg.get("hidden_channels", 4))
 
+        layer_config = ADMM_LayerConfig(
+            beta=beta,
+            rho=rho,
+            thetas=thetas,
+            deltas=deltas,
+            use_bias=bias,
+            use_fft=use_fft,
+        )
         match model_name:
             case "spiking-linear":
                 if num_layers == 2:
@@ -169,12 +176,15 @@ if __name__ == "__main__":
                             ADMM_SpikingLinear(
                                 in_f=34 * 34 * 2,
                                 out_f=hidden_dims,
-                                h=ADMM_Heaviside(thetas=thetas),
-                                init=init,
-                                bias=bias,
+                                h=ADMM_Heaviside(),
+                                config=layer_config,
                             ),
                             ADMM_SpikingLinear(
-                                in_f=hidden_dims, out_f=10, h=None, init=init, bias=bias
+                                in_f=hidden_dims,
+                                out_f=10,
+                                h=None,
+                                config=layer_config,
+                                use_reset=False,
                             ),
                         ]
                     )
@@ -185,19 +195,21 @@ if __name__ == "__main__":
                             ADMM_SpikingLinear(
                                 in_f=34 * 34 * 2,
                                 out_f=hidden_dims,
-                                h=ADMM_Heaviside(thetas=thetas),
-                                init=init,
-                                bias=bias,
+                                h=ADMM_Heaviside(),
+                                config=layer_config,
                             ),
                             ADMM_SpikingLinear(
                                 in_f=hidden_dims,
                                 out_f=mid_dims,
-                                h=ADMM_Heaviside(thetas=thetas),
-                                init=init,
-                                bias=bias,
+                                h=ADMM_Heaviside(),
+                                config=layer_config,
                             ),
                             ADMM_SpikingLinear(
-                                in_f=mid_dims, out_f=10, h=None, init=init, bias=bias
+                                in_f=mid_dims,
+                                out_f=10,
+                                h=None,
+                                config=layer_config,
+                                use_reset=False,
                             ),
                         ]
                     )
@@ -222,20 +234,18 @@ if __name__ == "__main__":
                                 k=k,
                                 p=p,
                                 s=s,
-                                h=ADMM_Heaviside(thetas=thetas),
-                                init=init,
-                                bias=bias,
-                                use_fft=False,
+                                h=ADMM_Heaviside(),
+                                config=layer_config,
                                 padding_mode="zeros",
                             ),
                             # Passing 648 to in_f and using Flatten
                             ADMM_SpikingLinear(
                                 in_f=lin_in,
                                 out_f=10,
-                                init=init,
                                 h=None,
                                 pool_op=ADMM_Flatten(),
-                                bias=bias,
+                                config=layer_config,
+                                use_reset=False,
                             ),
                         ]
                     )
@@ -251,10 +261,9 @@ if __name__ == "__main__":
                                 k=k,
                                 p=p,
                                 s=1,
-                                h=ADMM_Heaviside(thetas=thetas),
-                                init=init,
-                                bias=bias,
-                                use_fft=True,
+                                h=ADMM_Heaviside(),
+                                config=layer_config,
+                                use_reset=False,
                                 padding_mode="circular",
                             ),
                             ADMM_SpikingConv2d(
@@ -263,19 +272,18 @@ if __name__ == "__main__":
                                 k=k,
                                 p=mid_p,
                                 s=s,
-                                h=ADMM_Heaviside(thetas=thetas),
-                                init=init,
-                                bias=bias,
-                                use_fft=False,
+                                h=ADMM_Heaviside(),
+                                config=layer_config,
+                                use_reset=False,
                                 padding_mode="zeros",
                             ),
                             ADMM_SpikingLinear(
                                 in_f=lin_in,
                                 out_f=10,
-                                init=init,
                                 h=None,
                                 pool_op=ADMM_SpatialPool((pool_h, pool_w)),
-                                bias=bias,
+                                config=layer_config,
+                                use_reset=False,
                             ),
                         ]
                     )
@@ -291,8 +299,7 @@ if __name__ == "__main__":
                             in_f=current_in,
                             out_f=hidden_dims,
                             h=ADMM_ReLU(),
-                            init=init,
-                            bias=bias,
+                            config=layer_config,
                         )
                     )
                     # For all subsequent layers, the input is now hidden_dims
@@ -301,7 +308,11 @@ if __name__ == "__main__":
                 # 2. Build the final classification layer
                 layer_list.append(
                     ADMM_Linear(
-                        in_f=current_in, out_f=10, h=ADMM_ReLU(), init=init, bias=bias
+                        in_f=current_in,
+                        out_f=10,
+                        h=ADMM_ReLU(),
+                        config=layer_config,
+                        use_reset=False,
                     )
                 )
 
@@ -329,9 +340,7 @@ if __name__ == "__main__":
                             p=p,
                             s=1,
                             h=ADMM_ReLU(),
-                            init=init,
-                            bias=bias,
-                            use_fft=True,
+                            config=layer_config,
                             padding_mode="circular",
                         )  # <-- Changed to True for speed!
                     )
@@ -349,10 +358,8 @@ if __name__ == "__main__":
                         p=p,
                         s=s,
                         h=ADMM_ReLU(),
-                        init=init,
-                        bias=bias,
-                        use_fft=True,
-                        padding_mode="circular",
+                        config=layer_config,
+                        padding_mode=padding_mode,
                     )
                 )
 
@@ -367,9 +374,9 @@ if __name__ == "__main__":
                         in_f=lin_in,
                         out_f=10,
                         h=ADMM_ReLU(),
-                        init=init,
                         pool_op=ADMM_Flatten(),
-                        bias=bias,
+                        config=layer_config,
+                        use_reset=False,
                     )
                 )
 
@@ -378,32 +385,15 @@ if __name__ == "__main__":
         # ---------------------------------------------------------
         # 3. INITIALIZE MODEL & METRICS
         # ---------------------------------------------------------
+        config = ADMM_Config(init=init, train_method=train_method)
         if model_name.split("-")[0] == "spiking":
             model = ADMM(
-                layers,
-                loss_f=ADMM_CrossEntropy_Taylor(),
-                T=n_timesteps,
-                rho=rho,
-                thetas=thetas,
-                deltas=deltas,
-                beta=beta,
-                init=init,
-                bias=bias,
-                train_method=train_method,
+                layers, loss_f=ADMM_CrossEntropy_Taylor(), T=n_timesteps, config=config
             ).to(device)
         else:
-            model = ADMM(
-                layers,
-                loss_f=ADMM_SSE(),
-                rho=rho,
-                beta=beta,
-                init=init,
-                bias=bias,
-                train_method=train_method,
-            ).to(device)
+            model = ADMM(layers, loss_f=ADMM_SSE(), config=config).to(device)
 
         m = ADMM_Metrics(model)
-        model._init_states(data)
 
         if is_static_run:
             print(json.dumps(m.network_size_statistics(), indent=4))
@@ -427,18 +417,11 @@ if __name__ == "__main__":
         # ---------------------------------------------------------
         start_time = time.time()
         for epoch in range(epochs + 1):
-            model.fit(data, targets, warming=epoch < warming_iters)
+            model.fit(train_loader, warming=epoch < warming_iters)
             if epoch % 1 == 0:
                 with torch.no_grad():
-                    raw_outputs, firing_rates = model.forward_model(data)
-                    flat_outputs = raw_outputs.view(batch_size, -1)
-
-                    _, preds = flat_outputs.max(dim=1)
-
-                    m.save_metrics(data, targets)
-
+                    m.save_metrics()
                     print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
-
         #########################################
         # SAVING RESULTS AND PLOTTING
 

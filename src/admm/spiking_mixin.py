@@ -36,13 +36,13 @@ class ADMM_Spiking:
     ) -> torch.Tensor:
         r"""Standard sequential pass for initialization or inference.
 
-        * For Static Networks: Simply returns the spatial transformation ($z_l = F_l(a_{l-1})$).
+        * For Static Networks: Simply returns the spatial transformation $z_l = F_l(a_{l-1})$.
         * For Spiking Networks (SNNs): Simulates the mechanics step-by-step.
 
         Note:
             To refer to its non-spiking counterpart, see [`forward`][src.admm.base_layer.ADMM_Layer.forward].
 
-            **Performance Note (Compute vs. Memory):**
+        Note:
             This method is **compute-bound**. It strictly enforces causality via an $O(T)$
             sequential loop, resulting in slow execution but minimal memory footprint.
             Use this strictly for inference.
@@ -55,26 +55,37 @@ class ADMM_Spiking:
         Returns:
             torch.Tensor: The output tensor after the full temporal simulation.
         """
+        expected_slice_dim = 4 if self.convolution else 2
+        squeezed = a_prev.dim() == expected_slice_dim
+        if squeezed:
+            a_prev = a_prev.unsqueeze(0)  # [1, B, F]
+
         y_t = self.spatial_forward(a_prev)
+        if squeezed:
+            y_t = y_t.squeeze(0)  # back to [B, out_f]
+
         if z_tminus1 is None:
             z_tminus1 = torch.zeros_like(y_t)
             a_tminus1 = torch.zeros_like(y_t)
 
-        reset = self.config.thetas * a_tminus1 if (self.config.use_reset) else 0.0
+        reset = self.config.thetas * a_tminus1 if self.config.use_reset else 0.0
         return y_t + self.config.deltas * z_tminus1 - reset
 
     def get_v(self, state: ADMM_LayerState) -> torch.Tensor:
         r"""Returns the target tensor $v$ for spiking layers.
 
         Formula evaluated:
-        $v_l = z_l - b_l - T_l$
+
+        $$ v_l = z_l - b_l - T_l $$
 
         If layer $l$ has a Lagrangian multiplier:
-        $v_l = z_l - b_l - T_l + \frac{\lambda_l}{\rho}\mathbb{1}_{\{t=T\}}$
+
+        $$ v_l = z_l - b_l - T_l + \frac{\lambda_l}{\rho}\mathbb{1}_{\{t=T\}} $$
 
         Note:
             You can find the corresponding non-spiking version [`get_v`][src.admm.affine_layer.ADMM_AffineLayer.get_v] in the
             [`Affine Layer`][src.admm.affine_layer] module.
+
         Args:
             state (ADMM_LayerState): [State object][src.admm.dataclasses.ADMM_LayerState] of the current layer.
 
@@ -87,8 +98,8 @@ class ADMM_Spiking:
             v.sub_(bias_formatted)
         v.sub_(compute_temporal_dependencies(state, self.config))
         if self.config.use_lagrange and state.lambda_lagrange is not None:
-            lambda_lagrange = broadcast_to_match(state.lambda_lagrange, v)
-            v.add_(lambda_lagrange, alpha=1.0 / self.config.rho)
+            lambda_lagrange = broadcast_to_match(state.lambda_lagrange, v[-1])
+            v[-1].add_(lambda_lagrange, alpha=1.0 / self.config.rho)
         return v
 
     def _compute_bias_covariance(
@@ -97,10 +108,12 @@ class ADMM_Spiking:
         r"""Computes the mean spatial covariance for the bias update step.
 
         Formula evaluated:
-        $z_l - \mathcal{A}_l(a_{l-1}) - T_l$
+
+        $$ z_l - \mathcal{A}_l(a_{l-1}) - T_l $$
 
         If layer $l$ has a Lagrangian multiplier:
-        $z_l - \mathcal{A}_l(a_{l-1}) - T_l + \frac{\lambda}{\rho}_\{{t=T}\}$
+
+        $$ z_l - \mathcal{A}_l(a_{l-1}) - T_l + \frac{\lambda}{\rho}_\{{t=T}\} $$
 
         Note:
             You can find the corresponding non-spiking version [`_compute_bias_covariance`][src.admm.affine_layer.ADMM_AffineLayer._compute_bias_covariance] in the
@@ -127,17 +140,16 @@ class ADMM_Spiking:
     def _get_a_numerator_no_adjoint(
         self,
         state: ADMM_LayerState,
-        next_config: ADMM_LayerConfig,
         a_prev: torch.Tensor,
     ) -> torch.Tensor:
         r"""Calculates the spiking numerator block for the vectorized activation ($a$) update.
 
         Extends the static formula with the temporal reset penalty term for $t < T$:
-        $N = \beta_l h_{l,\theta}(z_{l}) - \rho_l \theta S^T\big(z_l - \delta S z_l-F_l(a_{l-1}) \big)$
 
-         Args:
+        $$ N = \beta_l h_{l,\theta}(z_{l}) - \rho_l \theta S^T\big(z_l - \delta S z_l-F_l(a_{l-1}) \big) $$
+
+        Args:
             state (ADMM_LayerState): [State object][src.admm.dataclasses.ADMM_LayerState] containing the current pre-activations ($z$).
-            next_config (ADMM_LayerConfig): [The configuration object][src.admm.dataclasses.ADMM_LayerConfig] of the subsequent layer.
             a_prev (torch.Tensor): The activations from the previous layer.
 
         Returns:
@@ -151,15 +163,15 @@ class ADMM_Spiking:
         num_slice = numerator[:-1]
         forward_pass = self.spatial_forward(a_prev)
         # S^T ([1:] means t+1 to t)
-        num_slice.add_(forward_pass[1:], alpha=self.config.thetas * next_config.rho)
+        num_slice.add_(forward_pass[1:], alpha=self.config.thetas * self.config.rho)
         del forward_pass
         # S^T ([1:] means t+1 to t)
-        num_slice.add_(state.z[1:], alpha=-self.config.thetas * next_config.rho)
+        num_slice.add_(state.z[1:], alpha=-self.config.thetas * self.config.rho)
         # The advance (S^T) and delay (S) operators cancel out (S^T * S = I).
         # We simply add the current timestep (t, via [:-1]).
         num_slice.add_(
             state.z[:-1],
-            alpha=self.config.deltas * self.config.thetas * next_config.rho,
+            alpha=self.config.deltas * self.config.thetas * self.config.rho,
         )
         return numerator
 
@@ -169,7 +181,8 @@ class ADMM_Spiking:
         r"""Computes the denominator matrices for the activation ($a$) update using FFTs.
 
         Formula evaluated in the frequency domain:
-        $D = \beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1}) + \rho_l \theta^2 S^TS$
+
+        $$ D = \beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1}) + \rho_l \theta^2 S^TS $$
 
         Note:
             We separate this function, because it is needed for the unrolled cache, see [`TemporalCache`][src.admm.dataclasses.TemporalCache]
@@ -214,7 +227,8 @@ class ADMM_Spiking:
         r"""Computes the spiking denominator matrix for the activation ($a$) update.
 
         Formula evaluated:
-        $D = \beta_l I + \rho_{l+1} \mathcal{A}_{l+1}^* \circ \mathcal{A}_{l+1} + \rho_l \theta^2 S^TS}$
+
+        $$ D = \beta_l I + \rho_{l+1} \mathcal{A}_{l+1}^* \circ \mathcal{A}_{l+1} + \rho_l \theta^2 S^TS $$
 
         Note:
             We separate this function, because it is needed for the unrolled cache, see [`TemporalCache`][src.admm.dataclasses.TemporalCache]
@@ -417,7 +431,8 @@ class ADMM_Spiking:
         r"""Updates the Lagrange multiplier ($\lambda$) based on the current layer constraints for spiking neurons.
 
         Formula evaluated:
-        $\lambda_l \leftarrow \lambda_l + \rho_l \big(z_{l,T} - \mathcal{F}_{l,T}\big)$
+
+        $$ \lambda_l \leftarrow \lambda_l + \rho_l \big(z_{l,T} - \mathcal{F}_{l,T}\big) $$
 
         Note:
             You can find the corresponding non-spiking version [update_lambda][src.admm.base_layer.ADMM_Layer.update_lambda] in the [Base Layer][src.admm.base_layer] module.

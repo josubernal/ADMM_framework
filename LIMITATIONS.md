@@ -1,24 +1,23 @@
 # SNN ADMM Optimizer: Known Limitations
 
-This document outlines the current boundaries of the SNN ADMM Optimizer.
+This document outlines the current boundaries and technical debt of the SNN ADMM Optimizer. While the core ADMM optimization mechanics are fully functional, the current version has several architectural and technical areas scoped for future improvement.
 
-## ⚠️ Current Limitations
+### 📐 Architecture & State Management
 
-While the core ADMM optimization mechanics are fully functional, there are a few architectural and technical limitations in the current version:
+* **Decouple Spiking Logic from the Manager:** Currently, the state of whether a network is "spiking" is tracked redundantly by both the layer objects and the global manager. This duplication of state information introduces a risk of synchronization bugs. The manager should become entirely spiking-agnostic, relying instead on a unified, polymorphic layer interface.
+* **Modular Activation Functions:** Activation functions are tightly coupled to the layer definitions. Extracting these into independent, modular components will drastically improve architectural flexibility and simplify state initialization.
+* **Refactor Loss Function Module:** While functional, the current loss module's internal logic and API are not as clean or intuitive as they could be. A thorough refactor is needed to improve readability and extensibility.
 
-**Authomatic use_reset**: Use reset False should be authomatically set to the last layer. Or somehow updates should be changed so this param is unnecessary. This also yields the question of having spiking nn that do not accumulate in the output layer (but this is a complete other world).
+### 🧮 Tensor Mechanics & Forward Pass
 
-**Pooling standard linear**: All pooling methods flatten the output to a 2D shape for compatibility with linear layers by default. This must be addressed.
+* **Explicit Tensor Shape Handling:** The codebase currently relies on implicit broadcasting utilities (e.g., `broadcast_to_match`, `format_bias`) for rapid development. Replacing these with strict, explicit shape handling at every step will improve code readability and prevent silent dimensional bugs. Additionally, spiking forward tensor shaping should be checked.
+* **Dynamic Pooling Dimensions:** All pooling methods currently hardcode the output to a flattened 2D shape to ensure default compatibility with linear layers. The pooling mechanism needs to be generalized to support arbitrary tensor dimensions natively.
+* **Automatic Membrane Reset Handling (`use_reset`):** The `use_reset=False` parameter currently requires manual configuration for the final output layer to allow spike accumulation. This should be handled automatically by the optimizer. Additionally, this opens a broader discussion for future features regarding non-accumulating SNN output layers.
 
-**Multibatch scheduling**: Allow multibatch scheduling.
+### ⚙️ Optimization & Training
 
-**Make manager spiking agnostic**: At the moment the layer being spiking or not is known by two objects: layer and manager. This doubles down information and could possibly generate errors.
+* **Multibatch Scheduling Support:** The dynamic penalty scheduler currently only supports single-batch environments. It needs to be extended to properly track, average, and balance residuals across multibatch datasets.
 
-**Separate activation functions from layers**: At the moment activation functions are part of the layer. However I beleive that this should be separated for better modularity, and better initialization.
+### 🧪 Maintenance
 
-**Get rid of broadcasting functions**: Broadcasting functions like broadcast to match or format bias can lead to errors and make reading harder, even if they let us develop fast. I think having more clear shape handling in every step could be bug proof or at least this should be checked. 
-
-**Loss function review**: Loss function module works but is a bit not intuitive and seems dirty to me. Could benefit from a rework.
-
-**Better testing**: If we want to grow bigger and do it consistently without having bugs, we should improve or testing strategy, adding more tests that allow for early bug caching.
-
+* **Comprehensive Test Coverage:** To safely scale the framework and ensure mathematical stability across complex ADMM updates, the testing suite requires significant expansion. Implementing stricter unit and integration tests is necessary for early bug detection and consistent deployment.

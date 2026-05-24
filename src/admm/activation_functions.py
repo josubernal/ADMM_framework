@@ -103,13 +103,8 @@ class ADMM_ReLU(ADMM_ActivationBase):
         r"""Calculates the proximal update for ReLU.
 
         Formula evaluated:
-        $$
-        z_l \leftarrow 
-        \begin{cases}
-        \frac{\beta_l a_l + \rho_l F_l(a_{l-1})}{\beta_l + \rho_l} & \text{if } z_l > 0 \\\\
-        F_l(a_{l-1}) & \text{if } z_l \leq 0
-        \end{cases}
-        $$
+
+        $$ z_l \leftarrow \begin{cases} \frac{\beta_l a_l + \rho_l F_l(a_{l-1})}{\beta_l + \rho_l} & \text{if } z_l > 0 \cr F_l(a_{l-1}) & \text{if } z_l \leq 0 \end{cases} $$
 
         Args:
             state (ADMM_LayerState): [The state object][src.admm.dataclasses.ADMM_LayerState] containing the variables to update.

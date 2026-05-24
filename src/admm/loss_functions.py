@@ -26,6 +26,12 @@ class ADMM_Loss(nn.Module, ABC):
     def __init__(self) -> None:
         super().__init__()
 
+    def _format_labels(self, labels: torch.Tensor, num_classes: int) -> torch.Tensor:
+        """Centrally formats integer labels into one-hot tensors to prevent broadcast corruption."""
+        if labels.dim() == 1 or labels.shape[-1] != num_classes:
+            return F.one_hot(labels.view(-1).long(), num_classes=num_classes).float()
+        return labels.float()
+
     @abstractmethod
     def forward(self, predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """Calculates the loss for logging and metrics.
@@ -104,12 +110,14 @@ class ADMM_Loss(nn.Module, ABC):
             labels (torch.Tensor): The ground truth target labels.
             config (ADMM_LayerConfig): The [configuration object][src.admm.dataclasses.ADMM_LayerConfig] for the final layer.
         """
-        labels = broadcast_to_match(labels, forward)
+        labels_formatted = self._format_labels(labels, forward.size(-1))
         if config.use_lagrange and state.lambda_lagrange is not None:
             lambda_lagrange = broadcast_to_match(state.lambda_lagrange, forward)
         else:
             lambda_lagrange = torch.zeros_like(forward)
-        state.z.copy_(self._loss_update(forward, labels, lambda_lagrange, config))
+        state.z.copy_(
+            self._loss_update(forward, labels_formatted, lambda_lagrange, config)
+        )
 
     def update_z_last_spiking(
         self,
@@ -129,7 +137,7 @@ class ADMM_Loss(nn.Module, ABC):
         temporal_forward = forward + (compute_temporal_dependencies(state, config))
 
         shape = state.z[-1]
-        labels = broadcast_to_match(labels, shape)
+        labels_formatted = self._format_labels(labels, shape.size(-1))
         if config.use_lagrange and state.lambda_lagrange is not None:
             lambda_lagrange = broadcast_to_match(state.lambda_lagrange, shape)
         else:
@@ -145,7 +153,7 @@ class ADMM_Loss(nn.Module, ABC):
         numerator[:-1].div_(denominator_main)
 
         numerator[-1] = self._loss_update(
-            temporal_forward[-1], labels, lambda_lagrange, config
+            temporal_forward[-1], labels_formatted, lambda_lagrange, config
         )
 
         state.z.copy_(numerator)
@@ -167,7 +175,7 @@ class ADMM_Loss(nn.Module, ABC):
             config (ADMM_LayerConfig): The [configuration object][src.admm.dataclasses.ADMM_LayerConfig] for the final layer.
             time_steps (List[int]): The ordered sequence of time steps to update.
         """
-        labels = broadcast_to_match(labels, state.z[-1])
+        labels_formatted = self._format_labels(labels, state.z.size(-1))
         if config.use_lagrange and state.lambda_lagrange is not None:
             lambda_lagrange = broadcast_to_match(state.lambda_lagrange, state.z[-1])
         else:
@@ -194,7 +202,7 @@ class ADMM_Loss(nn.Module, ABC):
                 if t >= 1:
                     buffer.add_(state.z[t - 1], alpha=config.deltas)
                 state.z[t].copy_(
-                    self._loss_update(buffer, labels, lambda_lagrange, config)
+                    self._loss_update(buffer, labels_formatted, lambda_lagrange, config)
                 )
 
 
@@ -210,6 +218,10 @@ class ADMM_SSE(ADMM_Loss):
 
     def forward(self, predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """Computes the standard Mean Squared Error (summed over the batch)."""
+        if targets.dim() == 1 or targets.shape != predictions.shape:
+            targets = F.one_hot(
+                targets.view(-1).long(), num_classes=predictions.shape[-1]
+            ).float()
         return F.mse_loss(predictions, targets, reduction="sum")
 
     def _loss_update(
@@ -222,7 +234,8 @@ class ADMM_SSE(ADMM_Loss):
         r"""Computes the SSE specific update.
 
         Formula:
-        $(\rho * v + 2y - \lambda) / (2 + \rho)$
+
+        $$ (\rho_l  v + 2y - \lambda_l) / (2 + \rho_l) $$
         """
         num = (
             temporal_forward.mul(config.rho)
@@ -242,13 +255,13 @@ class ADMM_Hinge(ADMM_Loss):
     def __str__(self) -> str:
         return "Hinge_Loss"
 
-    def _format_labels(self, targets: torch.Tensor) -> torch.Tensor:
+    def _apply_hinge_bounds(self, targets: torch.Tensor) -> torch.Tensor:
         """Converts [0, 1] labels to [-1, 1] format required for Hinge bounds."""
         return 2.0 * targets - 1.0 if targets.min() == 0.0 else targets
 
     def forward(self, predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        """Computes the standard Hinge loss metric."""
-        y = self._format_labels(targets)
+        y = self._format_labels(targets, predictions.shape[-1])
+        y = self._apply_hinge_bounds(y)
         return torch.clamp(1.0 - (y * predictions), min=0.0).sum()
 
     def _loss_update(
@@ -259,7 +272,7 @@ class ADMM_Hinge(ADMM_Loss):
         config: ADMM_LayerConfig,
     ) -> torch.Tensor:
         """Computes the piecewise Hinge specific update."""
-        y = self._format_labels(labels)
+        y = self._apply_hinge_bounds(labels)
         v_T = temporal_forward.sub(lambda_lagrange / config.rho)
         cond = y * v_T
         z_tilde = torch.where(
@@ -285,16 +298,7 @@ class ADMM_CrossEntropy_Taylor(ADMM_Loss):
     def __str__(self) -> str:
         return "CrossEntropy_Taylor_Loss"
 
-    def _ensure_one_hot(self, labels: torch.Tensor, num_classes: int) -> torch.Tensor:
-        """Safely encodes integer labels into dense one-hot tensors."""
-        if labels.dim() == 1 or labels.size(1) == 1:
-            return F.one_hot(labels.view(-1).long(), num_classes=num_classes).to(
-                torch.float32
-            )
-        return labels.to(torch.float32)
-
     def forward(self, predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        """Computes the standard Cross-Entropy metric."""
         if targets.dim() > 1 and targets.size(1) > 1:
             targets = torch.argmax(targets, dim=1)
         return F.cross_entropy(predictions, targets.long().view(-1), reduction="sum")
@@ -307,9 +311,8 @@ class ADMM_CrossEntropy_Taylor(ADMM_Loss):
         config: ADMM_LayerConfig,
     ) -> torch.Tensor:
         """Computes the linear Taylor-approximated CE update."""
-        y_one_hot = self._ensure_one_hot(labels, temporal_forward.size(-1))
         p = F.softmax(temporal_forward, dim=-1)
-        grad_ce = p - y_one_hot
+        grad_ce = p - labels
         return temporal_forward.sub(lambda_lagrange + grad_ce, alpha=1.0 / config.rho)
 
 
@@ -323,14 +326,6 @@ class ADMM_CrossEntropy(ADMM_Loss):
 
     def __str__(self) -> str:
         return "CrossEntropy_Loss"
-
-    def _ensure_one_hot(self, labels: torch.Tensor, num_classes: int) -> torch.Tensor:
-        """Safely encodes integer labels into dense one-hot tensors."""
-        if labels.dim() == 1 or labels.size(1) == 1:
-            return F.one_hot(labels.view(-1).long(), num_classes=num_classes).to(
-                torch.float32
-            )
-        return labels.to(torch.float32)
 
     def forward(self, predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """Computes the standard Cross-Entropy metric."""
@@ -360,8 +355,6 @@ class ADMM_CrossEntropy(ADMM_Loss):
         Returns:
             torch.Tensor: The iteratively solved z_last tensor.
         """
-        y_one_hot = self._ensure_one_hot(labels, temporal_forward.size(-1))
-
         # The target 'v' that the ADMM consensus wants us to reach
         v = temporal_forward.sub(lambda_lagrange / config.rho)
 
@@ -375,7 +368,7 @@ class ADMM_CrossEntropy(ADMM_Loss):
             p = F.softmax(z, dim=-1)
 
             # 1. First Derivative (Gradient): g(z) = p - y + rho * (z - v)
-            g = p - y_one_hot + config.rho * (z - v)
+            g = p - labels + config.rho * (z - v)
 
             # Check if we have converged to the exact answer
             if torch.max(torch.abs(g)) < tol:

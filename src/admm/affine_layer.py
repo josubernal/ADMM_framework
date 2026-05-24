@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .base_layer import ADMM_Layer
-from .dataclasses import ADMM_LayerConfig, ADMM_LayerCovariance, ADMM_LayerState
+from .dataclasses import ADMM_LayerCovariance, ADMM_LayerState
 from .functional.a_update_solvers import (
     solve_fft_system_static,
     solve_standard_system_static,
@@ -116,10 +116,12 @@ class ADMM_AffineLayer(ADMM_Layer):
         r"""Returns the target tensor $v$ for non-spiking layers.
 
         Formula evaluated:
-        $v_l = z_l - b_l$
+
+        $$ v_l = z_l - b_l $$
 
         If layer $l$ has a Lagrangian multiplier:
-        $v_l = z_l - b_l + \frac{\lambda_l}{\rho}$
+
+        $$ v_l = z_l - b_l + \frac{\lambda_l}{\rho}$$
 
         Note:
             You can find the corresponding spiking version [`get_v`][src.admm.spiking_mixin.ADMM_Spiking.get_v] in the
@@ -146,10 +148,12 @@ class ADMM_AffineLayer(ADMM_Layer):
         r"""Computes the mean spatial covariance for the bias update step.
 
         Formula evaluated:
-        $z_l - \mathcal{A}_l(a_{l-1})$
+
+        $$z_l - \mathcal{A}_l(a_{l-1})$$
 
         If layer $l$ has a Lagrangian multiplier:
-        $z_l - \mathcal{A}_l(a_{l-1}) + \frac{\lambda}{\rho}$
+
+        $$ z_l - \mathcal{A}_l(a_{l-1}) + \frac{\lambda}{\rho} $$
 
         Note:
             We separate this function, because it is overriden by it's spiking version [`_compute_bias_covariance`][src.admm.spiking_mixin.ADMM_Spiking._compute_bias_covariance] in the
@@ -271,7 +275,6 @@ class ADMM_AffineLayer(ADMM_Layer):
     def _get_a_numerator_no_adjoint(
         self,
         state: ADMM_LayerState,
-        next_config: ADMM_LayerConfig,
         a_prev: torch.Tensor,
     ) -> torch.Tensor:
         r"""Calculates the non-spiking numerator block for the spatial activation ($a$) update.
@@ -286,7 +289,6 @@ class ADMM_AffineLayer(ADMM_Layer):
 
         Args:
             state (ADMM_LayerState): [State object][src.admm.dataclasses.ADMM_LayerState] containing the current pre-activations ($z$).
-            next_config (ADMM_LayerConfig): [The configuration object][src.admm.dataclasses.ADMM_LayerConfig] of the subsequent layer. [(Needed for the spiking override)][src.admm.spiking_mixin.ADMM_Spiking._get_a_numerator_no_adjoint]
             a_prev (torch.Tensor): The activations from the previous layer. [(Needed for the spiking override)][src.admm.spiking_mixin.ADMM_Spiking._get_a_numerator_no_adjoint]
 
         Returns:
@@ -378,18 +380,18 @@ class ADMM_AffineLayer(ADMM_Layer):
          Computes the denominator and calls the solver [`solve_fft_system_static`][src.admm.functional.a_update_solvers.solve_fft_system_static]
 
         Denominator formula evaluated in the frequency domain:
-         $\beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1})$
+        $\beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1})$
 
-         Note:
+        Note:
              We separate this function, because it is overriden by it's spiking version [`_solve_fft_system`][src.admm.spiking_mixin.ADMM_Spiking._solve_fft_system] in the
              [`admm.spiking_mixin`][src.admm.spiking_mixin] module.
 
-         Args:
+        Args:
              next_layer (nn.Module): The subsequent layer in the network.
              numerator (torch.Tensor): The assembled numerator target tensor.
              a_shape (tuple): The desired output shape of the activation tensor.
 
-         Returns:
+        Returns:
              torch.Tensor: The solved spatial activations.
         """
 
@@ -442,9 +444,7 @@ class ADMM_AffineLayer(ADMM_Layer):
         """
 
         # Step 1: numerator = β_l·h_l(z_l) + ρ_{l+1}·A*_{l+1}(v_{l+1})
-        numerator = self._get_a_numerator_no_adjoint(
-            state=state, next_config=next_layer.config, a_prev=a_prev
-        )
+        numerator = self._get_a_numerator_no_adjoint(state=state, a_prev=a_prev)
 
         inside_adjoint = next_layer.get_v(next_state)
         adjoint = next_layer.adjoint_operator(

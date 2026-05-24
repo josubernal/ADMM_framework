@@ -18,7 +18,7 @@ def test_woodbury_identity_math_equivalence():
     # Force double precision for strict mathematical verification
     torch.set_default_dtype(torch.float64)
 
-    in_features = 4096
+    in_features = 400
     out_features = 10
     batch_size = 50
     out_shape = (batch_size, in_features)

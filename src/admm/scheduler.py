@@ -90,6 +90,7 @@ class ADMM_Scheduler:
         penalty parameters if the Primal and Dual residuals fall out of the tolerance ratio ($\mu$).
 
         **$\rho$ Update:**
+        
         $$
         \rho_l^{k+1} = 
         \begin{cases} 
@@ -98,10 +99,12 @@ class ADMM_Scheduler:
         \rho_l^k & \text{otherwise}
         \end{cases}
         $$
+        
         *Where:* $d_{\rho_l}^k = \rho_l^k \frac{\|z_l^{k} - z_l^{k-1}\|_2}{\sqrt{N_z}}$
 
         **Lagrange Multiplier ($\lambda$) Scaling:**
         *(If enabled via `use_lagrange`)*
+        
         $$
         \lambda_l^{k+1} = 
         \begin{cases} 
@@ -112,6 +115,7 @@ class ADMM_Scheduler:
         $$
         
         **$\beta$ Update:**
+        
         $$
         \beta_l^{k+1} = 
         \begin{cases} 
@@ -120,6 +124,7 @@ class ADMM_Scheduler:
         \beta_l^k & \text{otherwise}
         \end{cases}
         $$
+        
         *Where:* $d_{\beta_l}^k = \beta_l^k \frac{\|a_l^{k} - a_l^{k-1}\|_2}{\sqrt{N_a}}$
 
         Args:

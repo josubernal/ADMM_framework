@@ -179,7 +179,9 @@ class ADMM_Metrics:
     ) -> float:
         r"""Calculates the normalized norm of the primal residual for the final layer.
 
-        Formula evaluated: $||z_L -F_L(a_{L-1})|| / \sqrt{N}$
+        Formula evaluated:
+
+        $$ ||z_L -F_L(a_{L-1})|| / \sqrt{N} $$
 
         Args:
             inputs (torch.Tensor): The input data tensor.
@@ -208,7 +210,9 @@ class ADMM_Metrics:
     ) -> list[float]:
         r"""Calculates the normalized L2 norm of the pre-activation constraints.
 
-        Formula evaluated per layer: $||z_l - F_l(a_{layer_idx-1})|| / \sqrt{N}$
+        Formula evaluated per layer:
+
+        $$ ||z_l - F_l(a_{l-1})|| / \sqrt{N} $$
 
         Args:
             inputs (torch.Tensor): The input data tensor.
@@ -240,7 +244,9 @@ class ADMM_Metrics:
     def activation_constraint_sum(self, batch_state: ADMM_BatchState) -> list[float]:
         r"""Calculates the normalized L2 norm of the activation constraints.
 
-        Formula evaluated per layer: $||a_l - h_l(z_l)|| / \sqrt{N}$
+        Formula evaluated per layer:
+
+        $$ ||a_l - h_l(z_l)|| / \sqrt{N} $$
 
         Args:
             batch_state (ADMM_BatchState): The [global state][src.admm.dataclasses.ADMM_BatchState] object containing all layer states for the batch.

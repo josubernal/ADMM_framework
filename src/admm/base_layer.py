@@ -39,7 +39,7 @@ class ADMM_Layer(nn.Module):
         h: nn.Module = None,
         config: Optional[ADMM_LayerConfig] = None,
     ):
-        """Initializes the base layer and its constraints.
+        r"""Initializes the base layer and its constraints.
 
         Args:
             rho (float, optional): Affine penalty parameter ($\rho$). Defaults to the one set by the [layer configuration][src.admm.dataclasses.ADMM_LayerConfig].
@@ -81,7 +81,8 @@ class ADMM_Layer(nn.Module):
         * For Static Networks: Simply returns the spatial transformation ($z_l = F_l(a_{l-1})$).
         * For Spiking Networks (SNNs): Simulates the LIF mechanics.
 
-        To refer to its spiking counterpart, see [forward][src.admm.spiking_mixin.ADMM_Spiking.forward].
+        Note:
+            To refer to its spiking counterpart, see [forward][src.admm.spiking_mixin.ADMM_Spiking.forward].
 
         Args:
             a_prev (torch.Tensor): The input tensor from the previous layer.
@@ -96,7 +97,8 @@ class ADMM_Layer(nn.Module):
         r"""Updates the Lagrange multiplier ($\lambda$) based on the current layer constraints.
 
         Formula evaluated:
-        $\lambda_l \leftarrow \lambda_l + \rho_l \big(z_l - F_l(a_{l-1})\big)$
+
+        $$ \lambda_l \leftarrow \lambda_l + \rho_l \big(z_l - F_l(a_{l-1})\big) $$
 
         You can find the corresponding spiking version [update_lambda][src.admm.spiking_mixin.ADMM_Spiking.update_lambda] in the [Spiking Mixin][src.admm.spiking_mixin] module.
 

@@ -91,6 +91,7 @@ class ADMM(nn.Module):
         Provides the [global configuration][src.admm.dataclasses.ADMM_Config] to each layer for consistent initializations across the network.
         """
         for layer in self.layers:
+            layer.device = self.device
             layer._setup(global_config=self.config)
 
     def _get_time_steps(self) -> Optional[List[int]]:
@@ -242,7 +243,7 @@ class ADMM(nn.Module):
         a_prev: torch.Tensor,
         time_steps: Optional[List[int]] = None,
     ) -> None:
-        """Unified interface for updating activations (a) and pre-activations (z).
+        """Unified interface for updating activations ($a$) and pre-activations ($z$).
 
         Automatically routes the execution to unrolled, decoupled, or vectorized
         solvers based on the [global configuration][src.admm.dataclasses.ADMM_Config].
@@ -346,7 +347,7 @@ class ADMM(nn.Module):
         labels: torch.Tensor,
         time_steps: Optional[List[int]] = None,
     ) -> None:
-        """Handles state optimization specifically for the final layer's pre-activations (z).
+        """Handles state optimization specifically for the final layer's pre-activations ($z_L$).
 
         Delegates to the network's configured loss function to apply label-based proximal updates.
 

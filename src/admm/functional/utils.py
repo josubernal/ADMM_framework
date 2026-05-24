@@ -86,7 +86,9 @@ def compute_temporal_dependencies(
 ) -> torch.Tensor:
     r"""Computes the physical voltage leakage and threshold reset over time.
 
-    Formula evaluated: $\Delta z_t = \delta z_{t-1} - \theta a_{t-1}$
+    Formula evaluated:
+
+    $$ T_{l} = \begin{cases} \delta S z_l - \theta S a_{l}, & \text{if} \quad l < L, \cr \delta S z_L, & \text{if}\quad  l = L.\end{cases} $$
 
     Args:
         state (ADMM_LayerState): The [layer state object][src.admm.dataclasses.ADMM_LayerState].

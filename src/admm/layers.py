@@ -76,6 +76,7 @@ class ADMM_Linear(ADMM_AffineLayer):
         Returns:
             torch.Tensor: The linearly transformed output.
         """
+        x.to(self.device)
         b = (
             self.b
             if (isinstance(use_bias, bool) and use_bias and self.config.use_bias)
@@ -186,6 +187,7 @@ class ADMM_Conv2d(ADMM_AffineLayer):
         Returns:
             torch.Tensor: The convolved feature maps.
         """
+        x.to(self.device)
         if self.padding_mode == "circular":
             return circular_forward(self, x, use_bias)
         b = (
@@ -302,6 +304,7 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
         Returns:
             torch.Tensor: The transformed spiking output sequence.
         """
+        x.to(self.device)
         b = (
             self.b
             if (isinstance(use_bias, bool) and use_bias and self.config.use_bias)
@@ -421,6 +424,7 @@ class ADMM_SpikingConv2d(ADMM_Spiking, ADMM_AffineLayer):
         Returns:
             torch.Tensor: The convolved spiking video/sequence.
         """
+        x.to(self.device)
         if self.padding_mode == "circular":
             return circular_forward(self, x, use_bias)
         b = (
