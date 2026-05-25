@@ -1,5 +1,5 @@
 r"""
-This module contains the linear and convolutional layers for ADMM.
+This module contains the feedforward and convolutional layers for ADMM.
 """
 
 import warnings
@@ -23,12 +23,12 @@ from .spiking_mixin import ADMM_Spiking
 ####################################################################################################
 
 
-class ADMM_Linear(ADMM_AffineLayer):
+class ADMM_FeedForward(ADMM_AffineLayer):
     r"""Standard Fully Connected Layer for ADMM.
 
     How it works:
 
-    * **Forward**: Applies a linear transformation ($y = xW^T + b$) to the input.
+    * **Forward**: Applies a feedforward transformation ($y = xW^T + b$) to the input.
     * **Adjoint**: Maps the target vector back to the input space using the transpose of the weights.
     * **Patch Matrix**: Simply uses the pooled input directly.
     """
@@ -62,19 +62,19 @@ class ADMM_Linear(ADMM_AffineLayer):
         self.convolution = False
 
     def _setup(self, global_config=None) -> None:
-        """Initializes the weight and bias tensors for the linear layer."""
+        """Initializes the weight and bias tensors for the feedforward layer."""
         super()._setup(global_config)
         self._init_weights_and_bias((self.out_f, self.in_f), (self.out_f,))
 
     def spatial_forward(self, x: torch.Tensor, use_bias: bool = True) -> torch.Tensor:
-        """Applies the linear transformation to the input data.
+        """Applies the feedforward transformation to the input data.
 
         Args:
             x (torch.Tensor): The input tensor.
             use_bias (bool, optional): Whether to apply the layer's bias. Defaults to True.
 
         Returns:
-            torch.Tensor: The linearly transformed output.
+            torch.Tensor: The transformed output.
         """
         x.to(self.device)
         b = (
@@ -100,7 +100,7 @@ class ADMM_Linear(ADMM_AffineLayer):
         return self.pool_op.adjoint(out, original_input_shape=original_input_shape)
 
     def _compute_P(self, a_prev: torch.Tensor) -> torch.Tensor:
-        """Retrieves the patch matrix for linear least-squares updates."""
+        """Retrieves the patch matrix for feedforward least-squares updates."""
         return self.pool_op(a_prev)
 
     def _get_bias_reduction_dims(self) -> int:
@@ -248,7 +248,7 @@ class ADMM_Conv2d(ADMM_AffineLayer):
         return (0, 2, 3)
 
 
-class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
+class ADMM_SpikingFeedForward(ADMM_Spiking, ADMM_AffineLayer):
     r"""Spiking Fully Connected Layer.
 
     How it works:
@@ -290,7 +290,7 @@ class ADMM_SpikingLinear(ADMM_Spiking, ADMM_AffineLayer):
         self.convolution = False
 
     def _setup(self, global_config=None) -> None:
-        """Initializes the weight and bias tensors for the spiking linear layer."""
+        """Initializes the weight and bias tensors for the spiking feedforward layer."""
         super()._setup(global_config)
         self._init_weights_and_bias((self.out_f, self.in_f), (self.out_f,))
 

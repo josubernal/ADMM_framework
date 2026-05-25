@@ -1,4 +1,4 @@
-"""This module isolates the numerical linear algebra required for the ADMM a-updates.
+"""This module isolates the numerical algebra required for the ADMM a-updates.
 
 By keeping these functions stateless, they are easier to optimize, maintain,
 and read independently from the layer mechanics.
@@ -14,7 +14,7 @@ def solve_fft_system_static(
 ) -> torch.Tensor:
     """Static solver for the activation ($a$) update in the frequency domain.
 
-    Converts the numerator to the frequency domain and solves the linear system
+    Converts the numerator to the frequency domain and solves the system
     using the provided main and last denominator tensors.
 
     Args:
@@ -39,7 +39,7 @@ def solve_fft_system_spiking(
 ) -> torch.Tensor:
     """Spiking solver for the activation ($a$) update in the frequency domain.
 
-    Converts the numerator to the frequency domain and solves the linear system
+    Converts the numerator to the frequency domain and solves the system
     using the provided main and last denominator tensors.
 
     Args:
@@ -74,7 +74,7 @@ def solve_fft_system_unrolled(
 ) -> torch.Tensor:
     """Unrolled spiking solver for the activation ($a$) update in the frequency domain.
 
-    Converts the numerator to the frequency domain and solves the linear system
+    Converts the numerator to the frequency domain and solves the system
     using the provided main and last denominator tensors.
 
     Args:
@@ -254,7 +254,7 @@ def solve_woodbury_system_unrolled(
 def solve_standard_system_static(
     denominator: torch.Tensor, numerator: torch.Tensor, a_shape: tuple, in_features: int
 ) -> torch.Tensor:
-    """Solves a standard linear system $Ax = B$.
+    """Solves a standard system $Ax = B$.
 
     Args:
         denominator (torch.Tensor): The left-hand side matrix.
@@ -278,7 +278,7 @@ def solve_standard_system_spiking(
     in_features: int,
     T: int,
 ) -> torch.Tensor:
-    r"""Solves the linear system $Ax = B$ for spiking sequences.
+    r"""Solves the system $Ax = B$ for spiking sequences.
 
     Handles the boundary condition at the final timestep ($t=T$) separately
     from the main timesteps ($t<T$). We do this because the denominators are different.
@@ -314,7 +314,7 @@ def solve_standard_system_spiking(
 def solve_standard_system_unrolled(
     numerator: torch.Tensor, denominator: Union[torch.Tensor, dict]
 ) -> torch.Tensor:
-    """Solves a standard linear system  $Ax = B$ for spiking unrolled path.
+    """Solves a standard system  $Ax = B$ for spiking unrolled path.
 
     Args:
         numerator (torch.Tensor): The numerator for a single timestep $t$.

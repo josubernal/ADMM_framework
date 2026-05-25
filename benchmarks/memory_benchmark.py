@@ -34,7 +34,7 @@ def run_all_profiles():
     T = config.getint("config", "n_timesteps")
 
     batch_sizes = [4, 8, 16, 32, 64, 128, 256, 512]
-    architectures = ["linear", "conv", "spiking-linear", "spiking-conv"]
+    architectures = ["feedforward", "conv", "spiking-feedforward", "spiking-conv"]
 
     for model_name in architectures:
         print(f"\n{'=' * 50}")

@@ -42,7 +42,7 @@ Here is how to train a basic 2-layer Spiking Neural Network:
 
 ```python
 import torch
-from admm import ADMM, ADMM_Linear, ADMM_ReLU
+from admm import ADMM, ADMM_FeedForward, ADMM_ReLU
 
 # 1. Define your network geometry
 in_features = 784
@@ -52,8 +52,8 @@ batch_size = 32
 
 
 # 2. Instantiate ADMM Layers
-layer1 = ADMM_Linear(in_features, hidden_features, rho=1, beta=1, h=ADMM_ReLU())
-layer2 = ADMM_Linear(hidden_features, out_features, rho=1, beta=1)
+layer1 = ADMM_FeedForward(in_features, hidden_features, rho=1, beta=1, h=ADMM_ReLU())
+layer2 = ADMM_FeedForward(hidden_features, out_features, rho=1, beta=1)
 
 # 3. Initialize the Orchestrator
 model = ADMM(
@@ -73,7 +73,7 @@ model.fit(inputs, labels)
 
 ## Where to go next?
 
-* **[Tutorials](tutorials/getting_started.md):** Step-by-step guides from basic linear networks to complex spatiotemporal convolutions.
+* **[Tutorials](tutorials/getting_started.md):** Step-by-step guides from basic networks to complex spatiotemporal convolutions.
 * **[Theory](theory/motivation.md):** Deep dive into the mathematical formulation of the ADMM splitting scheme and SNN temporal unrolling.
 * **[API Reference](api/manager.md):** Comprehensive documentation of all layers, managers, and functional math operations.
 

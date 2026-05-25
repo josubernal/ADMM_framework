@@ -15,15 +15,15 @@ from src.admm import (
     ADMM_Config,
     ADMM_Conv2d,
     ADMM_CrossEntropy_Taylor,
+    ADMM_FeedForward,
     ADMM_Flatten,
     ADMM_Heaviside,
     ADMM_LayerConfig,
-    ADMM_Linear,
     ADMM_Metrics,
     ADMM_ReLU,
     ADMM_SpatialPool,
     ADMM_SpikingConv2d,
-    ADMM_SpikingLinear,
+    ADMM_SpikingFeedForward,
 )
 
 
@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
         # Extract variables
         use_double = cfg.get("use_double", False)
-        model_name = cfg.get("model", "linear")
+        model_name = cfg.get("model", "feedforward")
         epochs = cfg.get("epochs", 20)
         warming_iters = cfg.get("warming_iters", 6)
         batch_size = cfg.get("batch_size", 50)
@@ -143,7 +143,7 @@ if __name__ == "__main__":
         # 1. LOAD DATASET
         # ---------------------------------------------------------
 
-        if model_name in ["linear", "conv"]:
+        if model_name in ["feedforward", "conv"]:
             train_loader = get_dataset(model_name, batch_size, n_batches, seed=seed)
         else:
             train_loader = get_dataset(
@@ -169,17 +169,17 @@ if __name__ == "__main__":
             use_fft=use_fft,
         )
         match model_name:
-            case "spiking-linear":
+            case "spiking-feedforward":
                 if num_layers == 2:
                     layers = nn.ModuleList(
                         [
-                            ADMM_SpikingLinear(
+                            ADMM_SpikingFeedForward(
                                 in_f=34 * 34 * 2,
                                 out_f=hidden_dims,
                                 h=ADMM_Heaviside(),
                                 config=layer_config,
                             ),
-                            ADMM_SpikingLinear(
+                            ADMM_SpikingFeedForward(
                                 in_f=hidden_dims,
                                 out_f=10,
                                 h=None,
@@ -192,19 +192,19 @@ if __name__ == "__main__":
                     mid_dims = hidden_dims // 2
                     layers = nn.ModuleList(
                         [
-                            ADMM_SpikingLinear(
+                            ADMM_SpikingFeedForward(
                                 in_f=34 * 34 * 2,
                                 out_f=hidden_dims,
                                 h=ADMM_Heaviside(),
                                 config=layer_config,
                             ),
-                            ADMM_SpikingLinear(
+                            ADMM_SpikingFeedForward(
                                 in_f=hidden_dims,
                                 out_f=mid_dims,
                                 h=ADMM_Heaviside(),
                                 config=layer_config,
                             ),
-                            ADMM_SpikingLinear(
+                            ADMM_SpikingFeedForward(
                                 in_f=mid_dims,
                                 out_f=10,
                                 h=None,
@@ -239,7 +239,7 @@ if __name__ == "__main__":
                                 padding_mode="zeros",
                             ),
                             # Passing 648 to in_f and using Flatten
-                            ADMM_SpikingLinear(
+                            ADMM_SpikingFeedForward(
                                 in_f=lin_in,
                                 out_f=10,
                                 h=None,
@@ -277,7 +277,7 @@ if __name__ == "__main__":
                                 use_reset=False,
                                 padding_mode="zeros",
                             ),
-                            ADMM_SpikingLinear(
+                            ADMM_SpikingFeedForward(
                                 in_f=lin_in,
                                 out_f=10,
                                 h=None,
@@ -288,14 +288,14 @@ if __name__ == "__main__":
                         ]
                     )
 
-            case "linear":
+            case "feedforward":
                 layer_list = []
                 current_in = 28 * 28
 
                 # 1. Build all hidden layers (constant width)
                 for _ in range(num_layers - 1):
                     layer_list.append(
-                        ADMM_Linear(
+                        ADMM_FeedForward(
                             in_f=current_in,
                             out_f=hidden_dims,
                             h=ADMM_ReLU(),
@@ -307,7 +307,7 @@ if __name__ == "__main__":
 
                 # 2. Build the final classification layer
                 layer_list.append(
-                    ADMM_Linear(
+                    ADMM_FeedForward(
                         in_f=current_in,
                         out_f=10,
                         h=ADMM_ReLU(),
@@ -366,11 +366,11 @@ if __name__ == "__main__":
                 # CRITICAL FIX: Update the spatial size one last time based on stride `s`!
                 current_spatial = int(calc_spatial_out(current_spatial, k, p, s))
 
-                # 3. Build the final Linear Classification Layer
+                # 3. Build the final FeedForward Classification Layer
                 lin_in = hidden_channels * current_spatial * current_spatial
 
                 layer_list.append(
-                    ADMM_Linear(
+                    ADMM_FeedForward(
                         in_f=lin_in,
                         out_f=10,
                         h=ADMM_ReLU(),
@@ -407,7 +407,7 @@ if __name__ == "__main__":
         else:
             combo_str = "_".join([f"{k}-{cfg[k]}" for k in filtered_keys])
 
-        metrics_path = f"metrics_test/{model_name}/{batch_size}/{combo_str}/{seed}"
+        metrics_path = f"scripts/results/{model_name}/{batch_size}/{combo_str}/{seed}"
         os.makedirs(metrics_path, exist_ok=True)
 
         print("Training...")

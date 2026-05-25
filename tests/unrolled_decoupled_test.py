@@ -11,7 +11,7 @@ import torch
 
 from src.admm.activation_functions import ADMM_Heaviside
 from src.admm.dataclasses import ADMM_LayerState, TemporalCache
-from src.admm.layers import ADMM_SpikingLinear
+from src.admm.layers import ADMM_SpikingFeedForward
 
 
 def test_temporal_schemes_equivalence():
@@ -25,7 +25,7 @@ def test_temporal_schemes_equivalence():
     config = {"rho": 1.0, "beta": 1.0, "deltas": 0.8, "thetas": 1.0}
     h_func = ADMM_Heaviside()
 
-    layer_base = ADMM_SpikingLinear(IN_F, OUT_F, h=h_func, **config)
+    layer_base = ADMM_SpikingFeedForward(IN_F, OUT_F, h=h_func, **config)
     layer_base.device = device
     layer_base._setup()
     layer_base.T = T
@@ -37,7 +37,7 @@ def test_temporal_schemes_equivalence():
         "thetas": 1.0,
         "use_reset": False,
     }
-    next_layer = ADMM_SpikingLinear(OUT_F, OUT_F, h=h_func, **config_next)
+    next_layer = ADMM_SpikingFeedForward(OUT_F, OUT_F, h=h_func, **config_next)
     next_layer.device = device
     next_layer._setup()
     next_layer.T = T

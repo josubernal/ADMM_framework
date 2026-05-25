@@ -1,6 +1,6 @@
 r"""
 This module provides the core infrastructure for layers with trainable affine
-parameters (e.g., Linear, Conv2d). It encapsulates the exact mathematical solvers
+parameters (e.g., FeedForward, Conv2d). It encapsulates the exact mathematical solvers
 required to optimize these parameters ($W$ and $b$) and their corresponding activations ($a$) dynamically
 routing computations through standard dense, Woodbury, or Fast Fourier Transform (FFT) paths.
 """
@@ -29,7 +29,7 @@ from .pooling import ADMM_Flatten
 
 
 class ADMM_AffineLayer(ADMM_Layer):
-    """Manages affine layers with trainable parameters like Linear and Conv2d.
+    """Manages affine layers with trainable parameters like FeedForward and Conv2d.
 
     Handles the initialization of weights and biases and contains the core
     optimization solvers to update them using Alternating Direction Method
@@ -424,7 +424,7 @@ class ADMM_AffineLayer(ADMM_Layer):
         r"""Manages the activation ($a$) update for standard spatial layers.
 
         Assembles the numerator $n = \beta_l h_l(z_l) + \rho_{l+1} \mathcal{A}_{l+1}^*(v_{l+1})$
-        and dynamically routes to the optimal linear solver based on the layer configurations:
+        and dynamically routes to the optimal solver based on the layer configurations:
 
         * **FFT path**: Used when both the current and next layers are convolutional and
           `use_fft` is enabled. Solves the system entirely in the frequency domain,
@@ -452,7 +452,7 @@ class ADMM_AffineLayer(ADMM_Layer):
         )
         numerator.add_(adjoint, alpha=next_layer.config.rho)
 
-        # Step 2: Expand weights (handles Linear, Conv, pooled variants)
+        # Step 2: Expand weights (handles FeedForward, Conv, pooled variants)
         W_expanded = next_layer.pool_op.expand_weights(
             W=next_layer.W, a_shape=state.a.shape
         )

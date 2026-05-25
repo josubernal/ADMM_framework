@@ -15,10 +15,10 @@ def one_hot_target(y, num_classes=10):
 
 def format_images(images, model_name):
     """Formats the image tensor geometry based on the model architecture."""
-    if model_name == "spiking-linear":
+    if model_name == "spiking-feedforward":
         # Flatten spatial dims: [T, B, C, H, W] -> [T, B, Features]
         images = images.view(images.size(0), images.size(1), -1)
-    elif model_name == "linear":
+    elif model_name == "feedforward":
         # Flatten spatial dims: [B, C, H, W] -> [B, Features]
         images = images.view(images.size(0), -1)
 

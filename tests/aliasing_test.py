@@ -15,7 +15,7 @@ from src.admm.dataclasses import (
     ADMM_LayerCovariance,
     ADMM_LayerState,
 )
-from src.admm.layers import ADMM_SpikingLinear
+from src.admm.layers import ADMM_SpikingFeedForward
 
 
 def test_inplace_aliasing():
@@ -27,9 +27,9 @@ def test_inplace_aliasing():
     global_config = ADMM_Config()
 
     #  Setup 3 layers
-    layer1 = ADMM_SpikingLinear(feats, feats, h=ADMM_Heaviside(), config=config)
-    layer2 = ADMM_SpikingLinear(feats, feats, h=ADMM_Heaviside(), config=config)
-    layer3 = ADMM_SpikingLinear(feats, feats, h=ADMM_Heaviside(), config=config)
+    layer1 = ADMM_SpikingFeedForward(feats, feats, h=ADMM_Heaviside(), config=config)
+    layer2 = ADMM_SpikingFeedForward(feats, feats, h=ADMM_Heaviside(), config=config)
+    layer3 = ADMM_SpikingFeedForward(feats, feats, h=ADMM_Heaviside(), config=config)
 
     for i, layer in enumerate([layer1, layer2, layer3]):
         layer.device = device

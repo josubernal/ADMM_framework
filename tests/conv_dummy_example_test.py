@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from src.admm.activation_functions import ADMM_Identity, ADMM_ReLU
 from src.admm.dataclasses import ADMM_Config, ADMM_LayerConfig
-from src.admm.layers import ADMM_Conv2d, ADMM_Linear
+from src.admm.layers import ADMM_Conv2d, ADMM_FeedForward
 from src.admm.loss_functions import ADMM_SSE
 from src.admm.manager import ADMM
 
@@ -39,7 +39,7 @@ from src.admm.manager import ADMM
         ),
     ],
 )
-def test_conv2d_to_linear_admm_fit(
+def test_conv2d_to_feedforward_admm_fit(
     z0_val, a0_val, z1_val, Y_val, exp_W0, exp_W1, exp_a0, exp_z0, exp_z1
 ):
     torch.set_default_dtype(torch.float64)
@@ -75,10 +75,10 @@ def test_conv2d_to_linear_admm_fit(
         config=config0,
     )
 
-    # 2. Setup Layer 1 (Linear)
+    # 2. Setup Layer 1 (FeedForward)
     # in_f=1 because the Conv2d outputs shape (4, 1, 1, 1), which ADMM_Flatten pools to (4, 1)
     config1 = ADMM_LayerConfig(rho=1.0, beta=1.0, use_bias=False, use_lagrange=False)
-    layer1 = ADMM_Linear(in_f=1, out_f=1, h=ADMM_Identity(), config=config1)
+    layer1 = ADMM_FeedForward(in_f=1, out_f=1, h=ADMM_Identity(), config=config1)
 
     # 3. Setup Global Manager
     global_config = ADMM_Config(train_method="vectorized", layer_order="sequential")
@@ -138,7 +138,7 @@ def test_conv2d_to_linear_admm_fit(
         msg="Layer 0: Spatial Pre-activation (z0) update diverged.",
     )
 
-    # Layer 1 (Linear) assertions
+    # Layer 1 (FeedForward) assertions
     torch.testing.assert_close(
         layer1.W.data,
         torch.tensor(exp_W1, dtype=torch.float64, device=device),

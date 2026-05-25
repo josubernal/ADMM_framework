@@ -12,7 +12,7 @@ import torch
 
 from src.admm.activation_functions import ADMM_Heaviside
 from src.admm.dataclasses import ADMM_Config
-from src.admm.layers import ADMM_SpikingLinear
+from src.admm.layers import ADMM_SpikingFeedForward
 from src.admm.manager import ADMM
 
 
@@ -22,10 +22,10 @@ def test_autograd_and_memory_leak():
 
     # Setup a small 2-layer network
     global_config = ADMM_Config(init="zeros")
-    layer1 = ADMM_SpikingLinear(
+    layer1 = ADMM_SpikingFeedForward(
         in_f, hidden_f, rho=1.0, beta=1.0, deltas=0.8, thetas=1.0, h=ADMM_Heaviside()
     )
-    layer2 = ADMM_SpikingLinear(
+    layer2 = ADMM_SpikingFeedForward(
         hidden_f,
         out_f,
         rho=1.0,

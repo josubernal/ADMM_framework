@@ -364,7 +364,7 @@ class ADMM_Spiking:
         r"""Manages the unrolled (Gauss-Seidel) activation ($a$) update for spiking layers.
 
         Assembles the per-timestep numerator, factoring in the temporal reset penalty
-        if $t < T$, and dynamically routes to the optimal linear solver (FFT, Woodbury,
+        if $t < T$, and dynamically routes to the optimal solver (FFT, Woodbury,
         or Standard) based on the layer configurations. Output is clamped to $[0, 1]$.
 
         Args:

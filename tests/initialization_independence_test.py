@@ -14,7 +14,7 @@ from src.admm.dataclasses import (
     ADMM_LayerCovariance,
     ADMM_LayerState,
 )
-from src.admm.layers import ADMM_Linear
+from src.admm.layers import ADMM_FeedForward
 
 BATCH, IN_F, OUT_F = 16, 32, 32
 
@@ -34,8 +34,8 @@ def test_parameter_initialization_independence_no_bias(init_data):
     global_config = ADMM_Config()
 
     # Setup layer states equally
-    layer_z = ADMM_Linear(IN_F, OUT_F, h=ADMM_ReLU(), config=config)
-    layer_r = ADMM_Linear(IN_F, OUT_F, h=ADMM_ReLU(), config=config)
+    layer_z = ADMM_FeedForward(IN_F, OUT_F, h=ADMM_ReLU(), config=config)
+    layer_r = ADMM_FeedForward(IN_F, OUT_F, h=ADMM_ReLU(), config=config)
     layer_z._setup(global_config=global_config)
     layer_r._setup(global_config=global_config)
 

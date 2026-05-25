@@ -12,7 +12,7 @@ By decomposing the complex global loss landscape into highly parallelizable, loc
 ## ✨ Features
 
 * **PyTorch Native:** Built directly on top of `torch` and `torch.nn` to facilitate the learning curve.
-* **Spiking & Static Network Support:** Includes specialized managers for Affine layers (`Linear`, `Conv2d`) alongside a powerful `SpikingMixin` for modeling temporal leakage and spike resets.
+* **Spiking & Static Network Support:** Includes specialized managers for Affine layers (`FeedForward`, `Conv2d`) alongside a powerful `SpikingMixin` for modeling temporal leakage and spike resets.
 * **Vectorized, Decoupled & Unrolled Training:** Flexible training modes allowing you to balance memory constraints with raw compute speed.
 * **Lagrangian Multipliers:** Full support for dual variables and penalty parameter ($\rho$, $\beta$) tuning to enforce layer constraints.
 
@@ -47,7 +47,7 @@ The codebase is modularly designed to separate the mathematical solvers from the
 
 * Documentation
     - **`README.md`**: The entry point for the project, detailing installation, features, and high-level architecture.
-    - **`QUICK_GUIDE.md`**: A rapid-reference guide explaining the intuition behind global hyperparameters (`train_method`, state injectors) and layer-specific physics (penalty parameters $\rho$/$\beta$, leakage $\delta$, and thresholds $\theta$).
+    - **`QUICK_GUIDE.md`**: A rapid-reference guide explaining the intuition behind global hyperparameters (`train_method`, state injectors) and layer-specific physics (penalty parameters $\rho$, $\beta$, leakage $\delta$, and thresholds $\theta$).
     - **`LIMITATIONS.md`**: A quick review of the current limitations of the framework, and possible future updates.
 
 ## 📚 Documentation

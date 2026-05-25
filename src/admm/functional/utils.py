@@ -31,10 +31,10 @@ def fold_time(x: torch.Tensor) -> tuple[torch.Tensor, tuple | None]:
     """Folds the Time and Batch dimensions together for spatial operations.
 
     Used to seamlessly pass spiking sequences through standard 2D convolutions
-    and Linear matrix multiplications.
+    and feedforward matrix multiplications.
 
     Args:
-        x (torch.Tensor): The input tensor, potentially 5D (Conv) or 3D (Linear).
+        x (torch.Tensor): The input tensor, potentially 5D (Conv) or 3D (Feedforward).
 
     Returns:
         Tuple[torch.Tensor, Optional[Tuple[int, int]]]:

@@ -31,12 +31,12 @@ p = config.getint("config", "p")
 s = config.getint("config", "s")
 lr = config.getfloat("config", "learning_rate")
 
-linear_rho = config.getfloat("config", "linear_rho")
-linear_beta = config.getfloat("config", "linear_beta")
+ff_rho = config.getfloat("config", "ff_rho")
+ff_beta = config.getfloat("config", "ff_beta")
 conv_rho = config.getfloat("config", "conv_rho")
 conv_beta = config.getfloat("config", "conv_beta")
-splinear_rho = config.getfloat("config", "splinear_rho")
-splinear_beta = config.getfloat("config", "splinear_beta")
+spff_rho = config.getfloat("config", "spff_rho")
+spff_beta = config.getfloat("config", "spff_beta")
 spconv_rho = config.getfloat("config", "spconv_rho")
 spconv_beta = config.getfloat("config", "spconv_beta")
 
@@ -55,11 +55,11 @@ def calc_spatial_out(size_in, k, p, s):
 
 ########################################
 # MODELS
-class GDLinearNet(nn.Module):
+class GDFFNet(nn.Module):
     def __init__(
         self, input_size=input_size, hidden_size=hidden_size_static, num_classes=10
     ):
-        super(GDLinearNet, self).__init__()
+        super(GDFFNet, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
         self.fc2 = nn.Linear(hidden_size, num_classes)
@@ -97,7 +97,7 @@ class GDConvNet(nn.Module):
         return x
 
 
-class GDSpLinearNet(nn.Module):
+class GDSpFFNet(nn.Module):
     def __init__(
         self,
         input_size=34 * 34 * 2,
@@ -107,21 +107,35 @@ class GDSpLinearNet(nn.Module):
         threshold=thetas,
         num_steps=n_timesteps,
     ):
-        super(GDSpLinearNet, self).__init__()
+        super(GDSpFFNet, self).__init__()
         self.num_steps = num_steps
         self.fc1 = nn.Linear(input_size, hidden_size, bias=False)
         self.fc2 = nn.Linear(hidden_size, num_classes, bias=False)
         self.lif1 = snn.Leaky(beta=beta, threshold=threshold)
         self.lif2 = snn.Leaky(beta=beta, reset_mechanism="none")
 
-    def forward(self, x):
+    def forward(self, x, return_spikes=False):
         mem1 = self.lif1.init_leaky()
         mem2 = self.lif2.init_leaky()
+
+        if return_spikes:
+            spikes_layer1 = []
+
         for step in range(self.num_steps):
             cur1 = self.fc1(x[step])
             spk1, mem1 = self.lif1(cur1, mem1)
+
+            if return_spikes:
+                spikes_layer1.append(spk1)
+
             cur2 = self.fc2(spk1)
             _, mem2 = self.lif2(cur2, mem2)
+
+        if return_spikes:
+            # Calculate mean firing rate across time, batch, and neurons
+            fr1 = torch.stack(spikes_layer1).mean().item()
+            return mem2, [fr1]
+
         return mem2
 
 
@@ -152,15 +166,29 @@ class GDSpConvNet(nn.Module):
         self.lif1 = snn.Leaky(beta=beta, threshold=threshold)
         self.lif2 = snn.Leaky(beta=beta, reset_mechanism="none")
 
-    def forward(self, x):
+    def forward(self, x, return_spikes=False):
         mem1 = self.lif1.init_leaky()
         mem2 = self.lif2.init_leaky()
+
+        if return_spikes:
+            spikes_layer1 = []
+
         for step in range(self.num_steps):
             cur1 = self.conv(x[step])
             spk1, mem1 = self.lif1(cur1, mem1)
+
+            if return_spikes:
+                spikes_layer1.append(spk1)
+
             spk1_flat = self.flatten(spk1)
             cur2 = self.fc2(spk1_flat)
             _, mem2 = self.lif2(cur2, mem2)
+
+        if return_spikes:
+            # Calculate mean firing rate across time, batch, and spatial dimensions
+            fr1 = torch.stack(spikes_layer1).mean().item()
+            return mem2, [fr1]
+
         return mem2
 
 
@@ -168,7 +196,7 @@ class GDSpConvNet(nn.Module):
 # AUTOMATED ITERATION OVER MODELS
 #########################################
 # Un-commented array to loop through all models
-model_types = ["linear", "conv", "spiking-linear", "spiking-conv"]
+model_types = ["feedforward", "conv", "spiking-feedforward", "spiking-conv"]
 
 for model_name in model_types:
     torch.manual_seed(seed)
@@ -187,7 +215,7 @@ for model_name in model_types:
 
     #########################################
     # DATA
-    if model_name in ["linear", "conv"]:
+    if model_name in ["feedforward", "conv"]:
         train_loader = get_dataset(model_name, batch_size_static, 1, seed=seed)
     else:
         train_loader = get_dataset(
@@ -201,17 +229,17 @@ for model_name in model_types:
     #########################################
     # MODEL INSTANTIATION
     match model_name:
-        case "linear":
-            model = GDLinearNet().to(device)
+        case "feedforward":
+            model = GDFFNet().to(device)
         case "conv":
             model = GDConvNet().to(device)
-        case "spiking-linear":
-            model = GDSpLinearNet().to(device)
+        case "spiking-feedforward":
+            model = GDSpFFNet().to(device)
         case "spiking-conv":
             model = GDSpConvNet().to(device)
 
     match model_name:
-        case "linear":
+        case "feedforward":
             batch_size = batch_size_static
             admm_model = get_model(
                 model_name=model_name,
@@ -231,7 +259,7 @@ for model_name in model_types:
                 loss=ADMM_SSE(),
                 z_first=False,
             )
-        case "spiking-linear":
+        case "spiking-feedforward":
             batch_size = batch_size_spiking
             admm_model = get_model(
                 model_name=model_name,
@@ -285,10 +313,18 @@ for model_name in model_types:
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     gd_accs = []
+    gd_losses = []
+    gd_frs = []
 
     print("\nTraining model with gradient descent...")
     for epoch in range(epochs):
-        outputs = model(images)
+        # Extract outputs and conditionally extract firing rates
+        if model_name in ["spiking-feedforward", "spiking-conv"]:
+            outputs, frs = model(images, return_spikes=True)
+        else:
+            outputs = model(images)
+            frs = [float("nan")]
+
         loss = criterion(outputs, labels.long())
 
         _, predictions = torch.max(outputs, 1)
@@ -299,9 +335,12 @@ for model_name in model_types:
         loss.backward()
         optimizer.step()
 
+        # Append metrics
         gd_accs.append(accuracy)
+        gd_losses.append(loss.item())
+        gd_frs.append(frs)
 
-        print(f"Step {epoch + 1} |  Acc: {accuracy:.4f}")
+        print(f"Step {epoch + 1} | Loss: {loss.item():.4f} | Acc: {accuracy:.4f}")
 
     #########################################
     # SAVING RESULTS AND PLOTTING
@@ -312,6 +351,8 @@ for model_name in model_types:
     metrics["epochs"] = epochs
     metrics["seed"] = seed
     metrics["gd_accuracy"] = gd_accs
+    metrics["gd_loss"] = gd_losses
+    metrics["gd_firing_rate"] = gd_frs
 
     metrics_filename = (
         f"benchmarks/results/gd_comparation/{model_name}/{batch_size}/results.json"

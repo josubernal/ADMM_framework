@@ -22,7 +22,7 @@ epochs = config.getint("config", "epochs")
 n_timesteps = config.getint("config", "n_timesteps")
 warming_iters = epochs // 2
 
-model_types = ["linear", "conv", "spiking-linear", "spiking-conv"]
+model_types = ["feedforward", "conv", "spiking-feedforward", "spiking-conv"]
 layer_orders = ["sequential", "backwards"]
 for model_name in model_types:
     print(f"\n{'=' * 50}")
@@ -38,13 +38,13 @@ for model_name in model_types:
         torch.backends.cudnn.benchmark = False
         #########################################
         # DATA
-        if model_name in ["linear", "conv"]:
-            train_loader = get_dataset(batch_size_static, 1, spiking=False, seed=seed)
+        if model_name in ["feedforward", "conv"]:
+            train_loader = get_dataset(model_name, batch_size_static, 1, seed=seed)
         else:
             train_loader = get_dataset(
+                model_name,
                 batch_size_spiking,
                 1,
-                spiking=True,
                 n_timesteps=n_timesteps,
                 seed=seed,
             )
@@ -52,7 +52,7 @@ for model_name in model_types:
         #########################################
         # MODEL INSTANTIATION
         match model_name:
-            case "linear":
+            case "feedforward":
                 batch_size = batch_size_static
                 admm_model = get_model(
                     model_name=model_name,
@@ -72,7 +72,7 @@ for model_name in model_types:
                     loss=ADMM_SSE(),
                     z_first=False,
                 )
-            case "spiking-linear":
+            case "spiking-feedforward":
                 batch_size = batch_size_spiking
                 admm_model = get_model(
                     model_name=model_name,

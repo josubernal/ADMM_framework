@@ -2,9 +2,9 @@ from .activation_functions import ADMM_Heaviside, ADMM_ReLU
 from .dataclasses import ADMM_Config, ADMM_LayerConfig
 from .layers import (
     ADMM_Conv2d,
-    ADMM_Linear,
+    ADMM_FeedForward,
     ADMM_SpikingConv2d,
-    ADMM_SpikingLinear,
+    ADMM_SpikingFeedForward,
 )
 from .loss_functions import (
     ADMM_SSE,
@@ -20,9 +20,9 @@ from .scheduler import ADMM_Scheduler
 __all__ = [
     "ADMM",
     "ADMM_Metrics",
-    "ADMM_Linear",
+    "ADMM_FeedForward",
     "ADMM_Conv2d",
-    "ADMM_SpikingLinear",
+    "ADMM_SpikingFeedForward",
     "ADMM_SpikingConv2d",
     "ADMM_ReLU",
     "ADMM_Heaviside",

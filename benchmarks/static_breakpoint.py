@@ -9,8 +9,8 @@ from benchmarks.utils.dataset import get_dataset
 from src.admm import (
     ADMM,
     ADMM_Conv2d,
+    ADMM_FeedForward,
     ADMM_Flatten,
-    ADMM_Linear,
     ADMM_Metrics,
     ADMM_ReLU,
 )
@@ -31,8 +31,8 @@ k = config.getint("config", "k")
 p = (k - 1) // 2  # To prevent shrinkage
 s = 1
 
-linear_rho = config.getfloat("config", "linear_rho")
-linear_beta = config.getfloat("config", "linear_beta")
+ff_rho = config.getfloat("config", "ff_rho")
+ff_beta = config.getfloat("config", "ff_beta")
 conv_rho = config.getfloat("config", "conv_rho")
 conv_beta = config.getfloat("config", "conv_beta")
 max_layers = config.getint("config", "max_layers")
@@ -47,12 +47,12 @@ def calc_spatial_out(size_in, k, p, s):
 
 ########################################
 
-model_types = ["linear", "conv"]
+model_types = ["feedforward", "conv"]
 
 batch_size = batch_size_static
-train_loader = get_dataset(batch_size_static, 1, spiking=False, seed=seed)
 
 for model_name in model_types:
+    train_loader = get_dataset(model_name, batch_size_static, 1, seed=seed)
     print(f"\n{'=' * 50}")
     print(f"EVALUATING MODEL: {model_name.upper()}")
     print(f"{'=' * 50}")
@@ -68,14 +68,14 @@ for model_name in model_types:
         # MODEL INSTANTIATION
         layer_list = []
         match model_name:
-            case "linear":
+            case "feedforward":
                 layer_config = ADMM_LayerConfig(
-                    rho=linear_rho,
-                    beta=linear_beta,
+                    rho=ff_rho,
+                    beta=ff_beta,
                     use_bias=True,
                 )
                 layer_list.append(
-                    ADMM_Linear(
+                    ADMM_FeedForward(
                         in_f=input_size,
                         out_f=hidden_size_static,
                         h=ADMM_ReLU(),
@@ -84,7 +84,7 @@ for model_name in model_types:
                 )
                 for _ in range(layers - 1):
                     layer_list.append(
-                        ADMM_Linear(
+                        ADMM_FeedForward(
                             in_f=hidden_size_static,
                             out_f=hidden_size_static,
                             h=ADMM_ReLU(),
@@ -93,7 +93,7 @@ for model_name in model_types:
                     )
 
                 layer_list.append(
-                    ADMM_Linear(
+                    ADMM_FeedForward(
                         in_f=hidden_size_static,
                         out_f=10,
                         h=ADMM_ReLU(),
@@ -101,12 +101,12 @@ for model_name in model_types:
                     )
                 )
 
-                linear_layers = nn.ModuleList(layer_list)
+                ff_layers = nn.ModuleList(layer_list)
                 config = ADMM_Config(
                     init="pytorch",
                     train_method="vectorized",
                 )
-                admm_model = ADMM(linear_layers, config=config).to(device)
+                admm_model = ADMM(ff_layers, config=config).to(device)
 
             case "conv":
                 current_spatial = 28
@@ -144,7 +144,7 @@ for model_name in model_types:
 
                 lin_in_dim = hidden_channels_static * current_spatial * current_spatial
                 layer_list.append(
-                    ADMM_Linear(
+                    ADMM_FeedForward(
                         in_f=lin_in_dim,
                         out_f=10,
                         h=ADMM_ReLU(),

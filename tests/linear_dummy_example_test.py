@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from src.admm.activation_functions import ADMM_Identity, ADMM_ReLU
 from src.admm.dataclasses import ADMM_Config, ADMM_LayerConfig
-from src.admm.layers import ADMM_Linear
+from src.admm.layers import ADMM_FeedForward
 from src.admm.loss_functions import ADMM_SSE
 from src.admm.manager import ADMM
 
@@ -54,11 +54,11 @@ def test_full_network_admm_fit_exact_math(
 
     # 1. Setup Layer 0
     config0 = ADMM_LayerConfig(rho=1.0, beta=1.0, use_bias=False, use_lagrange=False)
-    layer0 = ADMM_Linear(in_f=2, out_f=2, h=ADMM_ReLU(), config=config0)
+    layer0 = ADMM_FeedForward(in_f=2, out_f=2, h=ADMM_ReLU(), config=config0)
 
     # 2. Setup Layer 1
     config1 = ADMM_LayerConfig(rho=1.0, beta=1.0, use_bias=False, use_lagrange=False)
-    layer1 = ADMM_Linear(in_f=2, out_f=1, h=ADMM_Identity(), config=config1)
+    layer1 = ADMM_FeedForward(in_f=2, out_f=1, h=ADMM_Identity(), config=config1)
 
     # 3. Setup Global Manager
     global_config = ADMM_Config(train_method="vectorized", layer_order="sequential")

@@ -1,6 +1,6 @@
 """Validates the mathematical equivalence of frequency-domain solvers.
 
-Checks that the FFT-based linear system solvers and covariance accumulators yield
+Checks that the FFT-based system solvers and covariance accumulators yield
 the exact same numerical results (within floating-point tolerance) as their dense,
 spatial-domain counterparts. Covers both 4D static convolutions and 5D spiking
 convolutions, including adjoint operator checks and unrolled timestep slices.

@@ -23,7 +23,7 @@ s = config.getint("config", "s")
 n_timesteps = config.getint("config", "n_timesteps")
 warming_iters = epochs // 2
 
-architectures = ["spiking-linear", "spiking-conv"]
+architectures = ["spiking-feedforward", "spiking-conv"]
 methods = [
     "unrolled-sequential",
     "unrolled-random",
@@ -51,9 +51,9 @@ for model_name in architectures:
         #########################################
         # DATA
         train_loader = get_dataset(
+            model_name,
             batch_size,
             1,
-            spiking=True,
             n_timesteps=n_timesteps,
             seed=seed,
         )
@@ -61,7 +61,7 @@ for model_name in architectures:
         #########################################
         # MODEL INSTANTIATION
         match model_name:
-            case "spiking-linear":
+            case "spiking-feedforward":
                 admm_model = get_model(
                     model_name=model_name,
                     init="s-uniform",

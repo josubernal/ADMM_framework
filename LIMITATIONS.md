@@ -11,7 +11,7 @@ This document outlines the current boundaries and technical debt of the SNN ADMM
 ### 🧮 Tensor Mechanics & Forward Pass
 
 * **Explicit Tensor Shape Handling:** The codebase currently relies on implicit broadcasting utilities (e.g., `broadcast_to_match`, `format_bias`) for rapid development. Replacing these with strict, explicit shape handling at every step will improve code readability and prevent silent dimensional bugs. Additionally, spiking forward tensor shaping should be checked.
-* **Dynamic Pooling Dimensions:** All pooling methods currently hardcode the output to a flattened 2D shape to ensure default compatibility with linear layers. The pooling mechanism needs to be generalized to support arbitrary tensor dimensions natively.
+* **Dynamic Pooling Dimensions:** All pooling methods currently hardcode the output to a flattened 2D shape to ensure default compatibility with feedforward layers. The pooling mechanism needs to be generalized to support arbitrary tensor dimensions natively.
 * **Automatic Membrane Reset Handling (`use_reset`):** The `use_reset=False` parameter currently requires manual configuration for the final output layer to allow spike accumulation. This should be handled automatically by the optimizer. Additionally, this opens a broader discussion for future features regarding non-accumulating SNN output layers.
 
 ### ⚙️ Optimization & Training

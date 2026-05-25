@@ -31,21 +31,42 @@ def main():
         json_paths = sorted(list(Path(folder_path).rglob("results.json")))
 
         if not json_paths:
-            print(f"Skipping Accuracy plots: No 'results.json' found in {folder_path}")
+            print(f"Skipping plots: No 'results.json' found in {folder_path}")
         else:
             num_models = len(json_paths)
             # Determine grid size (e.g., 2x2 for 4 models)
             cols = 2 if num_models > 1 else 1
             rows = (num_models + cols - 1) // cols
 
+            # --- Initialize Figures ---
+            # 1. Accuracy Figure
             fig_acc, axes_acc = plt.subplots(
                 rows, cols, figsize=(14, 5 * rows), squeeze=False
             )
             fig_acc.suptitle(
                 "Accuracy Comparison: GD vs ADMM", fontsize=16, fontweight="bold"
             )
-            axes_flat = axes_acc.flatten()
+            axes_acc_flat = axes_acc.flatten()
 
+            # 2. Loss Figure
+            fig_loss, axes_loss = plt.subplots(
+                rows, cols, figsize=(14, 5 * rows), squeeze=False
+            )
+            fig_loss.suptitle(
+                "Loss Comparison: GD vs ADMM", fontsize=16, fontweight="bold"
+            )
+            axes_loss_flat = axes_loss.flatten()
+
+            # 3. Firing Rate Figure
+            fig_fr, axes_fr = plt.subplots(
+                rows, cols, figsize=(14, 5 * rows), squeeze=False
+            )
+            fig_fr.suptitle(
+                "Firing Rate Comparison: GD vs ADMM", fontsize=16, fontweight="bold"
+            )
+            axes_fr_flat = axes_fr.flatten()
+
+            # --- Loop through JSONs and Plot ---
             for i, json_path in enumerate(json_paths):
                 with open(json_path, "r") as f:
                     try:
@@ -53,32 +74,36 @@ def main():
                     except json.JSONDecodeError:
                         continue
 
-                ax = axes_flat[i]
+                # Shared Metadata
+                warming_stop = data.get("warming_stop", None)
+                model_name = data.get("architecture", "Unknown")
+                batch_size = data.get("batch_size", "N/A")
+                title = f"Model: {model_name} (Batch: {batch_size})"
+
+                # ==========================================
+                # PLOT 1: ACCURACY
+                # ==========================================
+                ax_acc = axes_acc_flat[i]
                 gd_accs = data.get("gd_accuracy", [])
                 admm_accs = data.get("accuracy", [])
 
-                # Generate steps if not present
-                gd_steps = list(range(1, len(gd_accs) + 1))
-                admm_steps = list(range(1, len(admm_accs) + 1))
-
-                warming_stop = data.get("warming_stop", None)
-                model_name = data.get("architecture", None)
-                batch_size = data.get("batch_size", "N/A")
-
-                # Plotting
-                ax.plot(
-                    gd_steps,
+                ax_acc.plot(
+                    range(1, len(gd_accs) + 1),
                     gd_accs,
                     label="Gradient Descent",
                     color="#1f77b4",
                     linewidth=2,
                 )
-                ax.plot(
-                    admm_steps, admm_accs, label="ADMM", color="#ff7f0e", linewidth=2
+                ax_acc.plot(
+                    range(1, len(admm_accs) + 1),
+                    admm_accs,
+                    label="ADMM",
+                    color="#ff7f0e",
+                    linewidth=2,
                 )
 
                 if warming_stop is not None:
-                    ax.axvline(
+                    ax_acc.axvline(
                         x=warming_stop,
                         color="red",
                         linestyle="--",
@@ -86,18 +111,123 @@ def main():
                         label=f"Warming Stop ({warming_stop})",
                     )
 
-                ax.set_title(f"Model: {model_name} (Batch: {batch_size})", fontsize=12)
-                ax.set_xlabel("Epochs")
-                ax.set_ylabel("Accuracy (%)")
-                ax.legend(fontsize="small")
-                ax.grid(True, linestyle="--", alpha=0.5)
+                ax_acc.set_title(title, fontsize=12)
+                ax_acc.set_xlabel("Epochs")
+                ax_acc.set_ylabel("Accuracy (%)")
+                ax_acc.legend(fontsize="small")
+                ax_acc.grid(True, linestyle="--", alpha=0.5)
 
-            # Remove any empty subplots if num_models is odd
-            for j in range(i + 1, len(axes_flat)):
-                fig_acc.delaxes(axes_flat[j])
+                # ==========================================
+                # PLOT 2: LOSS
+                # ==========================================
+                ax_loss = axes_loss_flat[i]
+                gd_losses = data.get("gd_loss", [])
+                admm_losses = data.get("loss", [])
 
-            plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+                ax_loss.plot(
+                    range(1, len(gd_losses) + 1),
+                    gd_losses,
+                    label="Gradient Descent",
+                    color="#1f77b4",
+                    linewidth=2,
+                )
+                ax_loss.plot(
+                    range(1, len(admm_losses) + 1),
+                    admm_losses,
+                    label="ADMM",
+                    color="#ff7f0e",
+                    linewidth=2,
+                )
 
+                if warming_stop is not None:
+                    ax_loss.axvline(
+                        x=warming_stop,
+                        color="red",
+                        linestyle="--",
+                        alpha=0.6,
+                        label=f"Warming Stop ({warming_stop})",
+                    )
+
+                ax_loss.set_title(title, fontsize=12)
+                ax_loss.set_xlabel("Epochs")
+                ax_loss.set_ylabel("Loss")
+                ax_loss.legend(fontsize="small")
+                ax_loss.grid(True, linestyle="--", alpha=0.5)
+
+                # ==========================================
+                # PLOT 3: FIRING RATE
+                # ==========================================
+                ax_fr = axes_fr_flat[i]
+                gd_fr_raw = data.get("gd_firing_rate", [])
+                admm_fr_raw = data.get("firing_rate", [])
+
+                # Only plot FR if it's a spiking model
+                if "spiking" in model_name.lower():
+                    # Extract the layer 1 FR safely from the lists (e.g., [[0.2], [0.25]] -> [0.2, 0.25])
+                    gd_frs = [
+                        x[0] if isinstance(x, list) and len(x) > 0 else float("nan")
+                        for x in gd_fr_raw
+                    ]
+                    admm_frs = [
+                        x[0] if isinstance(x, list) and len(x) > 0 else float("nan")
+                        for x in admm_fr_raw
+                    ]
+
+                    ax_fr.plot(
+                        range(1, len(gd_frs) + 1),
+                        gd_frs,
+                        label="Gradient Descent",
+                        color="#1f77b4",
+                        linewidth=2,
+                    )
+                    ax_fr.plot(
+                        range(1, len(admm_frs) + 1),
+                        admm_frs,
+                        label="ADMM",
+                        color="#ff7f0e",
+                        linewidth=2,
+                    )
+
+                    if warming_stop is not None:
+                        ax_fr.axvline(
+                            x=warming_stop,
+                            color="red",
+                            linestyle="--",
+                            alpha=0.6,
+                            label=f"Warming Stop ({warming_stop})",
+                        )
+
+                    ax_fr.legend(fontsize="small")
+                else:
+                    # Place a placeholder text for standard non-spiking models
+                    ax_fr.text(
+                        0.5,
+                        0.5,
+                        "Non-spiking model\n(No Firing Rate)",
+                        horizontalalignment="center",
+                        verticalalignment="center",
+                        transform=ax_fr.transAxes,
+                        fontsize=12,
+                        color="gray",
+                    )
+
+                ax_fr.set_title(title, fontsize=12)
+                ax_fr.set_xlabel("Epochs")
+                ax_fr.set_ylabel("Firing Rate")
+                ax_fr.grid(True, linestyle="--", alpha=0.5)
+
+            # --- Clean up any empty subplots if num_models is odd ---
+            for j in range(num_models, len(axes_acc_flat)):
+                fig_acc.delaxes(axes_acc_flat[j])
+                fig_loss.delaxes(axes_loss_flat[j])
+                fig_fr.delaxes(axes_fr_flat[j])
+
+            # --- Final Formatting ---
+            fig_acc.tight_layout(rect=[0, 0.03, 1, 0.95])
+            fig_loss.tight_layout(rect=[0, 0.03, 1, 0.95])
+            fig_fr.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+            plt.show()
     # ==========================================
     # PLOT 2: Memory Benchmark (3 metrics in one)
     # ==========================================
@@ -166,7 +296,7 @@ def main():
         if iter_data:
             archs = sorted(
                 list(set([d["architecture"] for d in iter_data])), reverse=True
-            )  # ['linear', 'conv']
+            )  # ['feedforward', 'conv']
 
             # Create a 2x2 grid
             fig, axes = plt.subplots(2, 2, figsize=(16, 12))
@@ -258,9 +388,9 @@ def main():
                 continue
 
         if static_data:
-            # Find unique architectures (should be 'linear' and 'conv')
+            # Find unique architectures (should be 'feedforward' and 'conv')
             archs = list(set([d["architecture"] for d in static_data]))
-            archs.sort(reverse=True)  # Usually puts 'linear' first, then 'conv'
+            archs.sort(reverse=True)  # Usually puts 'feedforward' first, then 'conv'
 
             cols = len(archs)
             if cols > 0:
@@ -332,9 +462,9 @@ def main():
             # Standardize architecture order for a nice 2x2 layout
             archs = list(set([d["architecture"] for d in loss_data]))
             arch_order = {
-                "linear": 0,
+                "feedforward": 0,
                 "conv": 1,
-                "spiking-linear": 2,
+                "spiking-feedforward": 2,
                 "spiking-conv": 3,
             }
             archs.sort(key=lambda x: arch_order.get(x, 10))
@@ -429,9 +559,9 @@ def main():
             # Standardize architecture order for a nice 2x2 layout
             archs = list(set([d["architecture"] for d in loss_data]))
             arch_order = {
-                "linear": 0,
+                "feedforward": 0,
                 "conv": 1,
-                "spiking-linear": 2,
+                "spiking-feedforward": 2,
                 "spiking-conv": 3,
             }
             archs.sort(key=lambda x: arch_order.get(x, 10))
@@ -522,9 +652,9 @@ def main():
             # Standardize architecture order for a nice 2x2 layout
             archs = list(set([d["architecture"] for d in loss_data]))
             arch_order = {
-                "linear": 0,
+                "feedforward": 0,
                 "conv": 1,
-                "spiking-linear": 2,
+                "spiking-feedforward": 2,
                 "spiking-conv": 3,
             }
             archs.sort(key=lambda x: arch_order.get(x, 10))
@@ -615,9 +745,9 @@ def main():
             # Standardize architecture order for a nice 2x2 layout
             archs = list(set([d["architecture"] for d in init_data]))
             arch_order = {
-                "linear": 0,
+                "feedforward": 0,
                 "conv": 1,
-                "spiking-linear": 2,
+                "spiking-feedforward": 2,
                 "spiking-conv": 3,
             }
             archs.sort(key=lambda x: arch_order.get(x, 10))
@@ -721,9 +851,9 @@ def main():
             # Standardize architecture order for a nice 2x2 layout
             archs = list(set([d["architecture"] for d in scheduler_data]))
             arch_order = {
-                "linear": 0,
+                "feedforward": 0,
                 "conv": 1,
-                "spiking-linear": 2,
+                "spiking-feedforward": 2,
                 "spiking-conv": 3,
             }
             archs.sort(key=lambda x: arch_order.get(x, 10))
@@ -816,9 +946,9 @@ def main():
             # Standardize architecture order for a nice 2x2 layout
             archs = list(set([d["architecture"] for d in lagrange_data]))
             arch_order = {
-                "linear": 0,
+                "feedforward": 0,
                 "conv": 1,
-                "spiking-linear": 2,
+                "spiking-feedforward": 2,
                 "spiking-conv": 3,
             }
             archs.sort(key=lambda x: arch_order.get(x, 10))

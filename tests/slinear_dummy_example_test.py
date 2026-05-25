@@ -4,7 +4,7 @@ import torch.nn as nn
 
 from src.admm.activation_functions import ADMM_Heaviside, ADMM_Identity
 from src.admm.dataclasses import ADMM_Config, ADMM_LayerConfig
-from src.admm.layers import ADMM_SpikingLinear
+from src.admm.layers import ADMM_SpikingFeedForward
 from src.admm.loss_functions import ADMM_SSE
 from src.admm.manager import ADMM
 
@@ -50,7 +50,7 @@ def test_all_methods_equivalence(method, case):
     Y = torch.tensor(case["Y_val"], dtype=torch.float64)
     dataloader = [(X, Y)]
 
-    layer0 = ADMM_SpikingLinear(
+    layer0 = ADMM_SpikingFeedForward(
         in_f=2,
         out_f=2,
         h=ADMM_Heaviside(1.0),
@@ -58,7 +58,7 @@ def test_all_methods_equivalence(method, case):
             rho=1.0, beta=1.0, deltas=0.5, thetas=1.0, use_reset=True
         ),
     )
-    layer1 = ADMM_SpikingLinear(
+    layer1 = ADMM_SpikingFeedForward(
         in_f=2,
         out_f=2,
         h=ADMM_Identity(),

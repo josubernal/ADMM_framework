@@ -20,7 +20,7 @@ Here is a complete, runnable example of a 2-layer network:
 ```python
 import torch
 
-from admm import ADMM, ADMM_Config, ADMM_Linear, ADMM_ReLU
+from admm import ADMM, ADMM_Config, ADMM_FeedForward, ADMM_ReLU
 
 # 1. Setup Environment and Data
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -34,8 +34,8 @@ dummy_y = torch.randn(batch_size, out_features, device=device)
 config = ADMM_Config(init="pytorch", train_method="vectorized")
 
 # 3. Create ADMM-compatible Layers
-layer1 = ADMM_Linear(in_features, hidden, h=ADMM_ReLU(), rho=1.0, beta=1.0)
-layer2 = ADMM_Linear(hidden, out_features, h=ADMM_ReLU(), rho=1.0, beta=1.0)
+layer1 = ADMM_FeedForward(in_features, hidden, h=ADMM_ReLU(), rho=1.0, beta=1.0)
+layer2 = ADMM_FeedForward(hidden, out_features, h=ADMM_ReLU(), rho=1.0, beta=1.0)
 
 # 4. Wrap in the ADMM Manager
 model = ADMM(layers=[layer1, layer2], device=device, config=config)

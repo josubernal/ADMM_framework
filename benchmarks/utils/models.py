@@ -7,13 +7,13 @@ from src.admm import (
     ADMM,
     ADMM_Config,
     ADMM_Conv2d,
+    ADMM_FeedForward,
     ADMM_Flatten,
     ADMM_Heaviside,
     ADMM_LayerConfig,
-    ADMM_Linear,
     ADMM_ReLU,
     ADMM_SpikingConv2d,
-    ADMM_SpikingLinear,
+    ADMM_SpikingFeedForward,
 )
 
 
@@ -36,12 +36,12 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
     p = config.getint("config", "p")
     s = config.getint("config", "s")
 
-    linear_rho = config.getfloat("config", "linear_rho")
-    linear_beta = config.getfloat("config", "linear_beta")
+    ff_rho = config.getfloat("config", "ff_rho")
+    ff_beta = config.getfloat("config", "ff_beta")
     conv_rho = config.getfloat("config", "conv_rho")
     conv_beta = config.getfloat("config", "conv_beta")
-    splinear_rho = config.getfloat("config", "splinear_rho")
-    splinear_beta = config.getfloat("config", "splinear_beta")
+    spff_rho = config.getfloat("config", "spff_rho")
+    spff_beta = config.getfloat("config", "spff_beta")
     spconv_rho = config.getfloat("config", "spconv_rho")
     spconv_beta = config.getfloat("config", "spconv_beta")
 
@@ -51,22 +51,20 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
     n_timesteps = config.getint("config", "n_timesteps")
 
     match model_name:
-        case "linear":
+        case "feedforward":
             hidden_layer_config = ADMM_LayerConfig(
-                rho=linear_rho, beta=linear_beta, use_bias=True
+                rho=ff_rho, beta=ff_beta, use_bias=True
             )
-            out_layer_config = ADMM_LayerConfig(
-                rho=linear_rho, beta=linear_beta, use_bias=True
-            )
-            linear_layers = nn.ModuleList(
+            out_layer_config = ADMM_LayerConfig(rho=ff_rho, beta=ff_beta, use_bias=True)
+            ff_layers = nn.ModuleList(
                 [
-                    ADMM_Linear(
+                    ADMM_FeedForward(
                         in_f=input_size,
                         out_f=hidden_size_static,
                         h=ADMM_ReLU(),
                         config=hidden_layer_config,
                     ),
-                    ADMM_Linear(
+                    ADMM_FeedForward(
                         in_f=hidden_size_static,
                         out_f=10,
                         h=ADMM_ReLU(),
@@ -81,7 +79,7 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                 update_z_first=z_first,
             )
             admm_model = ADMM(
-                linear_layers,
+                ff_layers,
                 loss_f=loss,
                 config=config,
             ).to(device)
@@ -107,7 +105,7 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                         config=hidden_layer_config,
                         padding_mode="zeros",
                     ),
-                    ADMM_Linear(
+                    ADMM_FeedForward(
                         in_f=lin_in_dim,
                         out_f=10,
                         h=ADMM_ReLU(),
@@ -127,32 +125,32 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                 loss_f=loss,
                 config=config,
             ).to(device)
-        case "spiking-linear":
+        case "spiking-feedforward":
             hidden_layer_config = ADMM_LayerConfig(
-                rho=splinear_rho,
-                beta=splinear_beta,
+                rho=spff_rho,
+                beta=spff_beta,
                 use_bias=False,
                 deltas=deltas,
                 thetas=thetas,
                 use_reset=True,
             )
             out_layer_config = ADMM_LayerConfig(
-                rho=splinear_rho,
-                beta=splinear_beta,
+                rho=spff_rho,
+                beta=spff_beta,
                 use_bias=False,
                 deltas=deltas,
                 thetas=thetas,
                 use_reset=False,
             )
-            splinear_layers = nn.ModuleList(
+            spff_layers = nn.ModuleList(
                 [
-                    ADMM_SpikingLinear(
+                    ADMM_SpikingFeedForward(
                         in_f=34 * 34 * 2,
                         out_f=hidden_size_spiking,
                         h=ADMM_Heaviside(thetas=thetas),
                         config=hidden_layer_config,
                     ),
-                    ADMM_SpikingLinear(
+                    ADMM_SpikingFeedForward(
                         in_f=hidden_size_spiking,
                         out_f=10,
                         h=None,
@@ -167,7 +165,7 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                 update_z_first=z_first,
             )
             admm_model = ADMM(
-                splinear_layers,
+                spff_layers,
                 loss_f=loss,
                 T=n_timesteps,
                 config=config,
@@ -205,7 +203,7 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                         config=hidden_layer_config,
                         padding_mode="zeros",
                     ),
-                    ADMM_SpikingLinear(
+                    ADMM_SpikingFeedForward(
                         in_f=lin_in_dim,
                         pool_op=ADMM_Flatten(),
                         out_f=10,

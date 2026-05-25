@@ -1,5 +1,5 @@
 """
-This module isolates the numerical linear algebra required for ADMM weight updates.
+This module isolates the numerical algebra required for ADMM weight updates.
 By keeping these functions stateless, they are easier to optimize, maintain,
 and read independently from the layer mechanics. Additionally it allows us to experient
 with different solvers modularly.
@@ -105,7 +105,7 @@ def conjugate_gradient(
     tol: float = 1e-4,
     max_iter: int = 50,
 ) -> torch.Tensor:
-    r"""Solves the linear system $AX = B$ using the Conjugate Gradient method.
+    r"""Solves the system $AX = B$ using the Conjugate Gradient method.
 
     Designed for batched solving where $X$ has multiple columns. This is
     often used as an efficient alternative to full matrix inversion.

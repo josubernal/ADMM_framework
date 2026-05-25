@@ -80,7 +80,7 @@ class ADMM_ActivationBase(nn.Module, ABC):
 
 
 class ADMM_Identity(ADMM_ActivationBase):
-    """Place-holder identity activation function for linear outputs."""
+    """Place-holder identity activation function."""
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x

@@ -2,14 +2,14 @@
 This module contains pooling and flattening operations designed specifically
 for Alternating Direction Method of Multipliers (ADMM) based neural network training.
 
-ADMM optimization requires mathematically explicit "adjoint" (transpose) linear
+ADMM optimization requires mathematically explicit "adjoint" (transpose) feedforward
 operators to map auxiliary variables and errors back to their original spatial dimensions.
 The classes defined here provide both the forward transformation (pooling/flattening)
 and its corresponding mathematical adjoint.
 
 IMPORTANT:
     All pooling methods flatten the output to a 2D shape `(Batch x Features)`
-    for compatibility with linear layers by default.
+    for compatibility with feedforward layers by default.
 """
 
 from abc import ABC, abstractmethod
@@ -59,7 +59,7 @@ class ADMM_PoolingBase(ABC):
     def expand_weights(self, W: torch.Tensor, a_shape=None) -> torch.Tensor:
         """Expands the weights of the next layer to match the spatial dimensions of a.
 
-        This is necessary for computing the linear system in ADMM when spatial pooling
+        This is necessary for computing the system in ADMM when spatial pooling
         is involved.
 
         Args:

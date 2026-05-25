@@ -4,7 +4,7 @@ import torch.nn as nn
 
 from src.admm.activation_functions import ADMM_Heaviside, ADMM_Identity
 from src.admm.dataclasses import ADMM_Config, ADMM_LayerConfig
-from src.admm.layers import ADMM_SpikingConv2d, ADMM_SpikingLinear
+from src.admm.layers import ADMM_SpikingConv2d, ADMM_SpikingFeedForward
 from src.admm.loss_functions import ADMM_SSE
 from src.admm.manager import ADMM
 from src.admm.pooling import ADMM_Flatten
@@ -111,7 +111,7 @@ def test_sconv_methods_equivalence_math(method, case):
     config1 = ADMM_LayerConfig(
         rho=1.0, beta=1.0, deltas=0.0, thetas=0.0, use_reset=False
     )
-    layer1 = ADMM_SpikingLinear(
+    layer1 = ADMM_SpikingFeedForward(
         in_f=1, out_f=1, h=ADMM_Identity(), pool_op=ADMM_Flatten(), config=config1
     )
 
@@ -151,7 +151,7 @@ def test_sconv_methods_equivalence_math(method, case):
         torch.tensor(case["exp_W1"], dtype=torch.float64),
         rtol=0,
         atol=1e-7,
-        msg=f"Layer 1 Linear Weight (W1) diverged in {method}",
+        msg=f"Layer 1 SFeedForward Weight (W1) diverged in {method}",
     )
     torch.testing.assert_close(
         final_batch.layer_states[0].a,
