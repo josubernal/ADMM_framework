@@ -1594,7 +1594,9 @@ securely handles the localized configuration setup.</p>
 <span class="normal">108</span>
 <span class="normal">109</span>
 <span class="normal">110</span>
-<span class="normal">111</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Layer</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Layer</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;The core Base Layer Interface for all ADMM modules.</span>
 
 <span class="sd">    Acts as the blueprint for all trainable and non-trainable ADMM layers.</span>
@@ -1612,7 +1614,7 @@ securely handles the localized configuration setup.</p>
         <span class="n">h</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMM_LayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the base layer and its constraints.</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Initializes the base layer and its constraints.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            rho (float, optional): Affine penalty parameter ($\rho$). Defaults to the one set by the [layer configuration][src.admm.dataclasses.ADMM_LayerConfig].</span>
@@ -1654,7 +1656,8 @@ securely handles the localized configuration setup.</p>
 <span class="sd">        * For Static Networks: Simply returns the spatial transformation ($z_l = F_l(a_{l-1})$).</span>
 <span class="sd">        * For Spiking Networks (SNNs): Simulates the LIF mechanics.</span>
 
-<span class="sd">        To refer to its spiking counterpart, see [forward][src.admm.spiking_mixin.ADMM_Spiking.forward].</span>
+<span class="sd">        Note:</span>
+<span class="sd">            To refer to its spiking counterpart, see [forward][src.admm.spiking_mixin.ADMM_Spiking.forward].</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            a_prev (torch.Tensor): The input tensor from the previous layer.</span>
@@ -1669,7 +1672,8 @@ securely handles the localized configuration setup.</p>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Updates the Lagrange multiplier ($\lambda$) based on the current layer constraints.</span>
 
 <span class="sd">        Formula evaluated:</span>
-<span class="sd">        $\lambda_l \leftarrow \lambda_l + \rho_l \big(z_l - F_l(a_{l-1})\big)$</span>
+
+<span class="sd">        $$ \lambda_l \leftarrow \lambda_l + \rho_l \big(z_l - F_l(a_{l-1})\big) $$</span>
 
 <span class="sd">        You can find the corresponding spiking version [update_lambda][src.admm.spiking_mixin.ADMM_Spiking.update_lambda] in the [Spiking Mixin][src.admm.spiking_mixin] module.</span>
 
@@ -1732,8 +1736,7 @@ securely handles the localized configuration setup.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Affine penalty parameter ($
-ho$). Defaults to the one set by the <a class="autorefs autorefs-internal" title="ADMM_LayerConfig
+                <p>Affine penalty parameter (<span class="arithmatex">\(\rho\)</span>). Defaults to the one set by the <a class="autorefs autorefs-internal" title="ADMM_LayerConfig
 
 
   
@@ -1754,7 +1757,7 @@ ho$). Defaults to the one set by the <a class="autorefs autorefs-internal" title
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Activation penalty parameter (<span class="arithmatex">\(eta\)</span>). Defaults to None.</p>
+                <p>Activation penalty parameter (<span class="arithmatex">\(\beta\)</span>). Defaults to None.</p>
               </div>
             </td>
             <td>
@@ -1900,7 +1903,7 @@ ho$). Defaults to the one set by the <a class="autorefs autorefs-internal" title
     <span class="n">h</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ADMM_LayerConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the base layer and its constraints.</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Initializes the base layer and its constraints.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        rho (float, optional): Affine penalty parameter ($\rho$). Defaults to the one set by the [layer configuration][src.admm.dataclasses.ADMM_LayerConfig].</span>
@@ -2028,8 +2031,12 @@ ho$). Defaults to the one set by the <a class="autorefs autorefs-internal" title
 <li>For Static Networks: Simply returns the spatial transformation (<span class="arithmatex">\(z_l = F_l(a_{l-1})\)</span>).</li>
 <li>For Spiking Networks (SNNs): Simulates the LIF mechanics.</li>
 </ul>
-<p>To refer to its spiking counterpart, see <a class="autorefs autorefs-internal" title="forward(a_prev, z_tminus1, a_tminus1)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking.forward">forward</a>.</p>
 
+
+<details class="note" open>
+  <summary>Note</summary>
+  <p>To refer to its spiking counterpart, see <a class="autorefs autorefs-internal" title="forward(a_prev, z_tminus1, a_tminus1)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking.forward">forward</a>.</p>
+</details>
 
 <p><span class="doc-section-title">Parameters:</span></p>
     <table>
@@ -2102,13 +2109,15 @@ ho$). Defaults to the one set by the <a class="autorefs autorefs-internal" title
 <span class="normal">90</span>
 <span class="normal">91</span>
 <span class="normal">92</span>
-<span class="normal">93</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="normal">93</span>
+<span class="normal">94</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Standard sequential pass for initialization or inference.</span>
 
 <span class="sd">    * For Static Networks: Simply returns the spatial transformation ($z_l = F_l(a_{l-1})$).</span>
 <span class="sd">    * For Spiking Networks (SNNs): Simulates the LIF mechanics.</span>
 
-<span class="sd">    To refer to its spiking counterpart, see [forward][src.admm.spiking_mixin.ADMM_Spiking.forward].</span>
+<span class="sd">    Note:</span>
+<span class="sd">        To refer to its spiking counterpart, see [forward][src.admm.spiking_mixin.ADMM_Spiking.forward].</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        a_prev (torch.Tensor): The input tensor from the previous layer.</span>
@@ -2136,8 +2145,8 @@ ho$). Defaults to the one set by the <a class="autorefs autorefs-internal" title
     <div class="doc doc-contents ">
 
         <p>Updates the Lagrange multiplier (<span class="arithmatex">\(\lambda\)</span>) based on the current layer constraints.</p>
-<p>Formula evaluated:
-<span class="arithmatex">\(\lambda_l \leftarrow \lambda_l + \rho_l \big(z_l - F_l(a_{l-1})\big)\)</span></p>
+<p>Formula evaluated:</p>
+<div class="arithmatex">\[ \lambda_l \leftarrow \lambda_l + \rho_l \big(z_l - F_l(a_{l-1})\big) \]</div>
 <p>You can find the corresponding spiking version <a class="autorefs autorefs-internal" title="update_lambda(state, a_prev)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking.update_lambda">update_lambda</a> in the <a class="autorefs autorefs-internal" title="src.admm.spiking_mixin" href="../spiking_mixin/#src.admm.spiking_mixin">Spiking Mixin</a> module.</p>
 
 
@@ -2200,8 +2209,7 @@ ho$). Defaults to the one set by the <a class="autorefs autorefs-internal" title
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\base_layer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 95</span>
-<span class="normal"> 96</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 96</span>
 <span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
@@ -2216,11 +2224,14 @@ ho$). Defaults to the one set by the <a class="autorefs autorefs-internal" title
 <span class="normal">108</span>
 <span class="normal">109</span>
 <span class="normal">110</span>
-<span class="normal">111</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_lambda</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_lambda</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Updates the Lagrange multiplier ($\lambda$) based on the current layer constraints.</span>
 
 <span class="sd">    Formula evaluated:</span>
-<span class="sd">    $\lambda_l \leftarrow \lambda_l + \rho_l \big(z_l - F_l(a_{l-1})\big)$</span>
+
+<span class="sd">    $$ \lambda_l \leftarrow \lambda_l + \rho_l \big(z_l - F_l(a_{l-1})\big) $$</span>
 
 <span class="sd">    You can find the corresponding spiking version [update_lambda][src.admm.spiking_mixin.ADMM_Spiking.update_lambda] in the [Spiking Mixin][src.admm.spiking_mixin] module.</span>
 

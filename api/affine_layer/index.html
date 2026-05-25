@@ -1649,7 +1649,7 @@
     <div class="doc doc-contents first">
 
         <p>This module provides the core infrastructure for layers with trainable affine
-parameters (e.g., Linear, Conv2d). It encapsulates the exact mathematical solvers
+parameters (e.g., FeedForward, Conv2d). It encapsulates the exact mathematical solvers
 required to optimize these parameters (<span class="arithmatex">\(W\)</span> and <span class="arithmatex">\(b\)</span>) and their corresponding activations (<span class="arithmatex">\(a\)</span>) dynamically
 routing computations through standard dense, Woodbury, or Fast Fourier Transform (FFT) paths.</p>
 
@@ -1689,7 +1689,7 @@ routing computations through standard dense, Woodbury, or Fast Fourier Transform
 
 
 
-        <p>Manages affine layers with trainable parameters like Linear and Conv2d.</p>
+        <p>Manages affine layers with trainable parameters like FeedForward and Conv2d.</p>
 <p>Handles the initialization of weights and biases and contains the core
 optimization solvers to update them using Alternating Direction Method
 of Multipliers (ADMM) principles. In addition, handles the activation updates.</p>
@@ -2164,7 +2164,7 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
 <span class="normal">489</span>
 <span class="normal">490</span>
 <span class="normal">491</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_AffineLayer</span><span class="p">(</span><span class="n">ADMM_Layer</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Manages affine layers with trainable parameters like Linear and Conv2d.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Manages affine layers with trainable parameters like FeedForward and Conv2d.</span>
 
 <span class="sd">    Handles the initialization of weights and biases and contains the core</span>
 <span class="sd">    optimization solvers to update them using Alternating Direction Method</span>
@@ -2251,10 +2251,12 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Returns the target tensor $v$ for non-spiking layers.</span>
 
 <span class="sd">        Formula evaluated:</span>
-<span class="sd">        $v_l = z_l - b_l$</span>
+
+<span class="sd">        $$ v_l = z_l - b_l $$</span>
 
 <span class="sd">        If layer $l$ has a Lagrangian multiplier:</span>
-<span class="sd">        $v_l = z_l - b_l + \frac{\lambda_l}{\rho}$</span>
+
+<span class="sd">        $$ v_l = z_l - b_l + \frac{\lambda_l}{\rho}$$</span>
 
 <span class="sd">        Note:</span>
 <span class="sd">            You can find the corresponding spiking version [`get_v`][src.admm.spiking_mixin.ADMM_Spiking.get_v] in the</span>
@@ -2281,10 +2283,12 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the mean spatial covariance for the bias update step.</span>
 
 <span class="sd">        Formula evaluated:</span>
-<span class="sd">        $z_l - \mathcal{A}_l(a_{l-1})$</span>
+
+<span class="sd">        $$z_l - \mathcal{A}_l(a_{l-1})$$</span>
 
 <span class="sd">        If layer $l$ has a Lagrangian multiplier:</span>
-<span class="sd">        $z_l - \mathcal{A}_l(a_{l-1}) + \frac{\lambda}{\rho}$</span>
+
+<span class="sd">        $$ z_l - \mathcal{A}_l(a_{l-1}) + \frac{\lambda}{\rho} $$</span>
 
 <span class="sd">        Note:</span>
 <span class="sd">            We separate this function, because it is overriden by it&#39;s spiking version [`_compute_bias_covariance`][src.admm.spiking_mixin.ADMM_Spiking._compute_bias_covariance] in the</span>
@@ -2406,7 +2410,6 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_a_numerator_no_adjoint</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span>
-        <span class="n">next_config</span><span class="p">:</span> <span class="n">ADMM_LayerConfig</span><span class="p">,</span>
         <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculates the non-spiking numerator block for the spatial activation ($a$) update.</span>
@@ -2421,7 +2424,6 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
 
 <span class="sd">        Args:</span>
 <span class="sd">            state (ADMM_LayerState): [State object][src.admm.dataclasses.ADMM_LayerState] containing the current pre-activations ($z$).</span>
-<span class="sd">            next_config (ADMM_LayerConfig): [The configuration object][src.admm.dataclasses.ADMM_LayerConfig] of the subsequent layer. [(Needed for the spiking override)][src.admm.spiking_mixin.ADMM_Spiking._get_a_numerator_no_adjoint]</span>
 <span class="sd">            a_prev (torch.Tensor): The activations from the previous layer. [(Needed for the spiking override)][src.admm.spiking_mixin.ADMM_Spiking._get_a_numerator_no_adjoint]</span>
 
 <span class="sd">        Returns:</span>
@@ -2513,18 +2515,18 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
 <span class="sd">         Computes the denominator and calls the solver [`solve_fft_system_static`][src.admm.functional.a_update_solvers.solve_fft_system_static]</span>
 
 <span class="sd">        Denominator formula evaluated in the frequency domain:</span>
-<span class="sd">         $\beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1})$</span>
+<span class="sd">        $\beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1})$</span>
 
-<span class="sd">         Note:</span>
+<span class="sd">        Note:</span>
 <span class="sd">             We separate this function, because it is overriden by it&#39;s spiking version [`_solve_fft_system`][src.admm.spiking_mixin.ADMM_Spiking._solve_fft_system] in the</span>
 <span class="sd">             [`admm.spiking_mixin`][src.admm.spiking_mixin] module.</span>
 
-<span class="sd">         Args:</span>
+<span class="sd">        Args:</span>
 <span class="sd">             next_layer (nn.Module): The subsequent layer in the network.</span>
 <span class="sd">             numerator (torch.Tensor): The assembled numerator target tensor.</span>
 <span class="sd">             a_shape (tuple): The desired output shape of the activation tensor.</span>
 
-<span class="sd">         Returns:</span>
+<span class="sd">        Returns:</span>
 <span class="sd">             torch.Tensor: The solved spatial activations.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
@@ -2557,7 +2559,7 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Manages the activation ($a$) update for standard spatial layers.</span>
 
 <span class="sd">        Assembles the numerator $n = \beta_l h_l(z_l) + \rho_{l+1} \mathcal{A}_{l+1}^*(v_{l+1})$</span>
-<span class="sd">        and dynamically routes to the optimal linear solver based on the layer configurations:</span>
+<span class="sd">        and dynamically routes to the optimal solver based on the layer configurations:</span>
 
 <span class="sd">        * **FFT path**: Used when both the current and next layers are convolutional and</span>
 <span class="sd">          `use_fft` is enabled. Solves the system entirely in the frequency domain,</span>
@@ -2577,9 +2579,7 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Step 1: numerator = β_l·h_l(z_l) + ρ_{l+1}·A*_{l+1}(v_{l+1})</span>
-        <span class="n">numerator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_a_numerator_no_adjoint</span><span class="p">(</span>
-            <span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span> <span class="n">next_config</span><span class="o">=</span><span class="n">next_layer</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">a_prev</span><span class="o">=</span><span class="n">a_prev</span>
-        <span class="p">)</span>
+        <span class="n">numerator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_a_numerator_no_adjoint</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span> <span class="n">a_prev</span><span class="o">=</span><span class="n">a_prev</span><span class="p">)</span>
 
         <span class="n">inside_adjoint</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">get_v</span><span class="p">(</span><span class="n">next_state</span><span class="p">)</span>
         <span class="n">adjoint</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">adjoint_operator</span><span class="p">(</span>
@@ -2587,7 +2587,7 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
         <span class="p">)</span>
         <span class="n">numerator</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">adjoint</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">next_layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
 
-        <span class="c1"># Step 2: Expand weights (handles Linear, Conv, pooled variants)</span>
+        <span class="c1"># Step 2: Expand weights (handles FeedForward, Conv, pooled variants)</span>
         <span class="n">W_expanded</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">pool_op</span><span class="o">.</span><span class="n">expand_weights</span><span class="p">(</span>
             <span class="n">W</span><span class="o">=</span><span class="n">next_layer</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">a_shape</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span>
         <span class="p">)</span>
@@ -3155,10 +3155,10 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
     <div class="doc doc-contents ">
 
         <p>Returns the target tensor <span class="arithmatex">\(v\)</span> for non-spiking layers.</p>
-<p>Formula evaluated:
-<span class="arithmatex">\(v_l = z_l - b_l\)</span></p>
-<p>If layer <span class="arithmatex">\(l\)</span> has a Lagrangian multiplier:
-<span class="arithmatex">\(v_l = z_l - b_l + \frac{\lambda_l}{\rho}\)</span></p>
+<p>Formula evaluated:</p>
+<div class="arithmatex">\[ v_l = z_l - b_l \]</div>
+<p>If layer <span class="arithmatex">\(l\)</span> has a Lagrangian multiplier:</p>
+<div class="arithmatex">\[ v_l = z_l - b_l + \frac{\lambda_l}{\rho}\]</div>
 
 
 <details class="note" open>
@@ -3259,14 +3259,18 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
 <span class="normal">138</span>
 <span class="normal">139</span>
 <span class="normal">140</span>
-<span class="normal">141</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_v</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_v</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Returns the target tensor $v$ for non-spiking layers.</span>
 
 <span class="sd">    Formula evaluated:</span>
-<span class="sd">    $v_l = z_l - b_l$</span>
+
+<span class="sd">    $$ v_l = z_l - b_l $$</span>
 
 <span class="sd">    If layer $l$ has a Lagrangian multiplier:</span>
-<span class="sd">    $v_l = z_l - b_l + \frac{\lambda_l}{\rho}$</span>
+
+<span class="sd">    $$ v_l = z_l - b_l + \frac{\lambda_l}{\rho}$$</span>
 
 <span class="sd">    Note:</span>
 <span class="sd">        You can find the corresponding spiking version [`get_v`][src.admm.spiking_mixin.ADMM_Spiking.get_v] in the</span>
@@ -3304,10 +3308,10 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
     <div class="doc doc-contents ">
 
         <p>Computes the mean spatial covariance for the bias update step.</p>
-<p>Formula evaluated:
-<span class="arithmatex">\(z_l - \mathcal{A}_l(a_{l-1})\)</span></p>
-<p>If layer <span class="arithmatex">\(l\)</span> has a Lagrangian multiplier:
-<span class="arithmatex">\(z_l - \mathcal{A}_l(a_{l-1}) + \frac{\lambda}{\rho}\)</span></p>
+<p>Formula evaluated:</p>
+<div class="arithmatex">\[z_l - \mathcal{A}_l(a_{l-1})\]</div>
+<p>If layer <span class="arithmatex">\(l\)</span> has a Lagrangian multiplier:</p>
+<div class="arithmatex">\[ z_l - \mathcal{A}_l(a_{l-1}) + \frac{\lambda}{\rho} \]</div>
 
 
 <details class="note" open>
@@ -3398,9 +3402,7 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\affine_layer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">143</span>
-<span class="normal">144</span>
-<span class="normal">145</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">145</span>
 <span class="normal">146</span>
 <span class="normal">147</span>
 <span class="normal">148</span>
@@ -3428,16 +3430,22 @@ of Multipliers (ADMM) principles. In addition, handles the activation updates.</
 <span class="normal">170</span>
 <span class="normal">171</span>
 <span class="normal">172</span>
-<span class="normal">173</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_compute_bias_covariance</span><span class="p">(</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_compute_bias_covariance</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the mean spatial covariance for the bias update step.</span>
 
 <span class="sd">    Formula evaluated:</span>
-<span class="sd">    $z_l - \mathcal{A}_l(a_{l-1})$</span>
+
+<span class="sd">    $$z_l - \mathcal{A}_l(a_{l-1})$$</span>
 
 <span class="sd">    If layer $l$ has a Lagrangian multiplier:</span>
-<span class="sd">    $z_l - \mathcal{A}_l(a_{l-1}) + \frac{\lambda}{\rho}$</span>
+
+<span class="sd">    $$ z_l - \mathcal{A}_l(a_{l-1}) + \frac{\lambda}{\rho} $$</span>
 
 <span class="sd">    Note:</span>
 <span class="sd">        We separate this function, because it is overriden by it&#39;s spiking version [`_compute_bias_covariance`][src.admm.spiking_mixin.ADMM_Spiking._compute_bias_covariance] in the</span>
@@ -3519,11 +3527,7 @@ the least-squares weight update step.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\affine_layer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">175</span>
-<span class="normal">176</span>
-<span class="normal">177</span>
-<span class="normal">178</span>
-<span class="normal">179</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">179</span>
 <span class="normal">180</span>
 <span class="normal">181</span>
 <span class="normal">182</span>
@@ -3563,7 +3567,11 @@ the least-squares weight update step.</p>
 <span class="normal">216</span>
 <span class="normal">217</span>
 <span class="normal">218</span>
-<span class="normal">219</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">compute_batch_covariances</span><span class="p">(</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">compute_batch_covariances</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the numerator and denominator matrices for the weight update.</span>
@@ -3729,11 +3737,7 @@ to accelerate future updates. Defaults to False.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\affine_layer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">221</span>
-<span class="normal">222</span>
-<span class="normal">223</span>
-<span class="normal">224</span>
-<span class="normal">225</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">225</span>
 <span class="normal">226</span>
 <span class="normal">227</span>
 <span class="normal">228</span>
@@ -3758,7 +3762,11 @@ to accelerate future updates. Defaults to False.</p>
 <span class="normal">247</span>
 <span class="normal">248</span>
 <span class="normal">249</span>
-<span class="normal">250</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_weights</span><span class="p">(</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_weights</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">covariances</span><span class="p">:</span> <span class="n">ADMM_LayerCovariance</span><span class="p">,</span> <span class="n">cache_pinv</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Manages the update for the layer&#39;s weights by solving a least-squares problem.</span>
@@ -3859,11 +3867,7 @@ the bias sum and bias count.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\affine_layer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">252</span>
-<span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span>
-<span class="normal">256</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">256</span>
 <span class="normal">257</span>
 <span class="normal">258</span>
 <span class="normal">259</span>
@@ -3876,7 +3880,11 @@ the bias sum and bias count.</p>
 <span class="normal">266</span>
 <span class="normal">267</span>
 <span class="normal">268</span>
-<span class="normal">269</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_bias</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">covariances</span><span class="p">:</span> <span class="n">ADMM_LayerCovariance</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_bias</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">covariances</span><span class="p">:</span> <span class="n">ADMM_LayerCovariance</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Averages the residual errors to update the bias vector.</span>
 
 <span class="sd">    Formula evaluated:</span>
@@ -3904,7 +3912,7 @@ the bias sum and bias count.</p>
 
 
 <h4 id="src.admm.affine_layer.ADMM_AffineLayer._get_a_numerator_no_adjoint" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">_get_a_numerator_no_adjoint</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">next_config</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">_get_a_numerator_no_adjoint</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">)</span></code>
 
 </h4>
 
@@ -3918,7 +3926,7 @@ the bias sum and bias count.</p>
 
 <details class="note" open>
   <summary>Note</summary>
-  <p>We separate this function, because it is overriden by it's spiking version <a class="autorefs autorefs-internal" title="_get_a_numerator_no_adjoint(state, next_config, a_prev)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking._get_a_numerator_no_adjoint"><code>_get_a_numerator_no_adjoint</code></a> in the
+  <p>We separate this function, because it is overriden by it's spiking version <a class="autorefs autorefs-internal" title="_get_a_numerator_no_adjoint(state, a_prev)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking._get_a_numerator_no_adjoint"><code>_get_a_numerator_no_adjoint</code></a> in the
 <a class="autorefs autorefs-internal" title="src.admm.spiking_mixin" href="../spiking_mixin/#src.admm.spiking_mixin"><code>admm.spiking_mixin</code></a> module.</p>
 </details>
 
@@ -3961,32 +3969,6 @@ the bias sum and bias count.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>next_config</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="ADMM_LayerConfig
-
-
-  
-      dataclass
-   (src.admm.dataclasses.ADMM_LayerConfig)" href="../dataclasses/#src.admm.dataclasses.ADMM_LayerConfig">ADMM_LayerConfig</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p><a class="autorefs autorefs-internal" title="ADMM_LayerConfig
-
-
-  
-      dataclass
-  " href="../dataclasses/#src.admm.dataclasses.ADMM_LayerConfig">The configuration object</a> of the subsequent layer. <a class="autorefs autorefs-internal" title="_get_a_numerator_no_adjoint(state, next_config, a_prev)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking._get_a_numerator_no_adjoint">(Needed for the spiking override)</a></p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
                 <code>a_prev</code>
             </td>
             <td>
@@ -3994,7 +3976,7 @@ the bias sum and bias count.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The activations from the previous layer. <a class="autorefs autorefs-internal" title="_get_a_numerator_no_adjoint(state, next_config, a_prev)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking._get_a_numerator_no_adjoint">(Needed for the spiking override)</a></p>
+                <p>The activations from the previous layer. <a class="autorefs autorefs-internal" title="_get_a_numerator_no_adjoint(state, a_prev)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking._get_a_numerator_no_adjoint">(Needed for the spiking override)</a></p>
               </div>
             </td>
             <td>
@@ -4030,11 +4012,7 @@ the bias sum and bias count.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\affine_layer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">271</span>
-<span class="normal">272</span>
-<span class="normal">273</span>
-<span class="normal">274</span>
-<span class="normal">275</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">275</span>
 <span class="normal">276</span>
 <span class="normal">277</span>
 <span class="normal">278</span>
@@ -4055,10 +4033,11 @@ the bias sum and bias count.</p>
 <span class="normal">293</span>
 <span class="normal">294</span>
 <span class="normal">295</span>
-<span class="normal">296</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_a_numerator_no_adjoint</span><span class="p">(</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_a_numerator_no_adjoint</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span>
-    <span class="n">next_config</span><span class="p">:</span> <span class="n">ADMM_LayerConfig</span><span class="p">,</span>
     <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculates the non-spiking numerator block for the spatial activation ($a$) update.</span>
@@ -4073,7 +4052,6 @@ the bias sum and bias count.</p>
 
 <span class="sd">    Args:</span>
 <span class="sd">        state (ADMM_LayerState): [State object][src.admm.dataclasses.ADMM_LayerState] containing the current pre-activations ($z$).</span>
-<span class="sd">        next_config (ADMM_LayerConfig): [The configuration object][src.admm.dataclasses.ADMM_LayerConfig] of the subsequent layer. [(Needed for the spiking override)][src.admm.spiking_mixin.ADMM_Spiking._get_a_numerator_no_adjoint]</span>
 <span class="sd">        a_prev (torch.Tensor): The activations from the previous layer. [(Needed for the spiking override)][src.admm.spiking_mixin.ADMM_Spiking._get_a_numerator_no_adjoint]</span>
 
 <span class="sd">    Returns:</span>
@@ -4214,9 +4192,7 @@ Computes the denominator and calls the solver <a class="autorefs autorefs-intern
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\affine_layer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">298</span>
-<span class="normal">299</span>
-<span class="normal">300</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">300</span>
 <span class="normal">301</span>
 <span class="normal">302</span>
 <span class="normal">303</span>
@@ -4250,7 +4226,9 @@ Computes the denominator and calls the solver <a class="autorefs autorefs-intern
 <span class="normal">331</span>
 <span class="normal">332</span>
 <span class="normal">333</span>
-<span class="normal">334</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_solve_standard_system</span><span class="p">(</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_solve_standard_system</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">next_layer</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
     <span class="n">W_expanded</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
@@ -4421,9 +4399,7 @@ number of input features (<span class="arithmatex">\(N\)</span>), meaning <span 
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\affine_layer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">336</span>
-<span class="normal">337</span>
-<span class="normal">338</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">338</span>
 <span class="normal">339</span>
 <span class="normal">340</span>
 <span class="normal">341</span>
@@ -4454,7 +4430,9 @@ number of input features (<span class="arithmatex">\(N\)</span>), meaning <span 
 <span class="normal">366</span>
 <span class="normal">367</span>
 <span class="normal">368</span>
-<span class="normal">369</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_solve_woodbury_system</span><span class="p">(</span>
+<span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_solve_woodbury_system</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">next_layer</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
     <span class="n">W_expanded</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
@@ -4507,27 +4485,105 @@ number of input features (<span class="arithmatex">\(N\)</span>), meaning <span 
 
         <p>Solves the activation system via the Fast Fourier Transform (FFT) for static layers.
  Computes the denominator and calls the solver <a class="autorefs autorefs-internal" title="solve_fft_system_static(numerator, denominator)" href="../a_update_solvers/#src.admm.functional.a_update_solvers.solve_fft_system_static"><code>solve_fft_system_static</code></a></p>
+<p>Denominator formula evaluated in the frequency domain:
+<span class="arithmatex">\(\beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1})\)</span></p>
 
 
-<details class="denominator-formula-evaluated-in-the-frequency-domain" open>
-  <summary>Denominator formula evaluated in the frequency domain</summary>
-  <p><span class="arithmatex">\(\beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1})\)</span></p>
-<p>Note:
-    We separate this function, because it is overriden by it's spiking version <a class="autorefs autorefs-internal" title="_solve_fft_system(numerator, next_layer, a_shape)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking._solve_fft_system"><code>_solve_fft_system</code></a> in the
-    <a class="autorefs autorefs-internal" title="src.admm.spiking_mixin" href="../spiking_mixin/#src.admm.spiking_mixin"><code>admm.spiking_mixin</code></a> module.</p>
-<p>Args:
-    next_layer (nn.Module): The subsequent layer in the network.
-    numerator (torch.Tensor): The assembled numerator target tensor.
-    a_shape (tuple): The desired output shape of the activation tensor.</p>
-<p>Returns:
-    torch.Tensor: The solved spatial activations.</p>
+<details class="note" open>
+  <summary>Note</summary>
+  <p>We separate this function, because it is overriden by it's spiking version <a class="autorefs autorefs-internal" title="_solve_fft_system(numerator, next_layer, a_shape)" href="../spiking_mixin/#src.admm.spiking_mixin.ADMM_Spiking._solve_fft_system"><code>_solve_fft_system</code></a> in the
+<a class="autorefs autorefs-internal" title="src.admm.spiking_mixin" href="../spiking_mixin/#src.admm.spiking_mixin"><code>admm.spiking_mixin</code></a> module.</p>
 </details>
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>next_layer</code>
+            </td>
+            <td>
+                  <code><span title="torch.nn.Module">Module</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The subsequent layer in the network.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>numerator</code>
+            </td>
+            <td>
+                  <code><span title="torch.Tensor">Tensor</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The assembled numerator target tensor.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>a_shape</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The desired output shape of the activation tensor.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="torch.Tensor">Tensor</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>torch.Tensor: The solved spatial activations.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\affine_layer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">371</span>
-<span class="normal">372</span>
-<span class="normal">373</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">373</span>
 <span class="normal">374</span>
 <span class="normal">375</span>
 <span class="normal">376</span>
@@ -4567,7 +4623,9 @@ number of input features (<span class="arithmatex">\(N\)</span>), meaning <span 
 <span class="normal">410</span>
 <span class="normal">411</span>
 <span class="normal">412</span>
-<span class="normal">413</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_solve_fft_system</span><span class="p">(</span>
+<span class="normal">413</span>
+<span class="normal">414</span>
+<span class="normal">415</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_solve_fft_system</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">next_layer</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
     <span class="n">numerator</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
@@ -4577,18 +4635,18 @@ number of input features (<span class="arithmatex">\(N\)</span>), meaning <span 
 <span class="sd">     Computes the denominator and calls the solver [`solve_fft_system_static`][src.admm.functional.a_update_solvers.solve_fft_system_static]</span>
 
 <span class="sd">    Denominator formula evaluated in the frequency domain:</span>
-<span class="sd">     $\beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1})$</span>
+<span class="sd">    $\beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1})$</span>
 
-<span class="sd">     Note:</span>
+<span class="sd">    Note:</span>
 <span class="sd">         We separate this function, because it is overriden by it&#39;s spiking version [`_solve_fft_system`][src.admm.spiking_mixin.ADMM_Spiking._solve_fft_system] in the</span>
 <span class="sd">         [`admm.spiking_mixin`][src.admm.spiking_mixin] module.</span>
 
-<span class="sd">     Args:</span>
+<span class="sd">    Args:</span>
 <span class="sd">         next_layer (nn.Module): The subsequent layer in the network.</span>
 <span class="sd">         numerator (torch.Tensor): The assembled numerator target tensor.</span>
 <span class="sd">         a_shape (tuple): The desired output shape of the activation tensor.</span>
 
-<span class="sd">     Returns:</span>
+<span class="sd">    Returns:</span>
 <span class="sd">         torch.Tensor: The solved spatial activations.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -4629,7 +4687,7 @@ number of input features (<span class="arithmatex">\(N\)</span>), meaning <span 
 
         <p>Manages the activation (<span class="arithmatex">\(a\)</span>) update for standard spatial layers.</p>
 <p>Assembles the numerator <span class="arithmatex">\(n = \beta_l h_l(z_l) + \rho_{l+1} \mathcal{A}_{l+1}^*(v_{l+1})\)</span>
-and dynamically routes to the optimal linear solver based on the layer configurations:</p>
+and dynamically routes to the optimal solver based on the layer configurations:</p>
 <ul>
 <li><strong>FFT path</strong>: Used when both the current and next layers are convolutional and
   <code>use_fft</code> is enabled. Solves the system entirely in the frequency domain,
@@ -4746,9 +4804,7 @@ and dynamically routes to the optimal linear solver based on the layer configura
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\affine_layer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">415</span>
-<span class="normal">416</span>
-<span class="normal">417</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">417</span>
 <span class="normal">418</span>
 <span class="normal">419</span>
 <span class="normal">420</span>
@@ -4832,7 +4888,7 @@ and dynamically routes to the optimal linear solver based on the layer configura
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Manages the activation ($a$) update for standard spatial layers.</span>
 
 <span class="sd">    Assembles the numerator $n = \beta_l h_l(z_l) + \rho_{l+1} \mathcal{A}_{l+1}^*(v_{l+1})$</span>
-<span class="sd">    and dynamically routes to the optimal linear solver based on the layer configurations:</span>
+<span class="sd">    and dynamically routes to the optimal solver based on the layer configurations:</span>
 
 <span class="sd">    * **FFT path**: Used when both the current and next layers are convolutional and</span>
 <span class="sd">      `use_fft` is enabled. Solves the system entirely in the frequency domain,</span>
@@ -4852,9 +4908,7 @@ and dynamically routes to the optimal linear solver based on the layer configura
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># Step 1: numerator = β_l·h_l(z_l) + ρ_{l+1}·A*_{l+1}(v_{l+1})</span>
-    <span class="n">numerator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_a_numerator_no_adjoint</span><span class="p">(</span>
-        <span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span> <span class="n">next_config</span><span class="o">=</span><span class="n">next_layer</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">a_prev</span><span class="o">=</span><span class="n">a_prev</span>
-    <span class="p">)</span>
+    <span class="n">numerator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_a_numerator_no_adjoint</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span> <span class="n">a_prev</span><span class="o">=</span><span class="n">a_prev</span><span class="p">)</span>
 
     <span class="n">inside_adjoint</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">get_v</span><span class="p">(</span><span class="n">next_state</span><span class="p">)</span>
     <span class="n">adjoint</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">adjoint_operator</span><span class="p">(</span>
@@ -4862,7 +4916,7 @@ and dynamically routes to the optimal linear solver based on the layer configura
     <span class="p">)</span>
     <span class="n">numerator</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">adjoint</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">next_layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
 
-    <span class="c1"># Step 2: Expand weights (handles Linear, Conv, pooled variants)</span>
+    <span class="c1"># Step 2: Expand weights (handles FeedForward, Conv, pooled variants)</span>
     <span class="n">W_expanded</span> <span class="o">=</span> <span class="n">next_layer</span><span class="o">.</span><span class="n">pool_op</span><span class="o">.</span><span class="n">expand_weights</span><span class="p">(</span>
         <span class="n">W</span><span class="o">=</span><span class="n">next_layer</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">a_shape</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span>
     <span class="p">)</span>

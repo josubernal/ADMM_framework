@@ -1496,7 +1496,7 @@
 
         <p>This module contains pooling and flattening operations designed specifically
 for Alternating Direction Method of Multipliers (ADMM) based neural network training.</p>
-<p>ADMM optimization requires mathematically explicit "adjoint" (transpose) linear
+<p>ADMM optimization requires mathematically explicit "adjoint" (transpose) feedforward
 operators to map auxiliary variables and errors back to their original spatial dimensions.
 The classes defined here provide both the forward transformation (pooling/flattening)
 and its corresponding mathematical adjoint.</p>
@@ -1505,7 +1505,7 @@ and its corresponding mathematical adjoint.</p>
 <details class="important" open>
   <summary>IMPORTANT</summary>
   <p>All pooling methods flatten the output to a 2D shape <code>(Batch x Features)</code>
-for compatibility with linear layers by default.</p>
+for compatibility with feedforward layers by default.</p>
 </details>
 
 
@@ -1651,7 +1651,7 @@ adjoint operator, and a weight expansion helper.</p>
     <span class="k">def</span><span class="w"> </span><span class="nf">expand_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">W</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">a_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Expands the weights of the next layer to match the spatial dimensions of a.</span>
 
-<span class="sd">        This is necessary for computing the linear system in ADMM when spatial pooling</span>
+<span class="sd">        This is necessary for computing the system in ADMM when spatial pooling</span>
 <span class="sd">        is involved.</span>
 
 <span class="sd">        Args:</span>
@@ -1946,7 +1946,7 @@ Defaults to None.</p>
     <div class="doc doc-contents ">
 
         <p>Expands the weights of the next layer to match the spatial dimensions of a.</p>
-<p>This is necessary for computing the linear system in ADMM when spatial pooling
+<p>This is necessary for computing the system in ADMM when spatial pooling
 is involved.</p>
 
 
@@ -2042,7 +2042,7 @@ is involved.</p>
 <span class="k">def</span><span class="w"> </span><span class="nf">expand_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">W</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">a_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Expands the weights of the next layer to match the spatial dimensions of a.</span>
 
-<span class="sd">    This is necessary for computing the linear system in ADMM when spatial pooling</span>
+<span class="sd">    This is necessary for computing the system in ADMM when spatial pooling</span>
 <span class="sd">    is involved.</span>
 
 <span class="sd">    Args:</span>

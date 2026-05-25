@@ -1737,7 +1737,12 @@ prevent 'Ping-Pong' oscillation in non-convex landscapes.</p>
 <span class="normal">192</span>
 <span class="normal">193</span>
 <span class="normal">194</span>
-<span class="normal">195</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Scheduler</span><span class="p">:</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Scheduler</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Dynamically balances Primal and Dual residuals by scaling $\rho$ and $\beta$.</span>
 
 <span class="sd">    Mimics the version described in [Distributed Optimization and Statistical Learning via the Alternating Direction Method of Multipliers](https://web.stanford.edu/~boyd/papers/pdf/admm_distr_stats.pdf),</span>
@@ -1812,6 +1817,7 @@ prevent 'Ping-Pong' oscillation in non-convex landscapes.</p>
 <span class="sd">        penalty parameters if the Primal and Dual residuals fall out of the tolerance ratio ($\mu$).</span>
 
 <span class="sd">        **$\rho$ Update:**</span>
+
 <span class="sd">        $$</span>
 <span class="sd">        \rho_l^{k+1} = </span>
 <span class="sd">        \begin{cases} </span>
@@ -1820,10 +1826,12 @@ prevent 'Ping-Pong' oscillation in non-convex landscapes.</p>
 <span class="sd">        \rho_l^k &amp; \text{otherwise}</span>
 <span class="sd">        \end{cases}</span>
 <span class="sd">        $$</span>
+
 <span class="sd">        *Where:* $d_{\rho_l}^k = \rho_l^k \frac{\|z_l^{k} - z_l^{k-1}\|_2}{\sqrt{N_z}}$</span>
 
 <span class="sd">        **Lagrange Multiplier ($\lambda$) Scaling:**</span>
 <span class="sd">        *(If enabled via `use_lagrange`)*</span>
+
 <span class="sd">        $$</span>
 <span class="sd">        \lambda_l^{k+1} = </span>
 <span class="sd">        \begin{cases} </span>
@@ -1834,6 +1842,7 @@ prevent 'Ping-Pong' oscillation in non-convex landscapes.</p>
 <span class="sd">        $$</span>
 
 <span class="sd">        **$\beta$ Update:**</span>
+
 <span class="sd">        $$</span>
 <span class="sd">        \beta_l^{k+1} = </span>
 <span class="sd">        \begin{cases} </span>
@@ -1842,6 +1851,7 @@ prevent 'Ping-Pong' oscillation in non-convex landscapes.</p>
 <span class="sd">        \beta_l^k &amp; \text{otherwise}</span>
 <span class="sd">        \end{cases}</span>
 <span class="sd">        $$</span>
+
 <span class="sd">        *Where:* $d_{\beta_l}^k = \beta_l^k \frac{\|a_l^{k} - a_l^{k-1}\|_2}{\sqrt{N_a}}$</span>
 
 <span class="sd">        Args:</span>
@@ -2177,36 +2187,36 @@ prevent 'Ping-Pong' oscillation in non-convex landscapes.</p>
         <p>Called AFTER the epoch ends to compute duals and balance <span class="arithmatex">\(\rho\)</span> and <span class="arithmatex">\(\beta\)</span> penalties.</p>
 <p>Evaluates the normalized dual residuals (<span class="arithmatex">\(d_\rho\)</span> and <span class="arithmatex">\(d_\beta\)</span>) and scales the 
 penalty parameters if the Primal and Dual residuals fall out of the tolerance ratio (<span class="arithmatex">\(\mu\)</span>).</p>
-<p><strong><span class="arithmatex">\(\rho\)</span> Update:</strong>
-$$
+<p><strong><span class="arithmatex">\(\rho\)</span> Update:</strong></p>
+<div class="arithmatex">\[
 \rho_l^{k+1} = 
 \begin{cases} 
-\tau \rho_l^k &amp; \text{if } p_{\rho_l}^k &gt; \mu d_{\rho_l}^k \\
-\rho_l^k / \tau &amp; \text{if } d_{\rho_l}^k &gt; \mu p_{\rho_l}^k \\
+\tau \rho_l^k &amp; \text{if } p_{\rho_l}^k &gt; \mu d_{\rho_l}^k \\\\
+\rho_l^k / \tau &amp; \text{if } d_{\rho_l}^k &gt; \mu p_{\rho_l}^k \\\\
 \rho_l^k &amp; \text{otherwise}
 \end{cases}
-$$
-<em>Where:</em> <span class="arithmatex">\(d_{\rho_l}^k = \rho_l^k \frac{\|z_l^{k} - z_l^{k-1}\|_2}{\sqrt{N_z}}\)</span></p>
+\]</div>
+<p><em>Where:</em> <span class="arithmatex">\(d_{\rho_l}^k = \rho_l^k \frac{\|z_l^{k} - z_l^{k-1}\|_2}{\sqrt{N_z}}\)</span></p>
 <p><strong>Lagrange Multiplier (<span class="arithmatex">\(\lambda\)</span>) Scaling:</strong>
-<em>(If enabled via <code>use_lagrange</code>)</em>
-$$
+<em>(If enabled via <code>use_lagrange</code>)</em></p>
+<div class="arithmatex">\[
 \lambda_l^{k+1} = 
 \begin{cases} 
-\lambda_l^k / \tau &amp; \text{if } p_{\rho_l}^k &gt; \mu d_{\rho_l}^k \\
-\tau \lambda_l^k &amp; \text{if } d_{\rho_l}^k &gt; \mu p_{\rho_l}^k \\
+\lambda_l^k / \tau &amp; \text{if } p_{\rho_l}^k &gt; \mu d_{\rho_l}^k \\\\
+\tau \lambda_l^k &amp; \text{if } d_{\rho_l}^k &gt; \mu p_{\rho_l}^k \\\\
 \lambda_l^k &amp; \text{otherwise}
 \end{cases}
-$$</p>
-<p><strong><span class="arithmatex">\(\beta\)</span> Update:</strong>
-$$
+\]</div>
+<p><strong><span class="arithmatex">\(\beta\)</span> Update:</strong></p>
+<div class="arithmatex">\[
 \beta_l^{k+1} = 
 \begin{cases} 
-\tau \beta_l^k &amp; \text{if } p_{\beta_l}^k &gt; \mu d_{\beta_l}^k \\
-\beta_l^k / \tau &amp; \text{if } d_{\beta_l}^k &gt; \mu p_{\beta_l}^k \\
+\tau \beta_l^k &amp; \text{if } p_{\beta_l}^k &gt; \mu d_{\beta_l}^k \\\\
+\beta_l^k / \tau &amp; \text{if } d_{\beta_l}^k &gt; \mu p_{\beta_l}^k \\\\
 \beta_l^k &amp; \text{otherwise}
 \end{cases}
-$$
-<em>Where:</em> <span class="arithmatex">\(d_{\beta_l}^k = \beta_l^k \frac{\|a_l^{k} - a_l^{k-1}\|_2}{\sqrt{N_a}}\)</span></p>
+\]</div>
+<p><em>Where:</em> <span class="arithmatex">\(d_{\beta_l}^k = \beta_l^k \frac{\|a_l^{k} - a_l^{k-1}\|_2}{\sqrt{N_a}}\)</span></p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2371,7 +2381,12 @@ $$
 <span class="normal">192</span>
 <span class="normal">193</span>
 <span class="normal">194</span>
-<span class="normal">195</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">primal_rho_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
     <span class="n">primal_beta_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
@@ -2382,6 +2397,7 @@ $$
 <span class="sd">    penalty parameters if the Primal and Dual residuals fall out of the tolerance ratio ($\mu$).</span>
 
 <span class="sd">    **$\rho$ Update:**</span>
+
 <span class="sd">    $$</span>
 <span class="sd">    \rho_l^{k+1} = </span>
 <span class="sd">    \begin{cases} </span>
@@ -2390,10 +2406,12 @@ $$
 <span class="sd">    \rho_l^k &amp; \text{otherwise}</span>
 <span class="sd">    \end{cases}</span>
 <span class="sd">    $$</span>
+
 <span class="sd">    *Where:* $d_{\rho_l}^k = \rho_l^k \frac{\|z_l^{k} - z_l^{k-1}\|_2}{\sqrt{N_z}}$</span>
 
 <span class="sd">    **Lagrange Multiplier ($\lambda$) Scaling:**</span>
 <span class="sd">    *(If enabled via `use_lagrange`)*</span>
+
 <span class="sd">    $$</span>
 <span class="sd">    \lambda_l^{k+1} = </span>
 <span class="sd">    \begin{cases} </span>
@@ -2404,6 +2422,7 @@ $$
 <span class="sd">    $$</span>
 
 <span class="sd">    **$\beta$ Update:**</span>
+
 <span class="sd">    $$</span>
 <span class="sd">    \beta_l^{k+1} = </span>
 <span class="sd">    \begin{cases} </span>
@@ -2412,6 +2431,7 @@ $$
 <span class="sd">    \beta_l^k &amp; \text{otherwise}</span>
 <span class="sd">    \end{cases}</span>
 <span class="sd">    $$</span>
+
 <span class="sd">    *Where:* $d_{\beta_l}^k = \beta_l^k \frac{\|a_l^{k} - a_l^{k-1}\|_2}{\sqrt{N_a}}$</span>
 
 <span class="sd">    Args:</span>

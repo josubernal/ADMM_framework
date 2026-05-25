@@ -1374,7 +1374,7 @@
 
     <div class="doc doc-contents first">
 
-        <p>This module isolates the numerical linear algebra required for ADMM weight updates.
+        <p>This module isolates the numerical algebra required for ADMM weight updates.
 By keeping these functions stateless, they are easier to optimize, maintain,
 and read independently from the layer mechanics. Additionally it allows us to experient
 with different solvers modularly.</p>
@@ -1656,7 +1656,7 @@ denominator to accelerate the solve. Defaults to None.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Solves the linear system <span class="arithmatex">\(AX = B\)</span> using the Conjugate Gradient method.</p>
+        <p>Solves the system <span class="arithmatex">\(AX = B\)</span> using the Conjugate Gradient method.</p>
 <p>Designed for batched solving where <span class="arithmatex">\(X\)</span> has multiple columns. This is
 often used as an efficient alternative to full matrix inversion.</p>
 
@@ -1841,7 +1841,7 @@ often used as an efficient alternative to full matrix inversion.</p>
     <span class="n">tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">,</span>
     <span class="n">max_iter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Solves the linear system $AX = B$ using the Conjugate Gradient method.</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Solves the system $AX = B$ using the Conjugate Gradient method.</span>
 
 <span class="sd">    Designed for batched solving where $X$ has multiple columns. This is</span>
 <span class="sd">    often used as an efficient alternative to full matrix inversion.</span>

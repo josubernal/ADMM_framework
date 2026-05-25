@@ -2061,7 +2061,22 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
 <span class="normal">436</span>
 <span class="normal">437</span>
 <span class="normal">438</span>
-<span class="normal">439</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Spiking</span><span class="p">:</span>
+<span class="normal">439</span>
+<span class="normal">440</span>
+<span class="normal">441</span>
+<span class="normal">442</span>
+<span class="normal">443</span>
+<span class="normal">444</span>
+<span class="normal">445</span>
+<span class="normal">446</span>
+<span class="normal">447</span>
+<span class="normal">448</span>
+<span class="normal">449</span>
+<span class="normal">450</span>
+<span class="normal">451</span>
+<span class="normal">452</span>
+<span class="normal">453</span>
+<span class="normal">454</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Spiking</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Mixin class that provides temporal modeling and unrolled solvers for Spiking Neural Networks (SNNs).&quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span>
@@ -2069,13 +2084,13 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Standard sequential pass for initialization or inference.</span>
 
-<span class="sd">        * For Static Networks: Simply returns the spatial transformation ($z_l = F_l(a_{l-1})$).</span>
+<span class="sd">        * For Static Networks: Simply returns the spatial transformation $z_l = F_l(a_{l-1})$.</span>
 <span class="sd">        * For Spiking Networks (SNNs): Simulates the mechanics step-by-step.</span>
 
 <span class="sd">        Note:</span>
 <span class="sd">            To refer to its non-spiking counterpart, see [`forward`][src.admm.base_layer.ADMM_Layer.forward].</span>
 
-<span class="sd">            **Performance Note (Compute vs. Memory):**</span>
+<span class="sd">        Note:</span>
 <span class="sd">            This method is **compute-bound**. It strictly enforces causality via an $O(T)$</span>
 <span class="sd">            sequential loop, resulting in slow execution but minimal memory footprint.</span>
 <span class="sd">            Use this strictly for inference.</span>
@@ -2088,26 +2103,37 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
 <span class="sd">        Returns:</span>
 <span class="sd">            torch.Tensor: The output tensor after the full temporal simulation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">expected_slice_dim</span> <span class="o">=</span> <span class="mi">4</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">convolution</span> <span class="k">else</span> <span class="mi">2</span>
+        <span class="n">squeezed</span> <span class="o">=</span> <span class="n">a_prev</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="n">expected_slice_dim</span>
+        <span class="k">if</span> <span class="n">squeezed</span><span class="p">:</span>
+            <span class="n">a_prev</span> <span class="o">=</span> <span class="n">a_prev</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># [1, B, F]</span>
+
         <span class="n">y_t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">squeezed</span><span class="p">:</span>
+            <span class="n">y_t</span> <span class="o">=</span> <span class="n">y_t</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># back to [B, out_f]</span>
+
         <span class="k">if</span> <span class="n">z_tminus1</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">z_tminus1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">y_t</span><span class="p">)</span>
             <span class="n">a_tminus1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">y_t</span><span class="p">)</span>
 
-        <span class="n">reset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="n">a_tminus1</span> <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_reset</span><span class="p">)</span> <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="n">reset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="n">a_tminus1</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_reset</span> <span class="k">else</span> <span class="mf">0.0</span>
         <span class="k">return</span> <span class="n">y_t</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">deltas</span> <span class="o">*</span> <span class="n">z_tminus1</span> <span class="o">-</span> <span class="n">reset</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">get_v</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Returns the target tensor $v$ for spiking layers.</span>
 
 <span class="sd">        Formula evaluated:</span>
-<span class="sd">        $v_l = z_l - b_l - T_l$</span>
+
+<span class="sd">        $$ v_l = z_l - b_l - T_l $$</span>
 
 <span class="sd">        If layer $l$ has a Lagrangian multiplier:</span>
-<span class="sd">        $v_l = z_l - b_l - T_l + \frac{\lambda_l}{\rho}\mathbb{1}_{\{t=T\}}$</span>
+
+<span class="sd">        $$ v_l = z_l - b_l - T_l + \frac{\lambda_l}{\rho}\mathbb{1}_{\{t=T\}} $$</span>
 
 <span class="sd">        Note:</span>
 <span class="sd">            You can find the corresponding non-spiking version [`get_v`][src.admm.affine_layer.ADMM_AffineLayer.get_v] in the</span>
 <span class="sd">            [`Affine Layer`][src.admm.affine_layer] module.</span>
+
 <span class="sd">        Args:</span>
 <span class="sd">            state (ADMM_LayerState): [State object][src.admm.dataclasses.ADMM_LayerState] of the current layer.</span>
 
@@ -2120,8 +2146,8 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
             <span class="n">v</span><span class="o">.</span><span class="n">sub_</span><span class="p">(</span><span class="n">bias_formatted</span><span class="p">)</span>
         <span class="n">v</span><span class="o">.</span><span class="n">sub_</span><span class="p">(</span><span class="n">compute_temporal_dependencies</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">))</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_lagrange</span> <span class="ow">and</span> <span class="n">state</span><span class="o">.</span><span class="n">lambda_lagrange</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">lambda_lagrange</span> <span class="o">=</span> <span class="n">broadcast_to_match</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
-            <span class="n">v</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">lambda_lagrange</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
+            <span class="n">lambda_lagrange</span> <span class="o">=</span> <span class="n">broadcast_to_match</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="p">,</span> <span class="n">v</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">v</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">lambda_lagrange</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">v</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_compute_bias_covariance</span><span class="p">(</span>
@@ -2130,10 +2156,12 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the mean spatial covariance for the bias update step.</span>
 
 <span class="sd">        Formula evaluated:</span>
-<span class="sd">        $z_l - \mathcal{A}_l(a_{l-1}) - T_l$</span>
+
+<span class="sd">        $$ z_l - \mathcal{A}_l(a_{l-1}) - T_l $$</span>
 
 <span class="sd">        If layer $l$ has a Lagrangian multiplier:</span>
-<span class="sd">        $z_l - \mathcal{A}_l(a_{l-1}) - T_l + \frac{\lambda}{\rho}_\{{t=T}\}$</span>
+
+<span class="sd">        $$ z_l - \mathcal{A}_l(a_{l-1}) - T_l + \frac{\lambda}{\rho}_\{{t=T}\} $$</span>
 
 <span class="sd">        Note:</span>
 <span class="sd">            You can find the corresponding non-spiking version [`_compute_bias_covariance`][src.admm.affine_layer.ADMM_AffineLayer._compute_bias_covariance] in the</span>
@@ -2160,17 +2188,16 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_a_numerator_no_adjoint</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span>
-        <span class="n">next_config</span><span class="p">:</span> <span class="n">ADMM_LayerConfig</span><span class="p">,</span>
         <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculates the spiking numerator block for the vectorized activation ($a$) update.</span>
 
 <span class="sd">        Extends the static formula with the temporal reset penalty term for $t &lt; T$:</span>
-<span class="sd">        $N = \beta_l h_{l,\theta}(z_{l}) - \rho_l \theta S^T\big(z_l - \delta S z_l-F_l(a_{l-1}) \big)$</span>
 
-<span class="sd">         Args:</span>
+<span class="sd">        $$ N = \beta_l h_{l,\theta}(z_{l}) - \rho_l \theta S^T\big(z_l - \delta S z_l-F_l(a_{l-1}) \big) $$</span>
+
+<span class="sd">        Args:</span>
 <span class="sd">            state (ADMM_LayerState): [State object][src.admm.dataclasses.ADMM_LayerState] containing the current pre-activations ($z$).</span>
-<span class="sd">            next_config (ADMM_LayerConfig): [The configuration object][src.admm.dataclasses.ADMM_LayerConfig] of the subsequent layer.</span>
 <span class="sd">            a_prev (torch.Tensor): The activations from the previous layer.</span>
 
 <span class="sd">        Returns:</span>
@@ -2184,15 +2211,15 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
         <span class="n">num_slice</span> <span class="o">=</span> <span class="n">numerator</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="n">forward_pass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
         <span class="c1"># S^T ([1:] means t+1 to t)</span>
-        <span class="n">num_slice</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">forward_pass</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="n">next_config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
+        <span class="n">num_slice</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">forward_pass</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
         <span class="k">del</span> <span class="n">forward_pass</span>
         <span class="c1"># S^T ([1:] means t+1 to t)</span>
-        <span class="n">num_slice</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">alpha</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="n">next_config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
+        <span class="n">num_slice</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">alpha</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
         <span class="c1"># The advance (S^T) and delay (S) operators cancel out (S^T * S = I).</span>
         <span class="c1"># We simply add the current timestep (t, via [:-1]).</span>
         <span class="n">num_slice</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span>
             <span class="n">state</span><span class="o">.</span><span class="n">z</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
-            <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">deltas</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="n">next_config</span><span class="o">.</span><span class="n">rho</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">deltas</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">numerator</span>
 
@@ -2202,7 +2229,8 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the denominator matrices for the activation ($a$) update using FFTs.</span>
 
 <span class="sd">        Formula evaluated in the frequency domain:</span>
-<span class="sd">        $D = \beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1}) + \rho_l \theta^2 S^TS$</span>
+
+<span class="sd">        $$ D = \beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1}) + \rho_l \theta^2 S^TS $$</span>
 
 <span class="sd">        Note:</span>
 <span class="sd">            We separate this function, because it is needed for the unrolled cache, see [`TemporalCache`][src.admm.dataclasses.TemporalCache]</span>
@@ -2247,7 +2275,8 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the spiking denominator matrix for the activation ($a$) update.</span>
 
 <span class="sd">        Formula evaluated:</span>
-<span class="sd">        $D = \beta_l I + \rho_{l+1} \mathcal{A}_{l+1}^* \circ \mathcal{A}_{l+1} + \rho_l \theta^2 S^TS}$</span>
+
+<span class="sd">        $$ D = \beta_l I + \rho_{l+1} \mathcal{A}_{l+1}^* \circ \mathcal{A}_{l+1} + \rho_l \theta^2 S^TS $$</span>
 
 <span class="sd">        Note:</span>
 <span class="sd">            We separate this function, because it is needed for the unrolled cache, see [`TemporalCache`][src.admm.dataclasses.TemporalCache]</span>
@@ -2383,7 +2412,7 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Manages the unrolled (Gauss-Seidel) activation ($a$) update for spiking layers.</span>
 
 <span class="sd">        Assembles the per-timestep numerator, factoring in the temporal reset penalty</span>
-<span class="sd">        if $t &lt; T$, and dynamically routes to the optimal linear solver (FFT, Woodbury,</span>
+<span class="sd">        if $t &lt; T$, and dynamically routes to the optimal solver (FFT, Woodbury,</span>
 <span class="sd">        or Standard) based on the layer configurations. Output is clamped to $[0, 1]$.</span>
 
 <span class="sd">        Args:</span>
@@ -2450,7 +2479,8 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
 <span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Updates the Lagrange multiplier ($\lambda$) based on the current layer constraints for spiking neurons.</span>
 
 <span class="sd">        Formula evaluated:</span>
-<span class="sd">        $\lambda_l \leftarrow \lambda_l + \rho_l \big(z_{l,T} - \mathcal{F}_{l,T}\big)$</span>
+
+<span class="sd">        $$ \lambda_l \leftarrow \lambda_l + \rho_l \big(z_{l,T} - \mathcal{F}_{l,T}\big) $$</span>
 
 <span class="sd">        Note:</span>
 <span class="sd">            You can find the corresponding non-spiking version [update_lambda][src.admm.base_layer.ADMM_Layer.update_lambda] in the [Base Layer][src.admm.base_layer] module.</span>
@@ -2499,7 +2529,7 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
 
         <p>Standard sequential pass for initialization or inference.</p>
 <ul>
-<li>For Static Networks: Simply returns the spatial transformation (<span class="arithmatex">\(z_l = F_l(a_{l-1})\)</span>).</li>
+<li>For Static Networks: Simply returns the spatial transformation <span class="arithmatex">\(z_l = F_l(a_{l-1})\)</span>.</li>
 <li>For Spiking Networks (SNNs): Simulates the mechanics step-by-step.</li>
 </ul>
 
@@ -2507,8 +2537,11 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
 <details class="note" open>
   <summary>Note</summary>
   <p>To refer to its non-spiking counterpart, see <a class="autorefs autorefs-internal" title="forward(a_prev)" href="../base_layer/#src.admm.base_layer.ADMM_Layer.forward"><code>forward</code></a>.</p>
-<p><strong>Performance Note (Compute vs. Memory):</strong>
-This method is <strong>compute-bound</strong>. It strictly enforces causality via an <span class="arithmatex">\(O(T)\)</span>
+</details>
+
+<details class="note" open>
+  <summary>Note</summary>
+  <p>This method is <strong>compute-bound</strong>. It strictly enforces causality via an <span class="arithmatex">\(O(T)\)</span>
 sequential loop, resulting in slow execution but minimal memory footprint.
 Use this strictly for inference.</p>
 </details>
@@ -2631,18 +2664,26 @@ Use this strictly for inference.</p>
 <span class="normal">61</span>
 <span class="normal">62</span>
 <span class="normal">63</span>
-<span class="normal">64</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">z_tminus1</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">a_tminus1</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Standard sequential pass for initialization or inference.</span>
 
-<span class="sd">    * For Static Networks: Simply returns the spatial transformation ($z_l = F_l(a_{l-1})$).</span>
+<span class="sd">    * For Static Networks: Simply returns the spatial transformation $z_l = F_l(a_{l-1})$.</span>
 <span class="sd">    * For Spiking Networks (SNNs): Simulates the mechanics step-by-step.</span>
 
 <span class="sd">    Note:</span>
 <span class="sd">        To refer to its non-spiking counterpart, see [`forward`][src.admm.base_layer.ADMM_Layer.forward].</span>
 
-<span class="sd">        **Performance Note (Compute vs. Memory):**</span>
+<span class="sd">    Note:</span>
 <span class="sd">        This method is **compute-bound**. It strictly enforces causality via an $O(T)$</span>
 <span class="sd">        sequential loop, resulting in slow execution but minimal memory footprint.</span>
 <span class="sd">        Use this strictly for inference.</span>
@@ -2655,12 +2696,20 @@ Use this strictly for inference.</p>
 <span class="sd">    Returns:</span>
 <span class="sd">        torch.Tensor: The output tensor after the full temporal simulation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">expected_slice_dim</span> <span class="o">=</span> <span class="mi">4</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">convolution</span> <span class="k">else</span> <span class="mi">2</span>
+    <span class="n">squeezed</span> <span class="o">=</span> <span class="n">a_prev</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="n">expected_slice_dim</span>
+    <span class="k">if</span> <span class="n">squeezed</span><span class="p">:</span>
+        <span class="n">a_prev</span> <span class="o">=</span> <span class="n">a_prev</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># [1, B, F]</span>
+
     <span class="n">y_t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">squeezed</span><span class="p">:</span>
+        <span class="n">y_t</span> <span class="o">=</span> <span class="n">y_t</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># back to [B, out_f]</span>
+
     <span class="k">if</span> <span class="n">z_tminus1</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">z_tminus1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">y_t</span><span class="p">)</span>
         <span class="n">a_tminus1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">y_t</span><span class="p">)</span>
 
-    <span class="n">reset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="n">a_tminus1</span> <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_reset</span><span class="p">)</span> <span class="k">else</span> <span class="mf">0.0</span>
+    <span class="n">reset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="n">a_tminus1</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_reset</span> <span class="k">else</span> <span class="mf">0.0</span>
     <span class="k">return</span> <span class="n">y_t</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">deltas</span> <span class="o">*</span> <span class="n">z_tminus1</span> <span class="o">-</span> <span class="n">reset</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2680,23 +2729,57 @@ Use this strictly for inference.</p>
     <div class="doc doc-contents ">
 
         <p>Returns the target tensor <span class="arithmatex">\(v\)</span> for spiking layers.</p>
-<p>Formula evaluated:
-<span class="arithmatex">\(v_l = z_l - b_l - T_l\)</span></p>
-<p>If layer <span class="arithmatex">\(l\)</span> has a Lagrangian multiplier:
-<span class="arithmatex">\(v_l = z_l - b_l - T_l + \frac{\lambda_l}{\rho}\mathbb{1}_{\{t=T\}}\)</span></p>
+<p>Formula evaluated:</p>
+<div class="arithmatex">\[ v_l = z_l - b_l - T_l \]</div>
+<p>If layer <span class="arithmatex">\(l\)</span> has a Lagrangian multiplier:</p>
+<div class="arithmatex">\[ v_l = z_l - b_l - T_l + \frac{\lambda_l}{\rho}\mathbb{1}_{\{t=T\}} \]</div>
 
 
 <details class="note" open>
   <summary>Note</summary>
   <p>You can find the corresponding non-spiking version <a class="autorefs autorefs-internal" title="get_v(state)" href="../affine_layer/#src.admm.affine_layer.ADMM_AffineLayer.get_v"><code>get_v</code></a> in the
 <a class="autorefs autorefs-internal" title="src.admm.affine_layer" href="../affine_layer/#src.admm.affine_layer"><code>Affine Layer</code></a> module.</p>
-</details>        <p>Args:
-    state (ADMM_LayerState): <a class="autorefs autorefs-internal" title="ADMM_LayerState
+</details>
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>state</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ADMM_LayerState
+
+
+  
+      dataclass
+   (src.admm.dataclasses.ADMM_LayerState)" href="../dataclasses/#src.admm.dataclasses.ADMM_LayerState">ADMM_LayerState</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><a class="autorefs autorefs-internal" title="ADMM_LayerState
 
 
   
       dataclass
   " href="../dataclasses/#src.admm.dataclasses.ADMM_LayerState">State object</a> of the current layer.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     <p><span class="doc-section-title">Returns:</span></p>
@@ -2724,44 +2807,50 @@ Use this strictly for inference.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\spiking_mixin.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">66</span>
-<span class="normal">67</span>
-<span class="normal">68</span>
-<span class="normal">69</span>
-<span class="normal">70</span>
-<span class="normal">71</span>
-<span class="normal">72</span>
-<span class="normal">73</span>
-<span class="normal">74</span>
-<span class="normal">75</span>
-<span class="normal">76</span>
-<span class="normal">77</span>
-<span class="normal">78</span>
-<span class="normal">79</span>
-<span class="normal">80</span>
-<span class="normal">81</span>
-<span class="normal">82</span>
-<span class="normal">83</span>
-<span class="normal">84</span>
-<span class="normal">85</span>
-<span class="normal">86</span>
-<span class="normal">87</span>
-<span class="normal">88</span>
-<span class="normal">89</span>
-<span class="normal">90</span>
-<span class="normal">91</span>
-<span class="normal">92</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_v</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_v</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Returns the target tensor $v$ for spiking layers.</span>
 
 <span class="sd">    Formula evaluated:</span>
-<span class="sd">    $v_l = z_l - b_l - T_l$</span>
+
+<span class="sd">    $$ v_l = z_l - b_l - T_l $$</span>
 
 <span class="sd">    If layer $l$ has a Lagrangian multiplier:</span>
-<span class="sd">    $v_l = z_l - b_l - T_l + \frac{\lambda_l}{\rho}\mathbb{1}_{\{t=T\}}$</span>
+
+<span class="sd">    $$ v_l = z_l - b_l - T_l + \frac{\lambda_l}{\rho}\mathbb{1}_{\{t=T\}} $$</span>
 
 <span class="sd">    Note:</span>
 <span class="sd">        You can find the corresponding non-spiking version [`get_v`][src.admm.affine_layer.ADMM_AffineLayer.get_v] in the</span>
 <span class="sd">        [`Affine Layer`][src.admm.affine_layer] module.</span>
+
 <span class="sd">    Args:</span>
 <span class="sd">        state (ADMM_LayerState): [State object][src.admm.dataclasses.ADMM_LayerState] of the current layer.</span>
 
@@ -2774,8 +2863,8 @@ Use this strictly for inference.</p>
         <span class="n">v</span><span class="o">.</span><span class="n">sub_</span><span class="p">(</span><span class="n">bias_formatted</span><span class="p">)</span>
     <span class="n">v</span><span class="o">.</span><span class="n">sub_</span><span class="p">(</span><span class="n">compute_temporal_dependencies</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">))</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_lagrange</span> <span class="ow">and</span> <span class="n">state</span><span class="o">.</span><span class="n">lambda_lagrange</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">lambda_lagrange</span> <span class="o">=</span> <span class="n">broadcast_to_match</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
-        <span class="n">v</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">lambda_lagrange</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
+        <span class="n">lambda_lagrange</span> <span class="o">=</span> <span class="n">broadcast_to_match</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">lambda_lagrange</span><span class="p">,</span> <span class="n">v</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">v</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">lambda_lagrange</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">v</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2795,10 +2884,10 @@ Use this strictly for inference.</p>
     <div class="doc doc-contents ">
 
         <p>Computes the mean spatial covariance for the bias update step.</p>
-<p>Formula evaluated:
-<span class="arithmatex">\(z_l - \mathcal{A}_l(a_{l-1}) - T_l\)</span></p>
-<p>If layer <span class="arithmatex">\(l\)</span> has a Lagrangian multiplier:
-<span class="arithmatex">\(z_l - \mathcal{A}_l(a_{l-1}) - T_l + \frac{\lambda}{\rho}_\{{t=T}\}\)</span></p>
+<p>Formula evaluated:</p>
+<div class="arithmatex">\[ z_l - \mathcal{A}_l(a_{l-1}) - T_l \]</div>
+<p>If layer <span class="arithmatex">\(l\)</span> has a Lagrangian multiplier:</p>
+<div class="arithmatex">\[ z_l - \mathcal{A}_l(a_{l-1}) - T_l + \frac{\lambda}{\rho}_\{{t=T}\} \]</div>
 
 
 <details class="note" open>
@@ -2889,18 +2978,7 @@ Use this strictly for inference.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\spiking_mixin.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 94</span>
-<span class="normal"> 95</span>
-<span class="normal"> 96</span>
-<span class="normal"> 97</span>
-<span class="normal"> 98</span>
-<span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">105</span>
 <span class="normal">106</span>
 <span class="normal">107</span>
 <span class="normal">108</span>
@@ -2920,16 +2998,31 @@ Use this strictly for inference.</p>
 <span class="normal">122</span>
 <span class="normal">123</span>
 <span class="normal">124</span>
-<span class="normal">125</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_compute_bias_covariance</span><span class="p">(</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_compute_bias_covariance</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the mean spatial covariance for the bias update step.</span>
 
 <span class="sd">    Formula evaluated:</span>
-<span class="sd">    $z_l - \mathcal{A}_l(a_{l-1}) - T_l$</span>
+
+<span class="sd">    $$ z_l - \mathcal{A}_l(a_{l-1}) - T_l $$</span>
 
 <span class="sd">    If layer $l$ has a Lagrangian multiplier:</span>
-<span class="sd">    $z_l - \mathcal{A}_l(a_{l-1}) - T_l + \frac{\lambda}{\rho}_\{{t=T}\}$</span>
+
+<span class="sd">    $$ z_l - \mathcal{A}_l(a_{l-1}) - T_l + \frac{\lambda}{\rho}_\{{t=T}\} $$</span>
 
 <span class="sd">    Note:</span>
 <span class="sd">        You can find the corresponding non-spiking version [`_compute_bias_covariance`][src.admm.affine_layer.ADMM_AffineLayer._compute_bias_covariance] in the</span>
@@ -2962,7 +3055,7 @@ Use this strictly for inference.</p>
 
 
 <h4 id="src.admm.spiking_mixin.ADMM_Spiking._get_a_numerator_no_adjoint" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">_get_a_numerator_no_adjoint</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">next_config</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">_get_a_numerator_no_adjoint</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">)</span></code>
 
 </h4>
 
@@ -2970,22 +3063,65 @@ Use this strictly for inference.</p>
     <div class="doc doc-contents ">
 
         <p>Calculates the spiking numerator block for the vectorized activation (<span class="arithmatex">\(a\)</span>) update.</p>
-<p>Extends the static formula with the temporal reset penalty term for <span class="arithmatex">\(t &lt; T\)</span>:
-<span class="arithmatex">\(N = \beta_l h_{l,\theta}(z_{l}) - \rho_l \theta S^T\big(z_l - \delta S z_l-F_l(a_{l-1}) \big)\)</span></p>
-<p>Args:
-    state (ADMM_LayerState): <a class="autorefs autorefs-internal" title="ADMM_LayerState
+<p>Extends the static formula with the temporal reset penalty term for <span class="arithmatex">\(t &lt; T\)</span>:</p>
+<div class="arithmatex">\[ N = \beta_l h_{l,\theta}(z_{l}) - \rho_l \theta S^T\big(z_l - \delta S z_l-F_l(a_{l-1}) \big) \]</div>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>state</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ADMM_LayerState
 
 
   
       dataclass
-  " href="../dataclasses/#src.admm.dataclasses.ADMM_LayerState">State object</a> containing the current pre-activations (<span class="arithmatex">\(z\)</span>).
-    next_config (ADMM_LayerConfig): <a class="autorefs autorefs-internal" title="ADMM_LayerConfig
+   (src.admm.dataclasses.ADMM_LayerState)" href="../dataclasses/#src.admm.dataclasses.ADMM_LayerState">ADMM_LayerState</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><a class="autorefs autorefs-internal" title="ADMM_LayerState
 
 
   
       dataclass
-  " href="../dataclasses/#src.admm.dataclasses.ADMM_LayerConfig">The configuration object</a> of the subsequent layer.
-    a_prev (torch.Tensor): The activations from the previous layer.</p>
+  " href="../dataclasses/#src.admm.dataclasses.ADMM_LayerState">State object</a> containing the current pre-activations (<span class="arithmatex">\(z\)</span>).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>a_prev</code>
+            </td>
+            <td>
+                  <code><span title="torch.Tensor">Tensor</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The activations from the previous layer.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     <p><span class="doc-section-title">Returns:</span></p>
@@ -3013,20 +3149,7 @@ Use this strictly for inference.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\spiking_mixin.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
-<span class="normal">135</span>
-<span class="normal">136</span>
-<span class="normal">137</span>
-<span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">140</span>
 <span class="normal">141</span>
 <span class="normal">142</span>
 <span class="normal">143</span>
@@ -3050,20 +3173,31 @@ Use this strictly for inference.</p>
 <span class="normal">161</span>
 <span class="normal">162</span>
 <span class="normal">163</span>
-<span class="normal">164</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_a_numerator_no_adjoint</span><span class="p">(</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_a_numerator_no_adjoint</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span>
-    <span class="n">next_config</span><span class="p">:</span> <span class="n">ADMM_LayerConfig</span><span class="p">,</span>
     <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Calculates the spiking numerator block for the vectorized activation ($a$) update.</span>
 
 <span class="sd">    Extends the static formula with the temporal reset penalty term for $t &lt; T$:</span>
-<span class="sd">    $N = \beta_l h_{l,\theta}(z_{l}) - \rho_l \theta S^T\big(z_l - \delta S z_l-F_l(a_{l-1}) \big)$</span>
 
-<span class="sd">     Args:</span>
+<span class="sd">    $$ N = \beta_l h_{l,\theta}(z_{l}) - \rho_l \theta S^T\big(z_l - \delta S z_l-F_l(a_{l-1}) \big) $$</span>
+
+<span class="sd">    Args:</span>
 <span class="sd">        state (ADMM_LayerState): [State object][src.admm.dataclasses.ADMM_LayerState] containing the current pre-activations ($z$).</span>
-<span class="sd">        next_config (ADMM_LayerConfig): [The configuration object][src.admm.dataclasses.ADMM_LayerConfig] of the subsequent layer.</span>
 <span class="sd">        a_prev (torch.Tensor): The activations from the previous layer.</span>
 
 <span class="sd">    Returns:</span>
@@ -3077,15 +3211,15 @@ Use this strictly for inference.</p>
     <span class="n">num_slice</span> <span class="o">=</span> <span class="n">numerator</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="n">forward_pass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_forward</span><span class="p">(</span><span class="n">a_prev</span><span class="p">)</span>
     <span class="c1"># S^T ([1:] means t+1 to t)</span>
-    <span class="n">num_slice</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">forward_pass</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="n">next_config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
+    <span class="n">num_slice</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">forward_pass</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
     <span class="k">del</span> <span class="n">forward_pass</span>
     <span class="c1"># S^T ([1:] means t+1 to t)</span>
-    <span class="n">num_slice</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">alpha</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="n">next_config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
+    <span class="n">num_slice</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">alpha</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span>
     <span class="c1"># The advance (S^T) and delay (S) operators cancel out (S^T * S = I).</span>
     <span class="c1"># We simply add the current timestep (t, via [:-1]).</span>
     <span class="n">num_slice</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span>
         <span class="n">state</span><span class="o">.</span><span class="n">z</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
-        <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">deltas</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="n">next_config</span><span class="o">.</span><span class="n">rho</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">deltas</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">numerator</span>
 </code></pre></div></td></tr></table></div>
@@ -3106,8 +3240,8 @@ Use this strictly for inference.</p>
     <div class="doc doc-contents ">
 
         <p>Computes the denominator matrices for the activation (<span class="arithmatex">\(a\)</span>) update using FFTs.</p>
-<p>Formula evaluated in the frequency domain:
-<span class="arithmatex">\(D = \beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1}) + \rho_l \theta^2 S^TS\)</span></p>
+<p>Formula evaluated in the frequency domain:</p>
+<div class="arithmatex">\[ D = \beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1}) + \rho_l \theta^2 S^TS \]</div>
 
 
 <details class="note" open>
@@ -3204,19 +3338,7 @@ Use this strictly for inference.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\spiking_mixin.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">166</span>
-<span class="normal">167</span>
-<span class="normal">168</span>
-<span class="normal">169</span>
-<span class="normal">170</span>
-<span class="normal">171</span>
-<span class="normal">172</span>
-<span class="normal">173</span>
-<span class="normal">174</span>
-<span class="normal">175</span>
-<span class="normal">176</span>
-<span class="normal">177</span>
-<span class="normal">178</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">178</span>
 <span class="normal">179</span>
 <span class="normal">180</span>
 <span class="normal">181</span>
@@ -3245,13 +3367,27 @@ Use this strictly for inference.</p>
 <span class="normal">204</span>
 <span class="normal">205</span>
 <span class="normal">206</span>
-<span class="normal">207</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_fft_a_denominator</span><span class="p">(</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_fft_a_denominator</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">config_prev</span><span class="p">:</span> <span class="n">ADMM_LayerConfig</span><span class="p">,</span> <span class="n">a_shape</span><span class="p">:</span> <span class="nb">tuple</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the denominator matrices for the activation ($a$) update using FFTs.</span>
 
 <span class="sd">    Formula evaluated in the frequency domain:</span>
-<span class="sd">    $D = \beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1}) + \rho_l \theta^2 S^TS$</span>
+
+<span class="sd">    $$ D = \beta_l I + \rho_{l+1} \mathcal{F}(W_{l+1})^* \mathcal{F}(W_{l+1}) + \rho_l \theta^2 S^TS $$</span>
 
 <span class="sd">    Note:</span>
 <span class="sd">        We separate this function, because it is needed for the unrolled cache, see [`TemporalCache`][src.admm.dataclasses.TemporalCache]</span>
@@ -3305,8 +3441,8 @@ Use this strictly for inference.</p>
     <div class="doc doc-contents ">
 
         <p>Computes the spiking denominator matrix for the activation (<span class="arithmatex">\(a\)</span>) update.</p>
-<p>Formula evaluated:
-<span class="arithmatex">\(D = \beta_l I + \rho_{l+1} \mathcal{A}_{l+1}^* \circ \mathcal{A}_{l+1} + \rho_l \theta^2 S^TS}\)</span></p>
+<p>Formula evaluated:</p>
+<div class="arithmatex">\[ D = \beta_l I + \rho_{l+1} \mathcal{A}_{l+1}^* \circ \mathcal{A}_{l+1} + \rho_l \theta^2 S^TS \]</div>
 
 
 <details class="note" open>
@@ -3404,20 +3540,7 @@ Use this strictly for inference.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\spiking_mixin.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">209</span>
-<span class="normal">210</span>
-<span class="normal">211</span>
-<span class="normal">212</span>
-<span class="normal">213</span>
-<span class="normal">214</span>
-<span class="normal">215</span>
-<span class="normal">216</span>
-<span class="normal">217</span>
-<span class="normal">218</span>
-<span class="normal">219</span>
-<span class="normal">220</span>
-<span class="normal">221</span>
-<span class="normal">222</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">222</span>
 <span class="normal">223</span>
 <span class="normal">224</span>
 <span class="normal">225</span>
@@ -3438,7 +3561,21 @@ Use this strictly for inference.</p>
 <span class="normal">240</span>
 <span class="normal">241</span>
 <span class="normal">242</span>
-<span class="normal">243</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_a_denominator</span><span class="p">(</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_get_a_denominator</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">config_prev</span><span class="p">:</span> <span class="n">ADMM_LayerConfig</span><span class="p">,</span>
     <span class="n">W_expanded</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
@@ -3446,7 +3583,8 @@ Use this strictly for inference.</p>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the spiking denominator matrix for the activation ($a$) update.</span>
 
 <span class="sd">    Formula evaluated:</span>
-<span class="sd">    $D = \beta_l I + \rho_{l+1} \mathcal{A}_{l+1}^* \circ \mathcal{A}_{l+1} + \rho_l \theta^2 S^TS}$</span>
+
+<span class="sd">    $$ D = \beta_l I + \rho_{l+1} \mathcal{A}_{l+1}^* \circ \mathcal{A}_{l+1} + \rho_l \theta^2 S^TS $$</span>
 
 <span class="sd">    Note:</span>
 <span class="sd">        We separate this function, because it is needed for the unrolled cache, see [`TemporalCache`][src.admm.dataclasses.TemporalCache]</span>
@@ -3587,21 +3725,7 @@ Use this strictly for inference.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\spiking_mixin.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span>
-<span class="normal">250</span>
-<span class="normal">251</span>
-<span class="normal">252</span>
-<span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span>
-<span class="normal">256</span>
-<span class="normal">257</span>
-<span class="normal">258</span>
-<span class="normal">259</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">259</span>
 <span class="normal">260</span>
 <span class="normal">261</span>
 <span class="normal">262</span>
@@ -3615,7 +3739,21 @@ Use this strictly for inference.</p>
 <span class="normal">270</span>
 <span class="normal">271</span>
 <span class="normal">272</span>
-<span class="normal">273</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_solve_fft_system</span><span class="p">(</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_solve_fft_system</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">numerator</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">next_layer</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
@@ -3778,21 +3916,7 @@ number of input features (<span class="arithmatex">\(N\)</span>), meaning <span 
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\spiking_mixin.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">275</span>
-<span class="normal">276</span>
-<span class="normal">277</span>
-<span class="normal">278</span>
-<span class="normal">279</span>
-<span class="normal">280</span>
-<span class="normal">281</span>
-<span class="normal">282</span>
-<span class="normal">283</span>
-<span class="normal">284</span>
-<span class="normal">285</span>
-<span class="normal">286</span>
-<span class="normal">287</span>
-<span class="normal">288</span>
-<span class="normal">289</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">289</span>
 <span class="normal">290</span>
 <span class="normal">291</span>
 <span class="normal">292</span>
@@ -3814,7 +3938,21 @@ number of input features (<span class="arithmatex">\(N\)</span>), meaning <span 
 <span class="normal">308</span>
 <span class="normal">309</span>
 <span class="normal">310</span>
-<span class="normal">311</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_solve_woodbury_system</span><span class="p">(</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_solve_woodbury_system</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">next_layer</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
     <span class="n">W_expanded</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
@@ -3981,21 +4119,7 @@ number of input features (<span class="arithmatex">\(N\)</span>), meaning <span 
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\spiking_mixin.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span>
-<span class="normal">320</span>
-<span class="normal">321</span>
-<span class="normal">322</span>
-<span class="normal">323</span>
-<span class="normal">324</span>
-<span class="normal">325</span>
-<span class="normal">326</span>
-<span class="normal">327</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">327</span>
 <span class="normal">328</span>
 <span class="normal">329</span>
 <span class="normal">330</span>
@@ -4009,7 +4133,21 @@ number of input features (<span class="arithmatex">\(N\)</span>), meaning <span 
 <span class="normal">338</span>
 <span class="normal">339</span>
 <span class="normal">340</span>
-<span class="normal">341</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_solve_standard_system</span><span class="p">(</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_solve_standard_system</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">next_layer</span><span class="p">,</span> <span class="n">W_expanded</span><span class="p">,</span> <span class="n">numerator</span><span class="p">,</span> <span class="n">a_shape</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Solves the standard dense system for spiking activations.</span>
@@ -4057,7 +4195,7 @@ number of input features (<span class="arithmatex">\(N\)</span>), meaning <span 
 
         <p>Manages the unrolled (Gauss-Seidel) activation (<span class="arithmatex">\(a\)</span>) update for spiking layers.</p>
 <p>Assembles the per-timestep numerator, factoring in the temporal reset penalty
-if <span class="arithmatex">\(t &lt; T\)</span>, and dynamically routes to the optimal linear solver (FFT, Woodbury,
+if <span class="arithmatex">\(t &lt; T\)</span>, and dynamically routes to the optimal solver (FFT, Woodbury,
 or Standard) based on the layer configurations. Output is clamped to <span class="arithmatex">\([0, 1]\)</span>.</p>
 
 
@@ -4152,21 +4290,7 @@ or Standard) based on the layer configurations. Output is clamped to <span class
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\spiking_mixin.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">343</span>
-<span class="normal">344</span>
-<span class="normal">345</span>
-<span class="normal">346</span>
-<span class="normal">347</span>
-<span class="normal">348</span>
-<span class="normal">349</span>
-<span class="normal">350</span>
-<span class="normal">351</span>
-<span class="normal">352</span>
-<span class="normal">353</span>
-<span class="normal">354</span>
-<span class="normal">355</span>
-<span class="normal">356</span>
-<span class="normal">357</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">357</span>
 <span class="normal">358</span>
 <span class="normal">359</span>
 <span class="normal">360</span>
@@ -4223,7 +4347,21 @@ or Standard) based on the layer configurations. Output is clamped to <span class
 <span class="normal">411</span>
 <span class="normal">412</span>
 <span class="normal">413</span>
-<span class="normal">414</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_a_unrolled</span><span class="p">(</span>
+<span class="normal">414</span>
+<span class="normal">415</span>
+<span class="normal">416</span>
+<span class="normal">417</span>
+<span class="normal">418</span>
+<span class="normal">419</span>
+<span class="normal">420</span>
+<span class="normal">421</span>
+<span class="normal">422</span>
+<span class="normal">423</span>
+<span class="normal">424</span>
+<span class="normal">425</span>
+<span class="normal">426</span>
+<span class="normal">427</span>
+<span class="normal">428</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_a_unrolled</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">t</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">cache</span><span class="p">:</span> <span class="n">TemporalCache</span><span class="p">,</span>
@@ -4233,7 +4371,7 @@ or Standard) based on the layer configurations. Output is clamped to <span class
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Manages the unrolled (Gauss-Seidel) activation ($a$) update for spiking layers.</span>
 
 <span class="sd">    Assembles the per-timestep numerator, factoring in the temporal reset penalty</span>
-<span class="sd">    if $t &lt; T$, and dynamically routes to the optimal linear solver (FFT, Woodbury,</span>
+<span class="sd">    if $t &lt; T$, and dynamically routes to the optimal solver (FFT, Woodbury,</span>
 <span class="sd">    or Standard) based on the layer configurations. Output is clamped to $[0, 1]$.</span>
 
 <span class="sd">    Args:</span>
@@ -4313,8 +4451,8 @@ or Standard) based on the layer configurations. Output is clamped to <span class
     <div class="doc doc-contents ">
 
         <p>Updates the Lagrange multiplier (<span class="arithmatex">\(\lambda\)</span>) based on the current layer constraints for spiking neurons.</p>
-<p>Formula evaluated:
-<span class="arithmatex">\(\lambda_l \leftarrow \lambda_l + \rho_l \big(z_{l,T} - \mathcal{F}_{l,T}\big)\)</span></p>
+<p>Formula evaluated:</p>
+<div class="arithmatex">\[ \lambda_l \leftarrow \lambda_l + \rho_l \big(z_{l,T} - \mathcal{F}_{l,T}\big) \]</div>
 
 
 <details class="note" open>
@@ -4376,21 +4514,7 @@ or Standard) based on the layer configurations. Output is clamped to <span class
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\spiking_mixin.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">416</span>
-<span class="normal">417</span>
-<span class="normal">418</span>
-<span class="normal">419</span>
-<span class="normal">420</span>
-<span class="normal">421</span>
-<span class="normal">422</span>
-<span class="normal">423</span>
-<span class="normal">424</span>
-<span class="normal">425</span>
-<span class="normal">426</span>
-<span class="normal">427</span>
-<span class="normal">428</span>
-<span class="normal">429</span>
-<span class="normal">430</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">430</span>
 <span class="normal">431</span>
 <span class="normal">432</span>
 <span class="normal">433</span>
@@ -4399,11 +4523,27 @@ or Standard) based on the layer configurations. Output is clamped to <span class
 <span class="normal">436</span>
 <span class="normal">437</span>
 <span class="normal">438</span>
-<span class="normal">439</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_lambda</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">439</span>
+<span class="normal">440</span>
+<span class="normal">441</span>
+<span class="normal">442</span>
+<span class="normal">443</span>
+<span class="normal">444</span>
+<span class="normal">445</span>
+<span class="normal">446</span>
+<span class="normal">447</span>
+<span class="normal">448</span>
+<span class="normal">449</span>
+<span class="normal">450</span>
+<span class="normal">451</span>
+<span class="normal">452</span>
+<span class="normal">453</span>
+<span class="normal">454</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_lambda</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Updates the Lagrange multiplier ($\lambda$) based on the current layer constraints for spiking neurons.</span>
 
 <span class="sd">    Formula evaluated:</span>
-<span class="sd">    $\lambda_l \leftarrow \lambda_l + \rho_l \big(z_{l,T} - \mathcal{F}_{l,T}\big)$</span>
+
+<span class="sd">    $$ \lambda_l \leftarrow \lambda_l + \rho_l \big(z_{l,T} - \mathcal{F}_{l,T}\big) $$</span>
 
 <span class="sd">    Note:</span>
 <span class="sd">        You can find the corresponding non-spiking version [update_lambda][src.admm.base_layer.ADMM_Layer.update_lambda] in the [Base Layer][src.admm.base_layer] module.</span>

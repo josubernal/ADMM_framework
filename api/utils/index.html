@@ -1600,7 +1600,7 @@ evaluating layer state dynamics within the ADMM optimization framework.</p>
 
         <p>Folds the Time and Batch dimensions together for spatial operations.</p>
 <p>Used to seamlessly pass spiking sequences through standard 2D convolutions
-and Linear matrix multiplications.</p>
+and feedforward matrix multiplications.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1623,7 +1623,7 @@ and Linear matrix multiplications.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The input tensor, potentially 5D (Conv) or 3D (Linear).</p>
+                <p>The input tensor, potentially 5D (Conv) or 3D (Feedforward).</p>
               </div>
             </td>
             <td>
@@ -1683,10 +1683,10 @@ and Linear matrix multiplications.</p>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Folds the Time and Batch dimensions together for spatial operations.</span>
 
 <span class="sd">    Used to seamlessly pass spiking sequences through standard 2D convolutions</span>
-<span class="sd">    and Linear matrix multiplications.</span>
+<span class="sd">    and feedforward matrix multiplications.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        x (torch.Tensor): The input tensor, potentially 5D (Conv) or 3D (Linear).</span>
+<span class="sd">        x (torch.Tensor): The input tensor, potentially 5D (Conv) or 3D (Feedforward).</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Tuple[torch.Tensor, Optional[Tuple[int, int]]]:</span>
@@ -1966,7 +1966,8 @@ returned by fold_time.</p>
     <div class="doc doc-contents ">
 
         <p>Computes the physical voltage leakage and threshold reset over time.</p>
-<p>Formula evaluated: <span class="arithmatex">\(\Delta z_t = \delta z_{t-1} - \theta a_{t-1}\)</span></p>
+<p>Formula evaluated:</p>
+<div class="arithmatex">\[ T_{l} = \begin{cases} \delta S z_l - \theta S a_{l}, &amp; \text{if} \quad l &lt; L, \cr \delta S z_L, &amp; \text{if}\quad  l = L.\end{cases} \]</div>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2084,13 +2085,17 @@ returned by fold_time.</p>
 <span class="normal">103</span>
 <span class="normal">104</span>
 <span class="normal">105</span>
-<span class="normal">106</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">compute_temporal_dependencies</span><span class="p">(</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">compute_temporal_dependencies</span><span class="p">(</span>
     <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">ADMM_LayerConfig</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the physical voltage leakage and threshold reset over time.</span>
 
-<span class="sd">    Formula evaluated: $\Delta z_t = \delta z_{t-1} - \theta a_{t-1}$</span>
+<span class="sd">    Formula evaluated:</span>
+
+<span class="sd">    $$ T_{l} = \begin{cases} \delta S z_l - \theta S a_{l}, &amp; \text{if} \quad l &lt; L, \cr \delta S z_L, &amp; \text{if}\quad  l = L.\end{cases} $$</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        state (ADMM_LayerState): The [layer state object][src.admm.dataclasses.ADMM_LayerState].</span>

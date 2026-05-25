@@ -1398,7 +1398,7 @@
 <p>Training an ADMM network is different from standard PyTorch. Instead of <code>loss.backward()</code> and <code>optimizer.step()</code>, you initialize an ADMM orchestrator that handles the proximal updates and dual variables automatically.</p>
 <p>Here is how to train a basic 2-layer Spiking Neural Network:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">admm</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADMM</span><span class="p">,</span> <span class="n">ADMM_Linear</span><span class="p">,</span> <span class="n">ADMM_ReLU</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">admm</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADMM</span><span class="p">,</span> <span class="n">ADMM_FeedForward</span><span class="p">,</span> <span class="n">ADMM_ReLU</span>
 
 <span class="c1"># 1. Define your network geometry</span>
 <span class="n">in_features</span> <span class="o">=</span> <span class="mi">784</span>
@@ -1408,8 +1408,8 @@
 
 
 <span class="c1"># 2. Instantiate ADMM Layers</span>
-<span class="n">layer1</span> <span class="o">=</span> <span class="n">ADMM_Linear</span><span class="p">(</span><span class="n">in_features</span><span class="p">,</span> <span class="n">hidden_features</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">ADMM_ReLU</span><span class="p">())</span>
-<span class="n">layer2</span> <span class="o">=</span> <span class="n">ADMM_Linear</span><span class="p">(</span><span class="n">hidden_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">layer1</span> <span class="o">=</span> <span class="n">ADMM_FeedForward</span><span class="p">(</span><span class="n">in_features</span><span class="p">,</span> <span class="n">hidden_features</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">ADMM_ReLU</span><span class="p">())</span>
+<span class="n">layer2</span> <span class="o">=</span> <span class="n">ADMM_FeedForward</span><span class="p">(</span><span class="n">hidden_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
 <span class="c1"># 3. Initialize the Orchestrator</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">ADMM</span><span class="p">(</span>
@@ -1426,7 +1426,7 @@
 <hr />
 <h2 id="where-to-go-next">Where to go next?</h2>
 <ul>
-<li><strong><a href="tutorials/getting_started/">Tutorials</a>:</strong> Step-by-step guides from basic linear networks to complex spatiotemporal convolutions.</li>
+<li><strong><a href="tutorials/getting_started/">Tutorials</a>:</strong> Step-by-step guides from basic networks to complex spatiotemporal convolutions.</li>
 <li><strong><a href="theory/motivation/">Theory</a>:</strong> Deep dive into the mathematical formulation of the ADMM splitting scheme and SNN temporal unrolling.</li>
 <li><strong><a href="api/manager/">API Reference</a>:</strong> Comprehensive documentation of all layers, managers, and functional math operations.</li>
 </ul>
