@@ -73,6 +73,7 @@ def run_all_profiles():
                 layer_order="backwards",
                 loss=loss_fn,
                 z_first=False,
+                block_method="two-block",
             )
             model.to(device)
 

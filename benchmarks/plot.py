@@ -538,6 +538,101 @@ def main():
             )
 
     # ==========================================
+    # PLOT: Block Methods
+    # ==========================================
+    if "block_methods" in experiment_name:
+        all_jsons = list(Path(folder_path).rglob("*.json"))
+        loss_data = []
+        for jp in all_jsons:
+            try:
+                with open(jp, "r") as f:
+                    d = json.load(f)
+                    if "architecture" in d and "accuracy" in d:
+                        # Extract loss function name (fallback to folder name if key is missing)
+                        loss_name = d.get("method", jp.parent.name)
+                        d["method"] = loss_name
+                        loss_data.append(d)
+            except Exception:
+                continue
+
+        if loss_data:
+            # Standardize architecture order for a nice 2x2 layout
+            archs = list(set([d["architecture"] for d in loss_data]))
+            arch_order = {
+                "feedforward": 0,
+                "conv": 1,
+                "spiking-feedforward": 2,
+                "spiking-conv": 3,
+            }
+            archs.sort(key=lambda x: arch_order.get(x, 10))
+
+            # Setup Grid (e.g., 2x2 for 4 models)
+            cols = 2 if len(archs) > 1 else 1
+            rows = (len(archs) + cols - 1) // cols
+
+            fig_loss, axes_loss = plt.subplots(
+                rows, cols, figsize=(14, 5 * rows), squeeze=False
+            )
+            fig_loss.suptitle("Block Method Comparison", fontsize=16, fontweight="bold")
+            axes_flat = axes_loss.flatten()
+
+            # Define a consistent color map for the loss functions
+            unique_losses = list(set([str(d["method"]) for d in loss_data]))
+            cmap = plt.get_cmap("Set1")
+            loss_colors = {loss: cmap(i) for i, loss in enumerate(unique_losses)}
+
+            for i, arch in enumerate(archs):
+                ax = axes_flat[i]
+                arch_data = [d for d in loss_data if d["architecture"] == arch]
+
+                # Sort alphabetically by loss so the legend is consistent
+                arch_data.sort(key=lambda x: str(x["method"]))
+
+                for d in arch_data:
+                    acc = d["accuracy"]
+                    loss_name = str(d["method"])
+                    epochs_list = list(range(len(acc)))
+
+                    ax.plot(
+                        epochs_list,
+                        acc,
+                        label=loss_name,
+                        color=loss_colors[loss_name],
+                        linewidth=2.5,
+                        marker="o",
+                        markersize=5,
+                        alpha=0.8,
+                    )
+
+                # Formatting the subplot
+                ax.set_title(f"Architecture: {arch.upper()}", fontsize=14)
+                ax.set_xlabel("Epochs")
+                ax.set_ylabel("Accuracy (%)")
+                ax.grid(True, linestyle="--", alpha=0.6)
+
+                # Only add legend if data exists for this subplot
+                if arch_data:
+                    ax.legend(
+                        title="Loss Objective", fontsize="small", loc="lower right"
+                    )
+
+            # Clean up any empty subplots if you test < 4 architectures
+            for j in range(len(archs), len(axes_flat)):
+                fig_loss.delaxes(axes_flat[j])
+
+            plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+            # Optional: Save it
+            save_path = os.path.join(folder_path, "loss_function_comparison.png")
+            plt.savefig(save_path, dpi=300)
+            print(f"Loss comparison plot saved to: {save_path}")
+
+        else:
+            print(
+                f"Skipping Loss Function plot: No compatible JSONs found in {folder_path}"
+            )
+
+    # ==========================================
     # PLOT: Layer order
     # ==========================================
     if "layer_order" in experiment_name:

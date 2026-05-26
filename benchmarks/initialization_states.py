@@ -70,6 +70,7 @@ for model_name in architectures:
                     layer_order="backwards",
                     loss=ADMM_SSE(),
                     z_first=False,
+                    block_method="two-block",
                 )
             case "conv":
                 batch_size = batch_size_static
@@ -80,26 +81,29 @@ for model_name in architectures:
                     layer_order="backwards",
                     loss=ADMM_SSE(),
                     z_first=False,
+                    block_method="two-block",
                 )
             case "spiking-feedforward":
                 batch_size = batch_size_spiking
                 admm_model = get_model(
                     model_name=model_name,
                     init=initialization,
-                    train_method="decoupled-backwards",
-                    layer_order="backwards",
+                    train_method="unrolled-backwards",
+                    layer_order="sequential",
                     loss=ADMM_CrossEntropy_Taylor(),
                     z_first=False,
+                    block_method="two-block",
                 )
             case "spiking-conv":
                 batch_size = batch_size_spiking
                 admm_model = get_model(
                     model_name=model_name,
                     init=initialization,
-                    train_method="decoupled-backwards",
-                    layer_order="backwards",
+                    train_method="unrolled-backwards",
+                    layer_order="sequential",
                     loss=ADMM_CrossEntropy_Taylor(),
                     z_first=False,
+                    block_method="two-block",
                 )
 
         #########################################

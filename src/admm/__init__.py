@@ -1,5 +1,5 @@
 from .activation_functions import ADMM_Heaviside, ADMM_ReLU
-from .dataclasses import ADMM_Config, ADMM_LayerConfig
+from .dataclasses import ADMM_BatchState, ADMM_Config, ADMM_LayerConfig, ADMM_LayerState
 from .layers import (
     ADMM_Conv2d,
     ADMM_FeedForward,
@@ -36,4 +36,6 @@ __all__ = [
     "ADMM_Scheduler",
     "ADMM_Config",
     "ADMM_LayerConfig",
+    "ADMM_BatchState",
+    "ADMM_LayerState",
 ]

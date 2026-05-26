@@ -453,11 +453,6 @@ class ADMM(nn.Module):
     def fit(self, dataloader: DataLoader, warming: bool = False) -> None:
         """Orchestrates the global fitting loop for the ADMM optimization process.
 
-        Executes the two-phase ADMM algorithm:
-
-        - Global parameter updates (Weights and Biases).
-        - Local state updates (Activations, Pre-activations, and Lagrange multipliers).
-
         Args:
             dataloader (Any): A PyTorch DataLoader yielding inputs and labels.
             warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.
@@ -470,6 +465,27 @@ class ADMM(nn.Module):
         time_steps = self._get_time_steps()
         layer_indices = self._get_layer_order()
 
+        # Route to the selected mathematical optimization strategy
+        if self.config.block_method == "two-block":
+            self._fit_two_block(layer_indices, time_steps, warming)
+        elif self.config.block_method == "multi-block":
+            self._fit_multi_block(layer_indices, time_steps, warming)
+        else:
+            raise ValueError(f"Unknown update mode: {self.config.update_mode}")
+
+    def _fit_two_block(
+        self, layer_indices: List[int], time_steps: Optional[List[int]], warming: bool
+    ) -> None:
+        """Executes the two-phase ADMM algorithm:
+
+        - Global parameter updates (Weights and Biases).
+        - Local state updates (Activations, Pre-activations, and Lagrange multipliers).
+
+        Args:
+            layer_indices (List[int]): An ordered list of layer indices.
+            time_steps (Optional[List[int]], optional): List of timesteps for SNN simulation. Defaults to None.
+            warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.
+        """
         # PHASE 1: COMPUTE COVARIANCES
         self.cov_handler.reset_accumulators()
 
@@ -525,3 +541,68 @@ class ADMM(nn.Module):
                     layer.update_lambda(state, a_prev)
 
             self.state_handler.save_batch(batch_state, inputs=inputs, labels=labels)
+
+    def _fit_multi_block(
+        self, layer_indices: List[int], time_steps: Optional[List[int]], warming: bool
+    ) -> None:
+        """ "Executes the multi-phase ADMM algorithm: Updates weights then states sequentially per layer.
+
+        Args:
+           layer_indices (List[int]): An ordered list of layer indices.
+           time_steps (Optional[List[int]], optional): List of timesteps for SNN simulation. Defaults to None.
+           warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.
+        """
+
+        for layer_idx in layer_indices:
+            layer = self.layers[layer_idx]
+
+            # PHASE 1: COMPUTE COVARIANCES FOR THIS SPECIFIC LAYER
+            self.cov_handler.reset_accumulators()
+            for batch_id in self.state_handler.get_batch_ids():
+                inputs, labels, batch_state = self.state_handler.load_batch(batch_id)
+                state = batch_state.layer_states[layer_idx]
+                a_prev = self._get_a_prev(
+                    layer_idx=layer_idx, inputs=inputs, batch_state=batch_state
+                )
+
+                numerator, denominator, bias_sum, bias_count = (
+                    layer.compute_batch_covariances(state=state, a_prev=a_prev)
+                )
+                self.cov_handler.accumulate(
+                    layer_idx=layer_idx,
+                    numerator=numerator,
+                    denominator=denominator,
+                    bias_sum=bias_sum,
+                    bias_count=bias_count,
+                )
+
+            # PHASE 2: WEIGHT & BIAS UPDATE FOR THIS SPECIFIC LAYER
+            covariances = self.cov_handler.get_covariances(layer_idx)
+            new_pinv = self._optimize_weights_and_biases(
+                layer=layer, covariances=covariances, cache_pinv=(layer_idx == 0)
+            )
+            self.cov_handler.set_pinv(layer_idx=layer_idx, pinv=new_pinv)
+
+            # PHASE 3: STATE UPDATE FOR THIS SPECIFIC LAYER
+            for batch_id in self.state_handler.get_batch_ids():
+                inputs, labels, batch_state = self.state_handler.load_batch(batch_id)
+                state = batch_state.layer_states[layer_idx]
+                a_prev = self._get_a_prev(
+                    layer_idx=layer_idx, inputs=inputs, batch_state=batch_state
+                )
+
+                self._optimize_states(
+                    layer_idx=layer_idx,
+                    layer=layer,
+                    batch_state=batch_state,
+                    state=state,
+                    a_prev=a_prev,
+                    labels=labels,
+                    time_steps=time_steps,
+                )
+                if not warming:
+                    layer.update_lambda(state=state, a_prev=a_prev)
+
+                self.state_handler.save_batch(
+                    batch_state=batch_state, inputs=inputs, labels=labels
+                )

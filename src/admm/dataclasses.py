@@ -39,6 +39,7 @@ class ADMM_Config:
     """
 
     init: str = "s-uniform"
+    block_method: str = "two-block"
     train_method: str = "decoupled-backwards"
     layer_order: str = "backwards"
     update_z_first: bool = False
@@ -71,6 +72,15 @@ class ADMM_Config:
         if self.train_method not in valid_methods:
             raise ValueError(
                 f"Invalid train_method '{self.train_method}'. Allowed: {valid_methods}"
+            )
+        # Validate block methods
+        valid_block_methods = {
+            "multi-block",
+            "two-block",
+        }
+        if self.block_method not in valid_block_methods:
+            raise ValueError(
+                f"Invalid block_method '{self.block_method}'. Allowed: {valid_block_methods}"
             )
 
         # Validate layer orders

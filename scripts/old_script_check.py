@@ -1,3 +1,11 @@
+"""
+CHANGES PERFORMED
+1. Delete all rng by initializing both nets equally
+2. Set timesteps and layer updates to sequential (break rng)
+3. Fix check_entries delta2 bug
+4. Fix cache bug
+"""
+
 import random
 from typing import List
 
@@ -11,12 +19,15 @@ from torch.utils.data import DataLoader
 from src.admm import (
     ADMM,
     ADMM_SSE,
+    ADMM_BatchState,
     ADMM_Config,
     ADMM_Heaviside,
     ADMM_LayerConfig,
-    ADMM_Metrics,
+    ADMM_LayerState,
     ADMM_SpikingFeedForward,
 )
+
+torch.set_default_dtype(torch.float64)
 
 
 class ADMM_SNN:
@@ -240,7 +251,9 @@ class ADMM_SNN:
             torch.Tensor: Adjusted z_{l,T}.
         """
         delta1 = self.beta * (1 - 2 * a_lt).T
-        delta2 = self.rho * ((z - q_lt) ** 2 - self.rho * (self.thetas - q_lt) ** 2)
+        # delta2 = self.rho * ((z - q_lt) ** 2 - self.rho * (self.thetas - q_lt) ** 2)
+        # CHANGE: Fix delta2
+        delta2 = self.rho * (z - q_lt) ** 2 - self.rho * (self.thetas - q_lt) ** 2
 
         mask_z_greater = (z > self.thetas).float()
         mask_deltas1 = (delta1 + delta2 > 0).float()
@@ -276,7 +289,6 @@ class ADMM_SNN:
             torch.mm(Wl_next.T, vl_next.T)
             + (self.beta / self.rho) * self._heaviside(zl).T
         )
-
         activation_update = torch.mm(torch.inverse(term1), (term2 + term3))
 
         return torch.clip(activation_update, 0, 1)
@@ -406,14 +418,20 @@ class ADMM_SNN:
 
             self.W[l] = self._weight_update(x_l.to(self.device), output_spikes, l)
 
-            u_l = self.z[l].clone()
-            u_l[1:] -= self.deltas * u_l[:-1]
+            # u_l = self.z[l].clone()
+            # u_l[1:] -= self.deltas * u_l[:-1]
 
-            w_l = u_l - torch.matmul(
-                self.W[l].unsqueeze(0).unsqueeze(0), output_spikes.unsqueeze(-1)
-            ).squeeze(-1)
+            # w_l = u_l - torch.matmul(
+            #     self.W[l].unsqueeze(0).unsqueeze(0), output_spikes.unsqueeze(-1)
+            # ).squeeze(-1)
 
             for t in random_time_steps:
+                u_l = self.z[l].clone()
+                u_l[1:] -= self.deltas * u_l[:-1]
+
+                w_l = u_l - torch.matmul(
+                    self.W[l].unsqueeze(0).unsqueeze(0), output_spikes.unsqueeze(-1)
+                ).squeeze(-1)
                 if l < self.L - 2:
                     self.a[l][t] = self._activation_update(
                         self.W[l + 1], w_l[t + 1], self.z[l][t], v_lnext[t]
@@ -503,216 +521,60 @@ class ADMM_SNN:
             ).T
         return
 
-    def lagrangian_cost(self, inputs, labels):
-        """
-        Computes the Augmented Lagrangian cost function (Equation 1).
 
-        Args:
-            inputs (torch.Tensor): Input data batch.
-            labels (torch.Tensor): Target labels (one-hot encoded).
+def verify_internal_states(old_model, new_model, batch_state, epoch, tol=1e-4):
+    """Compares every internal tensor between the old and new framework."""
+    all_match = True
 
-        Returns:
-            torch.Tensor: Scalar value of the Lagrangian cost.
-        """
-        cost = 0
-        for l in range(self.L - 1):
-            output_spikes = inputs if l == 0 else self.a[l - 1]
-            for t in range(1, self.T):
-                term1 = (
-                    self.W[l] @ output_spikes[t].T
-                    - self.z[l][t].T
-                    + self.deltas * self.z[l][t - 1].T
-                )
-                cost += self.rho / 2 * torch.norm(term1) ** 2
-                term2 = self.a[l][t] - self._heaviside(self.z[l][t])
-                cost += self.rho / 2 * torch.norm(term2) ** 2
+    def check_tensor(name, t1, t2, tol=1e-4):
+        if t1 is None and t2 is None:
+            return True
+        if t1 is None or t2 is None:
+            print(f"  ❌ Mismatch in {name}: One is None!")
+            return False
+        if t1.shape != t2.shape:
+            print(f"  ❌ Shape mismatch in {name}: Old {t1.shape} vs New {t2.shape}")
+            return False
+        max_diff = torch.max(torch.abs(t1 - t2)).item()
+        if max_diff > tol:
+            print(f"  ❌ Mismatch in {name}! Max diff: {max_diff:.6f}")
+            return False
+        return True
 
-            term1_t0 = self.W[l] @ output_spikes[0].T - self.z[l][0].T
-            cost += self.rho / 2 * torch.norm(term1_t0) ** 2
-            term2_t0 = self.a[l][0] - self._heaviside(self.z[l][0])
-            cost += self.rho / 2 * torch.norm(term2_t0) ** 2
+    print(f"  [Epoch {epoch}] Verifying internal states...")
 
-        for t in range(1, self.T):
-            term1_L = (
-                self.W[self.L - 1] @ self.a[self.L - 2][t].T
-                - self.z[self.L - 1][t].T
-                + self.deltas * self.z[self.L - 1][t - 1].T
-            )
-            cost += self.rho / 2 * torch.norm(term1_L) ** 2
-
-        for i in range(self.lambda_lagrange.size(0)):
-            cost += self.lambda_lagrange[i] @ (
-                self.z[self.L - 1][self.T - 1][i]
-                - self.deltas * self.z[self.L - 1][self.T - 2][i]
-                - self.W[self.L - 1] @ self.a[self.L - 2][self.T - 1][i]
-            )
-
-        cost += torch.norm(self.z[self.L - 1][self.T - 1].T - labels) ** 2
-
-        return cost
-
-    def forward_model(self, inputs):
-        """
-        Performs a forward pass using the ADMM variables (W, z, a).
-
-        This function simulates the network dynamics based on the learned ADMM parameters.
-
-        Args:
-            inputs (torch.Tensor): Input data batch.
-
-        Returns:
-            torch.Tensor: Output potentials (z) of the last layer
-                          at the final timestep.
-        """
-        inputs = inputs.to(self.device)
-        potential = [torch.zeros_like(z_l).to(self.device) for z_l in self.z]
-
-        for t in range(self.T):
-            current_input = (
-                inputs[t]
-                if t < inputs.size(0)
-                else torch.zeros_like(inputs[0]).to(self.device)
-            )
-
-            for l in range(self.L):
-                # Calculate post-synaptic current for the current layer
-                post_syn_current = current_input @ self.W[l].T
-                potential[l][t, :, :] = post_syn_current
-                if t > 0:
-                    potential[l][t, :, :] += self.deltas * potential[l][t - 1, :, :]
-                    if l < self.L - 1:
-                        potential[l][t, :, :] -= self.thetas * self._heaviside(
-                            potential[l][t - 1, :, :]
-                        )
-
-                current_input = self._heaviside(potential[l][t, :, :])
-
-        firing_rate = []
-
-        for i in range(self.L - 1):
-            print(
-                self._heaviside(potential[i]).sum()
-                / (self.z[i].shape[0] * self.z[i].shape[1] * self.z[i].shape[2])
-            )
-            firing_rate.append(
-                self._heaviside(potential[i]).sum().item()
-                / (self.z[i].shape[0] * self.z[i].shape[1] * self.z[i].shape[2])
-            )
-
-        return potential[-1][-1], firing_rate
-
-    def primal_residual_norm(self):
-        """
-        Calculates the normalized L1 sum of the primal residual.
-
-        The primal residual measures the violation of the constraint involving
-        the output layer's final state (z_{L,T}). Used for monitoring convergence.
-
-        Returns:
-            torch.Tensor: Scalar value of the normalized primal residual sum.
-        """
-
-        r = (
-            self.z[self.L - 1][self.T - 1]
-            - self.deltas * self.z[self.L - 1][self.T - 2]
-            - torch.mm(self.W[self.L - 1], self.a[self.L - 2][self.T - 1].T).T
+    # Check W, z, and a for all layers
+    for l in range(old_model.L):
+        all_match &= check_tensor(
+            f"Layer {l} Weights (W)", old_model.W[l], new_model.layers[l].W
+        )
+        all_match &= check_tensor(
+            f"Layer {l} Pre-activations (z)",
+            old_model.z[l],
+            batch_state.layer_states[l].z,
         )
 
-        return torch.norm(r) / (r.size(0) * r.size(1)) ** (1 / 2)
-
-    def loss(self, labels):
-        """
-        Calculates the squared L2 loss between the final output potentials
-        (z_{L,T}) and the target labels.
-
-        Args:
-            labels (torch.Tensor): Target labels (one-hot encoded).
-
-        Returns:
-            torch.Tensor: Scalar value of the loss.
-        """
-        return torch.norm(self.z[self.L - 1][self.T - 1].T - labels) ** 2
-
-    def preactivation_constraint_sum(self, input_data_batch):
-        """
-        Calculates the sum of normalized L1 sums for the pre-activation constraints.
-
-        Measures the violation of the equation:
-        z_{l,t} - delta*z_{l,t-1} - W_l @ a_{l-1,t} + theta*a_{l,t-1} = 0
-        (Adjusted for t=0 and output layer where the equation differs).
-
-        Args:
-            input_data_batch (torch.Tensor): The input data batch used in the fit step.
-
-        Returns:
-            List[torch.Tensor]: A list containing the normalized L1 sum of the
-                                residual for each layer's pre-activation constraint.
-        """
-
-        constraints_residuals = []
-        output_spikes = [input_data_batch] + self.a
-        output_spikes_t_minus1 = self.a + [torch.zeros_like(self.z[-1])]
-        for preactivation, activation_l_minus1, activation_t_minus1, w in zip(
-            self.z, output_spikes, output_spikes_t_minus1, self.W
-        ):
-            zero_activation_tensor = torch.zeros(
-                1, activation_t_minus1.shape[1], activation_t_minus1.shape[2]
-            ).to(self.device)
-            shifted_activation = torch.cat(
-                (zero_activation_tensor, activation_t_minus1[:-1, :, :]), dim=0
-            )
-            zero_preactivation_tensor = torch.zeros(
-                1, preactivation.shape[1], preactivation.shape[2]
-            ).to(self.device)
-            shifted_preactivation = torch.cat(
-                (zero_preactivation_tensor, preactivation[:-1, :, :]), dim=0
+        # The old model only has 'a' for hidden layers (L-1)
+        if l < old_model.L - 1:
+            all_match &= check_tensor(
+                f"Layer {l} Activations (a)",
+                old_model.a[l],
+                batch_state.layer_states[l].a,
             )
 
-            # use signed residual (no absolute value)
-            soft_constraint_residual = (
-                preactivation
-                - self.deltas * shifted_preactivation
-                - (w @ activation_l_minus1.unsqueeze(-1)).squeeze(-1)
-                + self.thetas * shifted_activation
-            )
-            constraints_residuals.append(
-                torch.norm(soft_constraint_residual).cpu()
-                / (
-                    soft_constraint_residual.shape[0]
-                    * soft_constraint_residual.shape[1]
-                    * soft_constraint_residual.shape[2]
-                )
-                ** (1 / 2)
-            )
+    # Check Lagrange multipliers
+    all_match &= check_tensor(
+        "Lagrange Multipliers (lambda)",
+        old_model.lambda_lagrange,
+        batch_state.layer_states[-1].lambda_lagrange,
+    )
 
-        return constraints_residuals
+    if all_match:
+        print("✅ All internal tensors match perfectly!")
+    else:
+        print(f"  🛑 FATAL: Tensor mismatch detected at epoch {epoch}.")
 
-    def activation_constraint_sum(self):
-        """
-        Calculates the sum of normalized L1 sums for the activation constraints.
-
-        Measures the violation of the equation: a_{l,t} - h(z_{l,t}) = 0
-        for hidden layers l = 0 to L-2.
-
-        Returns:
-            List[torch.Tensor]: A list containing the normalized L1 sum of the
-                                residual for each hidden layer's activation constraint.
-        """
-        constraints_residuals = []
-        for preactivation, activation in zip(self.z[:-1], self.a):
-            # use signed residual between hevaiside(preactivation) and activation
-            soft_constraint_residual = self._heaviside(preactivation) - activation
-            constraints_residuals.append(
-                torch.norm(soft_constraint_residual).cpu()
-                / (
-                    soft_constraint_residual.shape[0]
-                    * soft_constraint_residual.shape[1]
-                    * soft_constraint_residual.shape[2]
-                )
-                ** (1 / 2)
-            )
-
-        return constraints_residuals
+    return all_match
 
 
 if __name__ == "__main__":
@@ -737,7 +599,7 @@ if __name__ == "__main__":
         ]
     )
 
-    batch_size = 10
+    batch_size = 1
     trainset = tonic.datasets.NMNIST(
         save_to="./data", transform=frame_transform, train=True
     )
@@ -752,24 +614,17 @@ if __name__ == "__main__":
         generator=torch.Generator().manual_seed(seed),
     )
 
-    n_samples = batch_size
-    n_timesteps = 10
+    n_timesteps = 3
     input_dim = sensor_size[0] * sensor_size[1]
-    hidden_dims = [100]  # List for old framework compatibility
+    hidden_dims = [3]
     n_outputs = 10
 
-    rho = 1.0
-    deltas = 0.95
-    thetas = 1.0
-    beta = 1.0
-
-    num_epochs = 10
-    n_warming_iters = 5
+    num_epochs = 5
+    n_warming_iters = 3
 
     # ==========================================
-    # 2. DATA PREPARATION (Shared)
+    # 2. DATA PREPARATION
     # ==========================================
-    # Get a single batch to overfit
     data, targets_raw = next(iter(trainloader))
     data, targets_raw = data.to(device), targets_raw.to(device)
 
@@ -782,157 +637,156 @@ if __name__ == "__main__":
         data = data[:, :n_timesteps, :]
 
     data = data.permute(1, 0, 2)
-    # Apply deterministic noise for testing equivalence
     torch.manual_seed(seed)
     data += 0.01 * torch.randn_like(data)
 
-    # Save original shapes for the new framework formatting
     new_framework_data = data.clone()
-    new_framework_targets = (
-        targets_one_hot.T.clone()
-    )  # New framework expects [B, num_classes]
+    new_framework_targets = targets_one_hot.T.clone()
 
     # ==========================================
-    # 3. OLD FRAMEWORK TRAINING
+    # 3. EXPLICIT DETERMINISTIC STATES
     # ==========================================
-    print(f"\n{'=' * 40}\nTRAINING OLD FRAMEWORK\n{'=' * 40}")
+    print(f"\n{'=' * 70}")
+    print("GENERATING EXPLICIT DETERMINISTIC TENSORS FOR W, z, a, and lambda")
+    print(f"{'=' * 70}")
 
-    # Reset seed right before model init to ensure random weight/state init matches
-    torch.manual_seed(seed)
-    random.seed(seed)
+    # We use a separate seed to generate completely arbitrary non-zero tensors once.
+    torch.manual_seed(999)
+    n_timesteps = data.size(0)
+    n_samples = data.size(1)
+    input_dim = data.size(2)
+    explicit_W = [
+        torch.rand((hidden_dims[0], input_dim)).to(device) * 0.1,
+        torch.rand((n_outputs, hidden_dims[0])).to(device) * 0.1,
+    ]
+    explicit_z = [
+        torch.rand((n_timesteps, n_samples, hidden_dims[0])).to(device),
+        torch.rand((n_timesteps, n_samples, n_outputs)).to(device),
+    ]
+    explicit_a = [torch.rand((n_timesteps, n_samples, hidden_dims[0])).to(device)]
+    explicit_lambda = torch.rand((n_samples, n_outputs)).to(device)
 
-    old_model = ADMM_SNN(
-        n_samples,
-        n_timesteps,
-        input_dim,
-        hidden_dims,
-        n_outputs,
-        rho,
-        deltas,
-        thetas,
-        beta,
-    )
+    hyperparam_configs = [
+        {"rho": 1.0, "deltas": 0.95, "thetas": 1.0, "beta": 1.0},
+        {"rho": 5.0, "deltas": 0.50, "thetas": 0.5, "beta": 0.1},
+        {"rho": 0.1, "deltas": 0.99, "thetas": 2.0, "beta": 10.0},
+    ]
 
-    old_final_loss = 0
-    old_final_acc = 0
+    for config_idx, hparams in enumerate(hyperparam_configs):
+        print(f"\n{'-' * 50}")
+        print(
+            f"TESTING HYPERPARAMETER CONFIG {config_idx + 1}/{len(hyperparam_configs)} WITH RANDOM INIT"
+        )
+        print(f"Params: {hparams}")
+        print(f"{'-' * 50}")
 
-    for epoch in range(num_epochs + 1):
-        old_model.fit(data, targets_one_hot, warming=epoch < n_warming_iters)
+        rho = hparams["rho"]
+        deltas = hparams["deltas"]
+        thetas = hparams["thetas"]
+        beta = hparams["beta"]
 
-        loss = old_model.loss(targets_one_hot).item()
-        pot, firing_rate = old_model.forward_model(data)
-        _, predicted = pot.max(1)
-        labels = torch.argmax(targets_one_hot, dim=0)
-        accuracy = (predicted == labels).sum().item() / labels.size(0)
+        # === 4a. INITIALIZE & INJECT OLD MODEL ===
+        old_model = ADMM_SNN(
+            n_samples,
+            n_timesteps,
+            input_dim,
+            hidden_dims,
+            n_outputs,
+            rho,
+            deltas,
+            thetas,
+            beta,
+        )
+        # Override the old model's zeros with our explicit non-zero tensors
+        old_model.W = [w.clone() for w in explicit_W]
+        old_model.z = [z.clone() for z in explicit_z]
+        old_model.a = [a.clone() for a in explicit_a]
+        old_model.lambda_lagrange = explicit_lambda.clone()
 
-        print(f"Epoch [{epoch}/{num_epochs}] | Loss: {loss:.4f} | Acc: {accuracy:.4f}")
-
-        if epoch == num_epochs:
-            old_final_loss = loss
-            old_final_acc = accuracy
-
-    # ==========================================
-    # 4. NEW FRAMEWORK TRAINING
-    # ==========================================
-    print(f"\n{'=' * 40}\nTRAINING NEW FRAMEWORK\n{'=' * 40}")
-
-    # Reset seed right before new model init
-    torch.manual_seed(seed)
-    random.seed(seed)
-
-    # Initialize new framework via get_model
-    hidden_layer_config = ADMM_LayerConfig(
-        rho=rho,
-        beta=beta,
-        use_bias=False,
-        deltas=deltas,
-        thetas=thetas,
-        use_reset=True,
-    )
-    out_layer_config = ADMM_LayerConfig(
-        rho=rho,
-        beta=beta,
-        use_bias=False,
-        deltas=deltas,
-        thetas=thetas,
-        use_reset=False,
-        use_lagrange=True,
-    )
-    spff_layers = nn.ModuleList(
-        [
-            ADMM_SpikingFeedForward(
-                in_f=34 * 34 * 2,
-                out_f=hidden_dims[0],
-                h=ADMM_Heaviside(thetas=thetas),
-                config=hidden_layer_config,
-            ),
-            ADMM_SpikingFeedForward(
-                in_f=hidden_dims[0],
-                out_f=10,
-                h=None,
-                config=out_layer_config,
-            ),
-        ]
-    )
-    config = ADMM_Config(
-        init="zeros",
-        train_method="unrolled-sequential",
-        layer_order="sequential",
-        update_z_first=False,
-    )
-    new_model = ADMM(
-        spff_layers,
-        loss_f=ADMM_SSE(),
-        T=n_timesteps,
-        config=config,
-    ).to(device)
-
-    # Create a mock dataloader that just yields our single prepared batch
-    mock_dataloader = [(new_framework_data, new_framework_targets)]
-
-    new_final_loss = 0
-    new_final_acc = 0
-
-    # You will need to import ADMM_Metrics if you want exactly the same printout,
-    # but for simple comparison, we'll manually check the state.
-    from src.admm import ADMM_Metrics
-
-    metrics_tracker = ADMM_Metrics(new_model)
-
-    for epoch in range(num_epochs + 1):
-        new_model.fit(mock_dataloader, warming=epoch < n_warming_iters)
-
-        # Load the batch state for metric calculation
-        _, _, batch_state = new_model.state_handler.load_batch(0)
-
-        # We need to manually calculate the loss metric if the ADMM_CrossEntropy_Taylor
-        # differs from the old L2 norm.
-        loss = metrics_tracker.loss(new_framework_targets, batch_state)
-        acc, _ = metrics_tracker.evaluate_performance(
-            new_framework_data, new_framework_targets
+        # === 4b. INITIALIZE & INJECT NEW MODEL ===
+        hidden_layer_config = ADMM_LayerConfig(
+            rho=rho,
+            beta=beta,
+            use_bias=False,
+            deltas=deltas,
+            thetas=thetas,
+            use_reset=True,
+        )
+        out_layer_config = ADMM_LayerConfig(
+            rho=rho,
+            beta=beta,
+            use_bias=False,
+            deltas=deltas,
+            thetas=thetas,
+            use_reset=False,
+            use_lagrange=True,
         )
 
-        print(f"Epoch [{epoch}/{num_epochs}] | Loss: {loss:.4f} | Acc: {acc:.4f}")
+        spff_layers = nn.ModuleList(
+            [
+                ADMM_SpikingFeedForward(
+                    in_f=input_dim,
+                    out_f=hidden_dims[0],
+                    h=ADMM_Heaviside(thetas=thetas),
+                    config=hidden_layer_config,
+                ),
+                ADMM_SpikingFeedForward(
+                    in_f=hidden_dims[0], out_f=10, h=None, config=out_layer_config
+                ),
+            ]
+        )
 
-        if epoch == num_epochs:
-            new_final_loss = loss
-            new_final_acc = acc / 100.0  # Convert percentage back to decimal
+        config = ADMM_Config(
+            init="zeros",
+            train_method="unrolled-sequential",
+            layer_order="sequential",
+            update_z_first=False,
+            block_method="multi-block",
+        )
+        new_model = ADMM(
+            spff_layers, loss_f=ADMM_SSE(), T=n_timesteps, config=config
+        ).to(device)
 
-    # ==========================================
-    # 5. VERIFICATION
-    # ==========================================
-    print(f"\n{'=' * 40}\nCOMPARISON RESULTS\n{'=' * 40}")
-    print(
-        f"Old Model - Final Loss: {old_final_loss:.4f}, Final Acc: {old_final_acc:.4f}"
-    )
-    print(
-        f"New Model - Final Loss: {new_final_loss:.4f}, Final Acc: {new_final_acc:.4f}"
-    )
+        # Inject Explicit Weights
+        new_model.layers[0].W.data = explicit_W[0].clone()
+        new_model.layers[1].W.data = explicit_W[1].clone()
 
-    if (
-        abs(old_final_loss - new_final_loss) < 1e-4
-        and abs(old_final_acc - new_final_acc) < 1e-4
-    ):
-        print("\n✅ SUCCESS: The frameworks match exactly.")
-    else:
-        print("\n❌ MISMATCH: The frameworks produced different results.")
+        # Construct and Inject Explicit Batch State
+        layer_states = []
+        for l in range(new_model.L):
+            ls = ADMM_LayerState(
+                z=explicit_z[l].clone(),
+                a=explicit_a[l].clone() if l < new_model.L - 1 else None,
+                lambda_lagrange=explicit_lambda.clone()
+                if l == new_model.L - 1
+                else None,
+            )
+            layer_states.append(ls)
+
+        explicit_batch_state = ADMM_BatchState(batch_id=0, layer_states=layer_states)
+
+        # Safely force the state into the new manager's state handler
+        new_model.state_handler.in_memory = True
+        new_model.state_handler.num_batches = 1
+        new_model.state_handler.save_batch(
+            batch_state=explicit_batch_state,
+            inputs=new_framework_data,
+            labels=new_framework_targets,
+        )
+        new_model.initialized = True
+
+        # === 5. RUN VERIFICATION LOOP ===
+        mock_dataloader = [(new_framework_data, new_framework_targets)]
+        _, _, current_batch_state = new_model.state_handler.load_batch(0)
+        is_match = verify_internal_states(old_model, new_model, current_batch_state, 0)
+        for epoch in range(num_epochs + 1):
+            old_model.fit(data, targets_one_hot, warming=epoch < n_warming_iters)
+
+            new_model.fit(mock_dataloader, warming=epoch < n_warming_iters)
+            _, _, current_batch_state = new_model.state_handler.load_batch(0)
+
+            is_match = verify_internal_states(
+                old_model, new_model, current_batch_state, epoch
+            )
+
+    print("\n🏁 ALL TESTS COMPLETED.")

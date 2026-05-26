@@ -21,7 +21,7 @@ def calc_spatial_out(size_in, k, p, s):
     return ((size_in + 2 * p - k) // s) + 1
 
 
-def get_model(model_name, init, train_method, layer_order, loss, z_first):
+def get_model(model_name, init, train_method, layer_order, loss, z_first, block_method):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     config = configparser.ConfigParser()
@@ -77,6 +77,7 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                 train_method="vectorized",
                 layer_order=layer_order,
                 update_z_first=z_first,
+                block_method=block_method,
             )
             admm_model = ADMM(
                 ff_layers,
@@ -119,6 +120,7 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                 train_method="vectorized",
                 layer_order=layer_order,
                 update_z_first=z_first,
+                block_method=block_method,
             )
             admm_model = ADMM(
                 conv_layers,
@@ -163,6 +165,7 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                 train_method=train_method,
                 layer_order=layer_order,
                 update_z_first=z_first,
+                block_method=block_method,
             )
             admm_model = ADMM(
                 spff_layers,
@@ -217,6 +220,7 @@ def get_model(model_name, init, train_method, layer_order, loss, z_first):
                 train_method=train_method,
                 layer_order=layer_order,
                 update_z_first=z_first,
+                block_method=block_method,
             )
 
             admm_model = ADMM(

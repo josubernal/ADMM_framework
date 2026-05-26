@@ -313,7 +313,7 @@ class ADMM_Spiking:
         Returns:
             torch.Tensor: The solved spatial activations.
         """
-        temporal_penalty = self.config.thetas * self.config.rho
+        temporal_penalty = (self.config.thetas**2) * self.config.rho
         return solve_woodbury_system_spiking(
             W_expanded=W_expanded,
             numerator=numerator,
@@ -380,7 +380,7 @@ class ADMM_Spiking:
 
         # - ρ_l·θ·(z_{l,t+1} - δ·z_{l,t} - F_l(a_{l-1,t}))
         temporal_reset_numerator_t = 0.0
-        if not is_last:
+        if self.config.use_reset and not is_last:
             temporal_reset_numerator_t = (
                 -self.config.thetas
                 * self.config.rho
@@ -391,7 +391,9 @@ class ADMM_Spiking:
                 )
             )
 
-        numerator = cache.adjoint[t] + h_t + temporal_reset_numerator_t
+        numerator = (
+            next_layer.config.rho * cache.adjoint[t] + h_t + temporal_reset_numerator_t
+        )
         # Step 2: Solve  (β_l I + ρ_{l+1} A_{l+1}*A_{l+1}) a_l = numerator
         # --- FFT path ---
         denominator = cache.denominator_last if is_last else cache.denominator_main

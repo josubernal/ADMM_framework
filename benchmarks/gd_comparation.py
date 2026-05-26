@@ -9,7 +9,7 @@ import torch.optim as optim
 
 from benchmarks.utils.dataset import get_data, get_dataset
 from benchmarks.utils.models import get_model
-from src.admm import ADMM_SSE, ADMM_CrossEntropy_Taylor, ADMM_Metrics
+from src.admm import ADMM_SSE, ADMM_Metrics
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 config = configparser.ConfigParser()
@@ -248,6 +248,7 @@ for model_name in model_types:
                 layer_order="backwards",
                 loss=ADMM_SSE(),
                 z_first=False,
+                block_method="two-block",
             )
         case "conv":
             batch_size = batch_size_static
@@ -258,6 +259,7 @@ for model_name in model_types:
                 layer_order="backwards",
                 loss=ADMM_SSE(),
                 z_first=False,
+                block_method="two-block",
             )
         case "spiking-feedforward":
             batch_size = batch_size_spiking
@@ -266,8 +268,9 @@ for model_name in model_types:
                 init="s-uniform",
                 train_method="unrolled-backwards",
                 layer_order="backwards",
-                loss=ADMM_CrossEntropy_Taylor(),
+                loss=ADMM_SSE(),
                 z_first=False,
+                block_method="two-block",
             )
         case "spiking-conv":
             batch_size = batch_size_spiking
@@ -276,8 +279,9 @@ for model_name in model_types:
                 init="s-uniform",
                 train_method="unrolled-backwards",
                 layer_order="backwards",
-                loss=ADMM_CrossEntropy_Taylor(),
+                loss=ADMM_SSE(),
                 z_first=False,
+                block_method="two-block",
             )
 
     #########################################
