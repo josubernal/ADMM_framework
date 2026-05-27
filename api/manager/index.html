@@ -824,6 +824,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#src.admm.manager.ADMM._fit_two_block" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _fit_two_block
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.manager.ADMM._fit_multi_block" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _fit_multi_block
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1563,6 +1585,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#src.admm.manager.ADMM._fit_two_block" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _fit_two_block
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.admm.manager.ADMM._fit_multi_block" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _fit_multi_block
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2264,7 +2308,88 @@ individual layers, activation functions or loss functions.</p>
 <span class="normal">524</span>
 <span class="normal">525</span>
 <span class="normal">526</span>
-<span class="normal">527</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="normal">527</span>
+<span class="normal">528</span>
+<span class="normal">529</span>
+<span class="normal">530</span>
+<span class="normal">531</span>
+<span class="normal">532</span>
+<span class="normal">533</span>
+<span class="normal">534</span>
+<span class="normal">535</span>
+<span class="normal">536</span>
+<span class="normal">537</span>
+<span class="normal">538</span>
+<span class="normal">539</span>
+<span class="normal">540</span>
+<span class="normal">541</span>
+<span class="normal">542</span>
+<span class="normal">543</span>
+<span class="normal">544</span>
+<span class="normal">545</span>
+<span class="normal">546</span>
+<span class="normal">547</span>
+<span class="normal">548</span>
+<span class="normal">549</span>
+<span class="normal">550</span>
+<span class="normal">551</span>
+<span class="normal">552</span>
+<span class="normal">553</span>
+<span class="normal">554</span>
+<span class="normal">555</span>
+<span class="normal">556</span>
+<span class="normal">557</span>
+<span class="normal">558</span>
+<span class="normal">559</span>
+<span class="normal">560</span>
+<span class="normal">561</span>
+<span class="normal">562</span>
+<span class="normal">563</span>
+<span class="normal">564</span>
+<span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span>
+<span class="normal">572</span>
+<span class="normal">573</span>
+<span class="normal">574</span>
+<span class="normal">575</span>
+<span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span>
+<span class="normal">580</span>
+<span class="normal">581</span>
+<span class="normal">582</span>
+<span class="normal">583</span>
+<span class="normal">584</span>
+<span class="normal">585</span>
+<span class="normal">586</span>
+<span class="normal">587</span>
+<span class="normal">588</span>
+<span class="normal">589</span>
+<span class="normal">590</span>
+<span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span>
+<span class="normal">601</span>
+<span class="normal">602</span>
+<span class="normal">603</span>
+<span class="normal">604</span>
+<span class="normal">605</span>
+<span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Universal Singlebatch and Multibatch Manager for ADMM networks.</span>
 
 <span class="sd">    Handles both multibatch and singlebatch updates for Static and Spiking ADMM networks automatically, orchestrating</span>
@@ -2693,11 +2818,6 @@ individual layers, activation functions or loss functions.</p>
     <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataloader</span><span class="p">:</span> <span class="n">DataLoader</span><span class="p">,</span> <span class="n">warming</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Orchestrates the global fitting loop for the ADMM optimization process.</span>
 
-<span class="sd">        Executes the two-phase ADMM algorithm:</span>
-
-<span class="sd">        - Global parameter updates (Weights and Biases).</span>
-<span class="sd">        - Local state updates (Activations, Pre-activations, and Lagrange multipliers).</span>
-
 <span class="sd">        Args:</span>
 <span class="sd">            dataloader (Any): A PyTorch DataLoader yielding inputs and labels.</span>
 <span class="sd">            warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.</span>
@@ -2710,6 +2830,27 @@ individual layers, activation functions or loss functions.</p>
         <span class="n">time_steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_time_steps</span><span class="p">()</span>
         <span class="n">layer_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_layer_order</span><span class="p">()</span>
 
+        <span class="c1"># Route to the selected mathematical optimization strategy</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">block_method</span> <span class="o">==</span> <span class="s2">&quot;two-block&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fit_two_block</span><span class="p">(</span><span class="n">layer_indices</span><span class="p">,</span> <span class="n">time_steps</span><span class="p">,</span> <span class="n">warming</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">block_method</span> <span class="o">==</span> <span class="s2">&quot;multi-block&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fit_multi_block</span><span class="p">(</span><span class="n">layer_indices</span><span class="p">,</span> <span class="n">time_steps</span><span class="p">,</span> <span class="n">warming</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown update mode: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">update_mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fit_two_block</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">layer_indices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">time_steps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span> <span class="n">warming</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Executes the two-phase ADMM algorithm:</span>
+
+<span class="sd">        - Global parameter updates (Weights and Biases).</span>
+<span class="sd">        - Local state updates (Activations, Pre-activations, and Lagrange multipliers).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            layer_indices (List[int]): An ordered list of layer indices.</span>
+<span class="sd">            time_steps (Optional[List[int]], optional): List of timesteps for SNN simulation. Defaults to None.</span>
+<span class="sd">            warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># PHASE 1: COMPUTE COVARIANCES</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cov_handler</span><span class="o">.</span><span class="n">reset_accumulators</span><span class="p">()</span>
 
@@ -2765,6 +2906,71 @@ individual layers, activation functions or loss functions.</p>
                     <span class="n">layer</span><span class="o">.</span><span class="n">update_lambda</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">save_batch</span><span class="p">(</span><span class="n">batch_state</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fit_multi_block</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">layer_indices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">time_steps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span> <span class="n">warming</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; &quot;Executes the multi-phase ADMM algorithm: Updates weights then states sequentially per layer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">           layer_indices (List[int]): An ordered list of layer indices.</span>
+<span class="sd">           time_steps (Optional[List[int]], optional): List of timesteps for SNN simulation. Defaults to None.</span>
+<span class="sd">           warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">layer_idx</span> <span class="ow">in</span> <span class="n">layer_indices</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">]</span>
+
+            <span class="c1"># PHASE 1: COMPUTE COVARIANCES FOR THIS SPECIFIC LAYER</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cov_handler</span><span class="o">.</span><span class="n">reset_accumulators</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">batch_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">get_batch_ids</span><span class="p">():</span>
+                <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">batch_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">load_batch</span><span class="p">(</span><span class="n">batch_id</span><span class="p">)</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">batch_state</span><span class="o">.</span><span class="n">layer_states</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">]</span>
+                <span class="n">a_prev</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_a_prev</span><span class="p">(</span>
+                    <span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span> <span class="n">batch_state</span><span class="o">=</span><span class="n">batch_state</span>
+                <span class="p">)</span>
+
+                <span class="n">numerator</span><span class="p">,</span> <span class="n">denominator</span><span class="p">,</span> <span class="n">bias_sum</span><span class="p">,</span> <span class="n">bias_count</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">layer</span><span class="o">.</span><span class="n">compute_batch_covariances</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span> <span class="n">a_prev</span><span class="o">=</span><span class="n">a_prev</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cov_handler</span><span class="o">.</span><span class="n">accumulate</span><span class="p">(</span>
+                    <span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span>
+                    <span class="n">numerator</span><span class="o">=</span><span class="n">numerator</span><span class="p">,</span>
+                    <span class="n">denominator</span><span class="o">=</span><span class="n">denominator</span><span class="p">,</span>
+                    <span class="n">bias_sum</span><span class="o">=</span><span class="n">bias_sum</span><span class="p">,</span>
+                    <span class="n">bias_count</span><span class="o">=</span><span class="n">bias_count</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="c1"># PHASE 2: WEIGHT &amp; BIAS UPDATE FOR THIS SPECIFIC LAYER</span>
+            <span class="n">covariances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cov_handler</span><span class="o">.</span><span class="n">get_covariances</span><span class="p">(</span><span class="n">layer_idx</span><span class="p">)</span>
+            <span class="n">new_pinv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimize_weights_and_biases</span><span class="p">(</span>
+                <span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">,</span> <span class="n">covariances</span><span class="o">=</span><span class="n">covariances</span><span class="p">,</span> <span class="n">cache_pinv</span><span class="o">=</span><span class="p">(</span><span class="n">layer_idx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cov_handler</span><span class="o">.</span><span class="n">set_pinv</span><span class="p">(</span><span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span> <span class="n">pinv</span><span class="o">=</span><span class="n">new_pinv</span><span class="p">)</span>
+
+            <span class="c1"># PHASE 3: STATE UPDATE FOR THIS SPECIFIC LAYER</span>
+            <span class="k">for</span> <span class="n">batch_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">get_batch_ids</span><span class="p">():</span>
+                <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">batch_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">load_batch</span><span class="p">(</span><span class="n">batch_id</span><span class="p">)</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">batch_state</span><span class="o">.</span><span class="n">layer_states</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">]</span>
+                <span class="n">a_prev</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_a_prev</span><span class="p">(</span>
+                    <span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span> <span class="n">batch_state</span><span class="o">=</span><span class="n">batch_state</span>
+                <span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">_optimize_states</span><span class="p">(</span>
+                    <span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span>
+                    <span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">,</span>
+                    <span class="n">batch_state</span><span class="o">=</span><span class="n">batch_state</span><span class="p">,</span>
+                    <span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span>
+                    <span class="n">a_prev</span><span class="o">=</span><span class="n">a_prev</span><span class="p">,</span>
+                    <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+                    <span class="n">time_steps</span><span class="o">=</span><span class="n">time_steps</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">warming</span><span class="p">:</span>
+                    <span class="n">layer</span><span class="o">.</span><span class="n">update_lambda</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span> <span class="n">a_prev</span><span class="o">=</span><span class="n">a_prev</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">save_batch</span><span class="p">(</span>
+                    <span class="n">batch_state</span><span class="o">=</span><span class="n">batch_state</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">labels</span>
+                <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -4578,11 +4784,6 @@ If True, returns a tuple containing:
     <div class="doc doc-contents ">
 
         <p>Orchestrates the global fitting loop for the ADMM optimization process.</p>
-<p>Executes the two-phase ADMM algorithm:</p>
-<ul>
-<li>Global parameter updates (Weights and Biases).</li>
-<li>Local state updates (Activations, Pre-activations, and Lagrange multipliers).</li>
-</ul>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -4656,9 +4857,119 @@ If True, returns a tuple containing:
 <span class="normal">471</span>
 <span class="normal">472</span>
 <span class="normal">473</span>
-<span class="normal">474</span>
-<span class="normal">475</span>
-<span class="normal">476</span>
+<span class="normal">474</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataloader</span><span class="p">:</span> <span class="n">DataLoader</span><span class="p">,</span> <span class="n">warming</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Orchestrates the global fitting loop for the ADMM optimization process.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dataloader (Any): A PyTorch DataLoader yielding inputs and labels.</span>
+<span class="sd">        warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Initialization</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">initialized</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">initialize_all_batches</span><span class="p">(</span><span class="n">dataloader</span><span class="o">=</span><span class="n">dataloader</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initialized</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="n">time_steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_time_steps</span><span class="p">()</span>
+    <span class="n">layer_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_layer_order</span><span class="p">()</span>
+
+    <span class="c1"># Route to the selected mathematical optimization strategy</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">block_method</span> <span class="o">==</span> <span class="s2">&quot;two-block&quot;</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fit_two_block</span><span class="p">(</span><span class="n">layer_indices</span><span class="p">,</span> <span class="n">time_steps</span><span class="p">,</span> <span class="n">warming</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">block_method</span> <span class="o">==</span> <span class="s2">&quot;multi-block&quot;</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fit_multi_block</span><span class="p">(</span><span class="n">layer_indices</span><span class="p">,</span> <span class="n">time_steps</span><span class="p">,</span> <span class="n">warming</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown update mode: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">update_mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.manager.ADMM._fit_two_block" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_fit_two_block</span><span class="p">(</span><span class="n">layer_indices</span><span class="p">,</span> <span class="n">time_steps</span><span class="p">,</span> <span class="n">warming</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Executes the two-phase ADMM algorithm:</p>
+<ul>
+<li>Global parameter updates (Weights and Biases).</li>
+<li>Local state updates (Activations, Pre-activations, and Lagrange multipliers).</li>
+</ul>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>layer_indices</code>
+            </td>
+            <td>
+                  <code><span title="typing.List">List</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An ordered list of layer indices.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>time_steps</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="typing.List">List</span>[<span title="int">int</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of timesteps for SNN simulation. Defaults to None.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>warming</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\manager.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">476</span>
 <span class="normal">477</span>
 <span class="normal">478</span>
 <span class="normal">479</span>
@@ -4709,27 +5020,35 @@ If True, returns a tuple containing:
 <span class="normal">524</span>
 <span class="normal">525</span>
 <span class="normal">526</span>
-<span class="normal">527</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataloader</span><span class="p">:</span> <span class="n">DataLoader</span><span class="p">,</span> <span class="n">warming</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Orchestrates the global fitting loop for the ADMM optimization process.</span>
-
-<span class="sd">    Executes the two-phase ADMM algorithm:</span>
+<span class="normal">527</span>
+<span class="normal">528</span>
+<span class="normal">529</span>
+<span class="normal">530</span>
+<span class="normal">531</span>
+<span class="normal">532</span>
+<span class="normal">533</span>
+<span class="normal">534</span>
+<span class="normal">535</span>
+<span class="normal">536</span>
+<span class="normal">537</span>
+<span class="normal">538</span>
+<span class="normal">539</span>
+<span class="normal">540</span>
+<span class="normal">541</span>
+<span class="normal">542</span>
+<span class="normal">543</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_fit_two_block</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span> <span class="n">layer_indices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">time_steps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span> <span class="n">warming</span><span class="p">:</span> <span class="nb">bool</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Executes the two-phase ADMM algorithm:</span>
 
 <span class="sd">    - Global parameter updates (Weights and Biases).</span>
 <span class="sd">    - Local state updates (Activations, Pre-activations, and Lagrange multipliers).</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        dataloader (Any): A PyTorch DataLoader yielding inputs and labels.</span>
+<span class="sd">        layer_indices (List[int]): An ordered list of layer indices.</span>
+<span class="sd">        time_steps (Optional[List[int]], optional): List of timesteps for SNN simulation. Defaults to None.</span>
 <span class="sd">        warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Initialization</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">initialized</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">initialize_all_batches</span><span class="p">(</span><span class="n">dataloader</span><span class="o">=</span><span class="n">dataloader</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">initialized</span> <span class="o">=</span> <span class="kc">True</span>
-
-    <span class="n">time_steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_time_steps</span><span class="p">()</span>
-    <span class="n">layer_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_layer_order</span><span class="p">()</span>
-
     <span class="c1"># PHASE 1: COMPUTE COVARIANCES</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">cov_handler</span><span class="o">.</span><span class="n">reset_accumulators</span><span class="p">()</span>
 
@@ -4785,6 +5104,218 @@ If True, returns a tuple containing:
                 <span class="n">layer</span><span class="o">.</span><span class="n">update_lambda</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">save_batch</span><span class="p">(</span><span class="n">batch_state</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.admm.manager.ADMM._fit_multi_block" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">_fit_multi_block</span><span class="p">(</span><span class="n">layer_indices</span><span class="p">,</span> <span class="n">time_steps</span><span class="p">,</span> <span class="n">warming</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>"Executes the multi-phase ADMM algorithm: Updates weights then states sequentially per layer.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>layer_indices</code>
+            </td>
+            <td>
+                  <code><span title="typing.List">List</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An ordered list of layer indices.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>time_steps</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="typing.List">List</span>[<span title="int">int</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of timesteps for SNN simulation. Defaults to None.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>warming</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src\admm\manager.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">545</span>
+<span class="normal">546</span>
+<span class="normal">547</span>
+<span class="normal">548</span>
+<span class="normal">549</span>
+<span class="normal">550</span>
+<span class="normal">551</span>
+<span class="normal">552</span>
+<span class="normal">553</span>
+<span class="normal">554</span>
+<span class="normal">555</span>
+<span class="normal">556</span>
+<span class="normal">557</span>
+<span class="normal">558</span>
+<span class="normal">559</span>
+<span class="normal">560</span>
+<span class="normal">561</span>
+<span class="normal">562</span>
+<span class="normal">563</span>
+<span class="normal">564</span>
+<span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span>
+<span class="normal">572</span>
+<span class="normal">573</span>
+<span class="normal">574</span>
+<span class="normal">575</span>
+<span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span>
+<span class="normal">580</span>
+<span class="normal">581</span>
+<span class="normal">582</span>
+<span class="normal">583</span>
+<span class="normal">584</span>
+<span class="normal">585</span>
+<span class="normal">586</span>
+<span class="normal">587</span>
+<span class="normal">588</span>
+<span class="normal">589</span>
+<span class="normal">590</span>
+<span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span>
+<span class="normal">601</span>
+<span class="normal">602</span>
+<span class="normal">603</span>
+<span class="normal">604</span>
+<span class="normal">605</span>
+<span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_fit_multi_block</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span> <span class="n">layer_indices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">time_steps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span> <span class="n">warming</span><span class="p">:</span> <span class="nb">bool</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; &quot;Executes the multi-phase ADMM algorithm: Updates weights then states sequentially per layer.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">       layer_indices (List[int]): An ordered list of layer indices.</span>
+<span class="sd">       time_steps (Optional[List[int]], optional): List of timesteps for SNN simulation. Defaults to None.</span>
+<span class="sd">       warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">layer_idx</span> <span class="ow">in</span> <span class="n">layer_indices</span><span class="p">:</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">]</span>
+
+        <span class="c1"># PHASE 1: COMPUTE COVARIANCES FOR THIS SPECIFIC LAYER</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cov_handler</span><span class="o">.</span><span class="n">reset_accumulators</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">batch_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">get_batch_ids</span><span class="p">():</span>
+            <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">batch_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">load_batch</span><span class="p">(</span><span class="n">batch_id</span><span class="p">)</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">batch_state</span><span class="o">.</span><span class="n">layer_states</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">]</span>
+            <span class="n">a_prev</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_a_prev</span><span class="p">(</span>
+                <span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span> <span class="n">batch_state</span><span class="o">=</span><span class="n">batch_state</span>
+            <span class="p">)</span>
+
+            <span class="n">numerator</span><span class="p">,</span> <span class="n">denominator</span><span class="p">,</span> <span class="n">bias_sum</span><span class="p">,</span> <span class="n">bias_count</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">compute_batch_covariances</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span> <span class="n">a_prev</span><span class="o">=</span><span class="n">a_prev</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cov_handler</span><span class="o">.</span><span class="n">accumulate</span><span class="p">(</span>
+                <span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span>
+                <span class="n">numerator</span><span class="o">=</span><span class="n">numerator</span><span class="p">,</span>
+                <span class="n">denominator</span><span class="o">=</span><span class="n">denominator</span><span class="p">,</span>
+                <span class="n">bias_sum</span><span class="o">=</span><span class="n">bias_sum</span><span class="p">,</span>
+                <span class="n">bias_count</span><span class="o">=</span><span class="n">bias_count</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># PHASE 2: WEIGHT &amp; BIAS UPDATE FOR THIS SPECIFIC LAYER</span>
+        <span class="n">covariances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cov_handler</span><span class="o">.</span><span class="n">get_covariances</span><span class="p">(</span><span class="n">layer_idx</span><span class="p">)</span>
+        <span class="n">new_pinv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimize_weights_and_biases</span><span class="p">(</span>
+            <span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">,</span> <span class="n">covariances</span><span class="o">=</span><span class="n">covariances</span><span class="p">,</span> <span class="n">cache_pinv</span><span class="o">=</span><span class="p">(</span><span class="n">layer_idx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cov_handler</span><span class="o">.</span><span class="n">set_pinv</span><span class="p">(</span><span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span> <span class="n">pinv</span><span class="o">=</span><span class="n">new_pinv</span><span class="p">)</span>
+
+        <span class="c1"># PHASE 3: STATE UPDATE FOR THIS SPECIFIC LAYER</span>
+        <span class="k">for</span> <span class="n">batch_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">get_batch_ids</span><span class="p">():</span>
+            <span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">batch_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">load_batch</span><span class="p">(</span><span class="n">batch_id</span><span class="p">)</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">batch_state</span><span class="o">.</span><span class="n">layer_states</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">]</span>
+            <span class="n">a_prev</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_a_prev</span><span class="p">(</span>
+                <span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span> <span class="n">batch_state</span><span class="o">=</span><span class="n">batch_state</span>
+            <span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_optimize_states</span><span class="p">(</span>
+                <span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span>
+                <span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">,</span>
+                <span class="n">batch_state</span><span class="o">=</span><span class="n">batch_state</span><span class="p">,</span>
+                <span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span>
+                <span class="n">a_prev</span><span class="o">=</span><span class="n">a_prev</span><span class="p">,</span>
+                <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+                <span class="n">time_steps</span><span class="o">=</span><span class="n">time_steps</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">warming</span><span class="p">:</span>
+                <span class="n">layer</span><span class="o">.</span><span class="n">update_lambda</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span> <span class="n">a_prev</span><span class="o">=</span><span class="n">a_prev</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">state_handler</span><span class="o">.</span><span class="n">save_batch</span><span class="p">(</span>
+                <span class="n">batch_state</span><span class="o">=</span><span class="n">batch_state</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">labels</span>
+            <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

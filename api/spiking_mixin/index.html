@@ -2076,7 +2076,9 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
 <span class="normal">451</span>
 <span class="normal">452</span>
 <span class="normal">453</span>
-<span class="normal">454</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Spiking</span><span class="p">:</span>
+<span class="normal">454</span>
+<span class="normal">455</span>
+<span class="normal">456</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Spiking</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Mixin class that provides temporal modeling and unrolled solvers for Spiking Neural Networks (SNNs).&quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span>
@@ -2361,7 +2363,7 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
 <span class="sd">        Returns:</span>
 <span class="sd">            torch.Tensor: The solved spatial activations.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">temporal_penalty</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span>
+        <span class="n">temporal_penalty</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span>
         <span class="k">return</span> <span class="n">solve_woodbury_system_spiking</span><span class="p">(</span>
             <span class="n">W_expanded</span><span class="o">=</span><span class="n">W_expanded</span><span class="p">,</span>
             <span class="n">numerator</span><span class="o">=</span><span class="n">numerator</span><span class="p">,</span>
@@ -2428,7 +2430,7 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
 
         <span class="c1"># - ρ_l·θ·(z_{l,t+1} - δ·z_{l,t} - F_l(a_{l-1,t}))</span>
         <span class="n">temporal_reset_numerator_t</span> <span class="o">=</span> <span class="mf">0.0</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_last</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_reset</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_last</span><span class="p">:</span>
             <span class="n">temporal_reset_numerator_t</span> <span class="o">=</span> <span class="p">(</span>
                 <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span>
                 <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span>
@@ -2439,7 +2441,9 @@ standard spatial hooks with temporal dependencies (leakage, reset).</p>
                 <span class="p">)</span>
             <span class="p">)</span>
 
-        <span class="n">numerator</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">adjoint</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="n">h_t</span> <span class="o">+</span> <span class="n">temporal_reset_numerator_t</span>
+        <span class="n">numerator</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">next_layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span> <span class="o">*</span> <span class="n">cache</span><span class="o">.</span><span class="n">adjoint</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="n">h_t</span> <span class="o">+</span> <span class="n">temporal_reset_numerator_t</span>
+        <span class="p">)</span>
         <span class="c1"># Step 2: Solve  (β_l I + ρ_{l+1} A_{l+1}*A_{l+1}) a_l = numerator</span>
         <span class="c1"># --- FFT path ---</span>
         <span class="n">denominator</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">denominator_last</span> <span class="k">if</span> <span class="n">is_last</span> <span class="k">else</span> <span class="n">cache</span><span class="o">.</span><span class="n">denominator_main</span>
@@ -3979,7 +3983,7 @@ number of input features (<span class="arithmatex">\(N\)</span>), meaning <span 
 <span class="sd">    Returns:</span>
 <span class="sd">        torch.Tensor: The solved spatial activations.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">temporal_penalty</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span>
+    <span class="n">temporal_penalty</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span>
     <span class="k">return</span> <span class="n">solve_woodbury_system_spiking</span><span class="p">(</span>
         <span class="n">W_expanded</span><span class="o">=</span><span class="n">W_expanded</span><span class="p">,</span>
         <span class="n">numerator</span><span class="o">=</span><span class="n">numerator</span><span class="p">,</span>
@@ -4361,7 +4365,9 @@ or Standard) based on the layer configurations. Output is clamped to <span class
 <span class="normal">425</span>
 <span class="normal">426</span>
 <span class="normal">427</span>
-<span class="normal">428</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_a_unrolled</span><span class="p">(</span>
+<span class="normal">428</span>
+<span class="normal">429</span>
+<span class="normal">430</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_a_unrolled</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">t</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">cache</span><span class="p">:</span> <span class="n">TemporalCache</span><span class="p">,</span>
@@ -4387,7 +4393,7 @@ or Standard) based on the layer configurations. Output is clamped to <span class
 
     <span class="c1"># - ρ_l·θ·(z_{l,t+1} - δ·z_{l,t} - F_l(a_{l-1,t}))</span>
     <span class="n">temporal_reset_numerator_t</span> <span class="o">=</span> <span class="mf">0.0</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_last</span><span class="p">:</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_reset</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_last</span><span class="p">:</span>
         <span class="n">temporal_reset_numerator_t</span> <span class="o">=</span> <span class="p">(</span>
             <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">thetas</span>
             <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span>
@@ -4398,7 +4404,9 @@ or Standard) based on the layer configurations. Output is clamped to <span class
             <span class="p">)</span>
         <span class="p">)</span>
 
-    <span class="n">numerator</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">adjoint</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="n">h_t</span> <span class="o">+</span> <span class="n">temporal_reset_numerator_t</span>
+    <span class="n">numerator</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">next_layer</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">rho</span> <span class="o">*</span> <span class="n">cache</span><span class="o">.</span><span class="n">adjoint</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="n">h_t</span> <span class="o">+</span> <span class="n">temporal_reset_numerator_t</span>
+    <span class="p">)</span>
     <span class="c1"># Step 2: Solve  (β_l I + ρ_{l+1} A_{l+1}*A_{l+1}) a_l = numerator</span>
     <span class="c1"># --- FFT path ---</span>
     <span class="n">denominator</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">denominator_last</span> <span class="k">if</span> <span class="n">is_last</span> <span class="k">else</span> <span class="n">cache</span><span class="o">.</span><span class="n">denominator_main</span>
@@ -4514,9 +4522,7 @@ or Standard) based on the layer configurations. Output is clamped to <span class
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\spiking_mixin.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">430</span>
-<span class="normal">431</span>
-<span class="normal">432</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">432</span>
 <span class="normal">433</span>
 <span class="normal">434</span>
 <span class="normal">435</span>
@@ -4538,7 +4544,9 @@ or Standard) based on the layer configurations. Output is clamped to <span class
 <span class="normal">451</span>
 <span class="normal">452</span>
 <span class="normal">453</span>
-<span class="normal">454</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_lambda</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">454</span>
+<span class="normal">455</span>
+<span class="normal">456</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_lambda</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ADMM_LayerState</span><span class="p">,</span> <span class="n">a_prev</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Updates the Lagrange multiplier ($\lambda$) based on the current layer constraints for spiking neurons.</span>
 
 <span class="sd">    Formula evaluated:</span>
