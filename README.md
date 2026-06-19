@@ -39,7 +39,7 @@ The codebase is modularly designed to separate the mathematical solvers from the
 
 * Core Optimizer (`src/admm/`)
 
-* Benchmarks & Scripts (`benchmarks/` / `scripts/`)
+* Experiments & Scripts (`experiments/` / `scripts/`)
 
     A comprehensive suite of automated pipelines used to profile ADMM's hardware footprint and convergence behaviors.
 
@@ -55,6 +55,7 @@ The codebase is modularly designed to separate the mathematical solvers from the
 For full API references, tutorials, and mathematical derivations of the ADMM update steps, please visit our documentation:
 
 👉 **[Read the Docs: SNN ADMM Optimizer](https://www.google.com/search?q=https://your-docs-link.com)**
+
 
 To build the documentation locally, ensure you have `mkdocs` and `mkdocstrings` installed, then run:
 

@@ -10,10 +10,9 @@ These parameters dictate the global behavior of the ADMM optimization loop, the 
 ### Training Methods (`train_method`)
 Defines the algorithmic sequence used to update the network's states over time.
 * **`vectorized`**: The default for static (non-spiking) networks. Processes the entire batch simultaneously. For spiking breaks the temporal dependencies apart, solving time-steps in parallel. (Jacobi update) 
-* **`unrolled-*`** *(SNNs only)*: Solves the network strictly step-by-step across the time dimension ($t=0$ to $t=T$). Highly accurate but computationally heavier. (Gauss-Seidel update) 
-* **`decoupled-*`** *(SNNs only)*: Breaks the temporal dependencies apart, solving the a-update in parallel. Performs z-update step-by-step.
+* **`unrolled`** *(SNNs only)*: Solves the network strictly step-by-step across the time dimension ($t=0$ to $t=T$). Highly accurate but computationally heavier. (Gauss-Seidel update) 
+* **`decoupled`** *(SNNs only)*: Breaks the temporal dependencies apart, solving the a-update in parallel. Performs z-update step-by-step.
 It is a middleground between the other two approaches.
-* *Note: Both `unrolled` and `decoupled` can be suffixed with `-random`, `-sequential`, or `-backwards` to dictate the order time-steps are processed.*
 
 ### Layer Ordering (`layer_order`)
 The sequence in which layers are optimized during a single ADMM sweep.
@@ -21,6 +20,13 @@ The sequence in which layers are optimized during a single ADMM sweep.
 * **`sequential`**: Computes from input to output.
 * **`random`** : Shuffles the layer update order.
 * **`random-last`**: Shuffles the first n layer update order but secures updating the last layer the last.
+
+### Time Ordering (`time_order`)
+The sequence in which time are optimized during ADMM.
+* **`backwards`**: Computes from output to input (similar to backpropagation).
+* **`sequential`**: Computes from input to output.
+* **`random`** : Shuffles the time update order.
+* **`random-last`**: Shuffles the first n time update order but secures updating the last timestep the last.
 
 ### Weight Solvers (`solver`)
 The mathematical method used to solve the least-squares problem for weight ($W$) updates.

@@ -39,6 +39,7 @@ class ADMM_Metrics:
         self.metrics = {
             "loss": [],
             "accuracy": [],
+            "f1": [],
             "lagrangian": [],
             "primal_residual": [],
             "preactivation_constraint_sum": [],
@@ -270,7 +271,7 @@ class ADMM_Metrics:
     @torch.no_grad()
     def evaluate_performance(
         self, inputs: torch.Tensor, labels: torch.Tensor
-    ) -> tuple[float, list[float] | float]:
+    ) -> tuple[float, float, list[float] | float]:
         """Calculates accuracy and extracts firing rates in a single forward pass.
 
         Args:
@@ -280,6 +281,7 @@ class ADMM_Metrics:
         Returns:
             tuple:
                 - float: The calculated accuracy percentage.
+                - float: The calculated F1 score.
                 - list of float or float: Firing rates per layer (if spiking), else NaN.
         """
         raw_outputs, firing_rates = self.model.forward_model(inputs, True)
@@ -301,7 +303,23 @@ class ADMM_Metrics:
 
         acc = 100.0 * (predictions == targets).sum().item() / batch_size
 
-        return acc, firing_rates
+        # F1
+        classes = torch.unique(torch.cat((targets, predictions)))
+        f1_sum = 0.0
+
+        for c in classes:
+            # Calculate True Positives, False Positives, and False Negatives for class 'c'
+            tp = ((predictions == c) & (targets == c)).sum().float()
+            fp = ((predictions == c) & (targets != c)).sum().float()
+            fn = ((predictions != c) & (targets == c)).sum().float()
+
+            # Calculate F1 for this class (1e-8 is an epsilon to prevent division by zero)
+            f1_sum += (2 * tp) / (2 * tp + fp + fn + 1e-8)
+
+        # Macro F1 average across all found classes
+        f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
+
+        return acc, f1, firing_rates
 
     def network_size_statistics(self) -> dict:
         """Calculates the footprint of parameters and auxiliary states.
@@ -382,6 +400,7 @@ class ADMM_Metrics:
 
         epoch_loss = 0.0
         epoch_acc = 0.0
+        epoch_f1 = 0.0
         epoch_lagr = 0.0
         epoch_primal = 0.0
 
@@ -395,8 +414,9 @@ class ADMM_Metrics:
 
             epoch_loss += self.loss(b_labels, b_state)
 
-            acc, fr = self.evaluate_performance(b_inputs, b_labels)
+            acc, f1, fr = self.evaluate_performance(b_inputs, b_labels)
             epoch_acc += acc
+            epoch_f1 += f1
             if self.model.is_spiking and isinstance(fr, list):
                 for i in range(len(fr)):
                     epoch_fr[i] += fr[i]
@@ -415,6 +435,7 @@ class ADMM_Metrics:
         # Average and append
         self.metrics["loss"].append(epoch_loss / num_batches)
         self.metrics["accuracy"].append(epoch_acc / num_batches)
+        self.metrics["f1"].append(epoch_f1 / num_batches)
         self.metrics["lagrangian"].append(epoch_lagr / num_batches)
         self.metrics["primal_residual"].append(epoch_primal / num_batches)
         self.metrics["preactivation_constraint_sum"].append(

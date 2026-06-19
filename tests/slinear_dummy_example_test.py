@@ -9,9 +9,7 @@ from src.admm.loss_functions import ADMM_SSE
 from src.admm.manager import ADMM
 
 
-@pytest.mark.parametrize(
-    "method", ["vectorized", "unrolled-sequential", "decoupled-sequential"]
-)
+@pytest.mark.parametrize("method", ["vectorized", "unrolled", "decoupled"])
 @pytest.mark.parametrize(
     "case",
     [
@@ -71,7 +69,9 @@ def test_all_methods_equivalence(method, case):
         nn.ModuleList([layer0, layer1]),
         loss_f=ADMM_SSE(),
         T=2,
-        config=ADMM_Config(train_method=method, layer_order="sequential"),
+        config=ADMM_Config(
+            train_method=method, layer_order="sequential", time_order="sequential"
+        ),
         device=device,
     )
 

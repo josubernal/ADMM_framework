@@ -8,7 +8,7 @@ import time
 import torch
 import torch.nn as nn
 
-from benchmarks.utils.dataset import get_dataset
+from experiments.utils.dataset import get_dataset
 from src.admm import (
     ADMM,
     ADMM_SSE,
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         n_batches = cfg.get("n_batches", 1)
         init = cfg.get("init", "s-uniform")
         bias = cfg.get("bias", False)
-        train_method = cfg.get("train_method", "unrolled-sequential")
+        train_method = cfg.get("train_method", "unrolled")
         rho = cfg.get("rho", 1.0)
         beta = cfg.get("beta", 0.1)
         thetas = cfg.get("thetas", 0.3)

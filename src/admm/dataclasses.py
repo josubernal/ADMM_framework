@@ -22,28 +22,37 @@ class ADMM_Config:
     Attributes:
         init (str): The strategy used to initialize the auxiliary states ($z$ and $a$)
             before the first optimization step. Options include `"zeros"`, `"xavier"`,
-            `"pytorch"`, `"z-uniform"`, `"s-uniform"`, and `"relaxed"`. Defaults to `"s-uniform"`.
-            For specific information on each strategy, refer to the [initializers][src.admm.initializers].
+            `"wrandom"`, `"pytorch"`, `"z-uniform"`, `"s-uniform"`, and `"relaxed"`.
+            Defaults to `"s-uniform"`. For specific information on each strategy,
+            refer to the [initializers][src.admm.initializers].
+        block_method (str): The block splitting strategy for the ADMM framework.
+            Options include `"two-block"` and `"multi-block"`. Defaults to `"two-block"`.
         train_method (str): The specific algorithmic sequence used to update the network.
-            For static networks, this must be `"vectorized"`, `"unrolled-random"`, `"unrolled-sequential"`,
-            `"decoupled-random"`, `"decoupled-sequential"`, `"unrolled-backwards"` and `"decoupled-backwards"`.
-            Defaults to `"decoupled-backwards"`.
+            Options include `"vectorized"`, `"unrolled"`, and `"decoupled"`.
+            Defaults to `"decoupled"`.
         layer_order (str): The sequence in which the layers are optimized during a
             single ADMM sweep. Options include `"backwards"`, `"sequential"`, `"random"`,
             and `"random-last"`. Defaults to `"backwards"`.
+        time_order (str): The sequence in which time steps are optimized during a
+            single ADMM sweep for unrolled/spiking networks. Options include `"backwards"`,
+            `"random"`, `"random-last"`, and `"sequential"`. Defaults to `"backwards"`.
         update_z_first (bool): A boolean flag determining the sub-step order. If True,
             the pre-activations ($z$) are updated before the activations ($a$).
             Defaults to `False`.
-        solver (str): The solver used in to compute the weight update. Options are `"standard"`, `"conjugate-gradient"`, `"cholesky"`.
-            Defaults to `"standard"`. For specific information on each solver, refer to the [weights solvers][src.admm.functional.weights_solvers].
+        solver (str): The solver used to compute the weight update. Options are `"standard"`,
+            `"conjugate-gradient"`, and `"cholesky"`. Defaults to `"standard"`. For specific
+            information on each solver, refer to the [weights solvers][src.admm.functional.weights_solvers].
+        cache_pinv (bool): Serves to activate and deactivate the inverse caching of the first layer. Defaults to `True`.
     """
 
     init: str = "s-uniform"
     block_method: str = "two-block"
-    train_method: str = "decoupled-backwards"
+    train_method: str = "decoupled"
     layer_order: str = "backwards"
+    time_order: str = "backwards"
     update_z_first: bool = False
     solver: str = "standard"
+    cache_pinv: bool = True
 
     def __post_init__(self):
         # Validate initialization strategies
@@ -62,12 +71,8 @@ class ADMM_Config:
         # Validate training methods
         valid_methods = {
             "vectorized",
-            "unrolled-random",
-            "unrolled-sequential",
-            "decoupled-random",
-            "decoupled-sequential",
-            "unrolled-backwards",
-            "decoupled-backwards",
+            "unrolled",
+            "decoupled",
         }
         if self.train_method not in valid_methods:
             raise ValueError(
@@ -89,6 +94,12 @@ class ADMM_Config:
             raise ValueError(
                 f"Invalid layer_order '{self.layer_order}'. Allowed: {valid_orders}"
             )
+        # Validate time orders
+        valid_orders = {"backwards", "random-last", "random", "sequential"}
+        if self.time_order not in valid_orders:
+            raise ValueError(
+                f"Invalid time_order '{self.time_order}'. Allowed: {valid_orders}"
+            )
 
         # Validate solver
         valid_solvers = {"standard", "conjugate-gradient", "cholesky"}
@@ -101,6 +112,11 @@ class ADMM_Config:
         if not isinstance(self.update_z_first, bool):
             raise TypeError(
                 f"update_z_first must be a boolean, got {type(self.update_z_first)}"
+            )
+
+        if not isinstance(self.cache_pinv, bool):
+            raise TypeError(
+                f"cache_pinv must be a boolean, got {type(self.cache_pinv)}"
             )
 
 
