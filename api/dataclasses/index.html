@@ -1562,8 +1562,21 @@ mathematical solver methods are deployed.</p>
               <div class="doc-md-description">
                 <p>The strategy used to initialize the auxiliary states (<span class="arithmatex">\(z\)</span> and <span class="arithmatex">\(a\)</span>)
 before the first optimization step. Options include <code>"zeros"</code>, <code>"xavier"</code>,
-<code>"pytorch"</code>, <code>"z-uniform"</code>, <code>"s-uniform"</code>, and <code>"relaxed"</code>. Defaults to <code>"s-uniform"</code>.
-For specific information on each strategy, refer to the <a class="autorefs autorefs-internal" title="src.admm.initializers" href="../initializers/#src.admm.initializers">initializers</a>.</p>
+<code>"wrandom"</code>, <code>"pytorch"</code>, <code>"z-uniform"</code>, <code>"s-uniform"</code>, and <code>"relaxed"</code>.
+Defaults to <code>"s-uniform"</code>. For specific information on each strategy,
+refer to the <a class="autorefs autorefs-internal" title="src.admm.initializers" href="../initializers/#src.admm.initializers">initializers</a>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.ADMM_Config.block_method">block_method</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The block splitting strategy for the ADMM framework.
+Options include <code>"two-block"</code> and <code>"multi-block"</code>. Defaults to <code>"two-block"</code>.</p>
               </div>
             </td>
           </tr>
@@ -1575,9 +1588,8 @@ For specific information on each strategy, refer to the <a class="autorefs autor
             <td>
               <div class="doc-md-description">
                 <p>The specific algorithmic sequence used to update the network.
-For static networks, this must be <code>"vectorized"</code>, <code>"unrolled-random"</code>, <code>"unrolled-sequential"</code>,
-<code>"decoupled-random"</code>, <code>"decoupled-sequential"</code>, <code>"unrolled-backwards"</code> and <code>"decoupled-backwards"</code>.
-Defaults to <code>"decoupled-backwards"</code>.</p>
+Options include <code>"vectorized"</code>, <code>"unrolled"</code>, and <code>"decoupled"</code>.
+Defaults to <code>"decoupled"</code>.</p>
               </div>
             </td>
           </tr>
@@ -1591,6 +1603,19 @@ Defaults to <code>"decoupled-backwards"</code>.</p>
                 <p>The sequence in which the layers are optimized during a
 single ADMM sweep. Options include <code>"backwards"</code>, <code>"sequential"</code>, <code>"random"</code>,
 and <code>"random-last"</code>. Defaults to <code>"backwards"</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.ADMM_Config.time_order">time_order</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The sequence in which time steps are optimized during a
+single ADMM sweep for unrolled/spiking networks. Options include <code>"backwards"</code>,
+<code>"random"</code>, <code>"random-last"</code>, and <code>"sequential"</code>. Defaults to <code>"backwards"</code>.</p>
               </div>
             </td>
           </tr>
@@ -1614,8 +1639,20 @@ Defaults to <code>False</code>.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The solver used in to compute the weight update. Options are <code>"standard"</code>, <code>"conjugate-gradient"</code>, <code>"cholesky"</code>.
-Defaults to <code>"standard"</code>. For specific information on each solver, refer to the <a class="autorefs autorefs-internal" title="src.admm.functional.weights_solvers" href="../weights_solvers/#src.admm.functional.weights_solvers">weights solvers</a>.</p>
+                <p>The solver used to compute the weight update. Options are <code>"standard"</code>,
+<code>"conjugate-gradient"</code>, and <code>"cholesky"</code>. Defaults to <code>"standard"</code>. For specific
+information on each solver, refer to the <a class="autorefs autorefs-internal" title="src.admm.functional.weights_solvers" href="../weights_solvers/#src.admm.functional.weights_solvers">weights solvers</a>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="src.admm.dataclasses.ADMM_Config.cache_pinv">cache_pinv</span></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Serves to activate and deactivate the inverse caching of the first layer. Defaults to <code>True</code>.</p>
               </div>
             </td>
           </tr>
@@ -1721,7 +1758,23 @@ Defaults to <code>"standard"</code>. For specific information on each solver, re
 <span class="normal">101</span>
 <span class="normal">102</span>
 <span class="normal">103</span>
-<span class="normal">104</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Config</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Universal global configuration class for the ADMM Manager.</span>
 
@@ -1732,28 +1785,37 @@ Defaults to <code>"standard"</code>. For specific information on each solver, re
 <span class="sd">    Attributes:</span>
 <span class="sd">        init (str): The strategy used to initialize the auxiliary states ($z$ and $a$)</span>
 <span class="sd">            before the first optimization step. Options include `&quot;zeros&quot;`, `&quot;xavier&quot;`,</span>
-<span class="sd">            `&quot;pytorch&quot;`, `&quot;z-uniform&quot;`, `&quot;s-uniform&quot;`, and `&quot;relaxed&quot;`. Defaults to `&quot;s-uniform&quot;`.</span>
-<span class="sd">            For specific information on each strategy, refer to the [initializers][src.admm.initializers].</span>
+<span class="sd">            `&quot;wrandom&quot;`, `&quot;pytorch&quot;`, `&quot;z-uniform&quot;`, `&quot;s-uniform&quot;`, and `&quot;relaxed&quot;`.</span>
+<span class="sd">            Defaults to `&quot;s-uniform&quot;`. For specific information on each strategy,</span>
+<span class="sd">            refer to the [initializers][src.admm.initializers].</span>
+<span class="sd">        block_method (str): The block splitting strategy for the ADMM framework.</span>
+<span class="sd">            Options include `&quot;two-block&quot;` and `&quot;multi-block&quot;`. Defaults to `&quot;two-block&quot;`.</span>
 <span class="sd">        train_method (str): The specific algorithmic sequence used to update the network.</span>
-<span class="sd">            For static networks, this must be `&quot;vectorized&quot;`, `&quot;unrolled-random&quot;`, `&quot;unrolled-sequential&quot;`,</span>
-<span class="sd">            `&quot;decoupled-random&quot;`, `&quot;decoupled-sequential&quot;`, `&quot;unrolled-backwards&quot;` and `&quot;decoupled-backwards&quot;`.</span>
-<span class="sd">            Defaults to `&quot;decoupled-backwards&quot;`.</span>
+<span class="sd">            Options include `&quot;vectorized&quot;`, `&quot;unrolled&quot;`, and `&quot;decoupled&quot;`.</span>
+<span class="sd">            Defaults to `&quot;decoupled&quot;`.</span>
 <span class="sd">        layer_order (str): The sequence in which the layers are optimized during a</span>
 <span class="sd">            single ADMM sweep. Options include `&quot;backwards&quot;`, `&quot;sequential&quot;`, `&quot;random&quot;`,</span>
 <span class="sd">            and `&quot;random-last&quot;`. Defaults to `&quot;backwards&quot;`.</span>
+<span class="sd">        time_order (str): The sequence in which time steps are optimized during a</span>
+<span class="sd">            single ADMM sweep for unrolled/spiking networks. Options include `&quot;backwards&quot;`,</span>
+<span class="sd">            `&quot;random&quot;`, `&quot;random-last&quot;`, and `&quot;sequential&quot;`. Defaults to `&quot;backwards&quot;`.</span>
 <span class="sd">        update_z_first (bool): A boolean flag determining the sub-step order. If True,</span>
 <span class="sd">            the pre-activations ($z$) are updated before the activations ($a$).</span>
 <span class="sd">            Defaults to `False`.</span>
-<span class="sd">        solver (str): The solver used in to compute the weight update. Options are `&quot;standard&quot;`, `&quot;conjugate-gradient&quot;`, `&quot;cholesky&quot;`.</span>
-<span class="sd">            Defaults to `&quot;standard&quot;`. For specific information on each solver, refer to the [weights solvers][src.admm.functional.weights_solvers].</span>
+<span class="sd">        solver (str): The solver used to compute the weight update. Options are `&quot;standard&quot;`,</span>
+<span class="sd">            `&quot;conjugate-gradient&quot;`, and `&quot;cholesky&quot;`. Defaults to `&quot;standard&quot;`. For specific</span>
+<span class="sd">            information on each solver, refer to the [weights solvers][src.admm.functional.weights_solvers].</span>
+<span class="sd">        cache_pinv (bool): Serves to activate and deactivate the inverse caching of the first layer. Defaults to `True`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">init</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;s-uniform&quot;</span>
     <span class="n">block_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;two-block&quot;</span>
-    <span class="n">train_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;decoupled-backwards&quot;</span>
+    <span class="n">train_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;decoupled&quot;</span>
     <span class="n">layer_order</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;backwards&quot;</span>
+    <span class="n">time_order</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;backwards&quot;</span>
     <span class="n">update_z_first</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="n">solver</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;standard&quot;</span>
+    <span class="n">cache_pinv</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># Validate initialization strategies</span>
@@ -1772,12 +1834,8 @@ Defaults to <code>"standard"</code>. For specific information on each solver, re
         <span class="c1"># Validate training methods</span>
         <span class="n">valid_methods</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;vectorized&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;unrolled-random&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;unrolled-sequential&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;decoupled-random&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;decoupled-sequential&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;unrolled-backwards&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;decoupled-backwards&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;unrolled&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;decoupled&quot;</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_methods</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -1799,6 +1857,12 @@ Defaults to <code>"standard"</code>. For specific information on each solver, re
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Invalid layer_order &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">layer_order</span><span class="si">}</span><span class="s2">&#39;. Allowed: </span><span class="si">{</span><span class="n">valid_orders</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
+        <span class="c1"># Validate time orders</span>
+        <span class="n">valid_orders</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;backwards&quot;</span><span class="p">,</span> <span class="s2">&quot;random-last&quot;</span><span class="p">,</span> <span class="s2">&quot;random&quot;</span><span class="p">,</span> <span class="s2">&quot;sequential&quot;</span><span class="p">}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_order</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_orders</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid time_order &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">time_order</span><span class="si">}</span><span class="s2">&#39;. Allowed: </span><span class="si">{</span><span class="n">valid_orders</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
 
         <span class="c1"># Validate solver</span>
         <span class="n">valid_solvers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;standard&quot;</span><span class="p">,</span> <span class="s2">&quot;conjugate-gradient&quot;</span><span class="p">,</span> <span class="s2">&quot;cholesky&quot;</span><span class="p">}</span>
@@ -1811,6 +1875,11 @@ Defaults to <code>"standard"</code>. For specific information on each solver, re
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_z_first</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;update_z_first must be a boolean, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_z_first</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_pinv</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;cache_pinv must be a boolean, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_pinv</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -1969,23 +2038,7 @@ penalty after a spike is emitted (soft-reset mechanics). Defaults to <code>True<
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">123</span>
 <span class="normal">124</span>
 <span class="normal">125</span>
 <span class="normal">126</span>
@@ -2022,7 +2075,23 @@ penalty after a spike is emitted (soft-reset mechanics). Defaults to <code>True<
 <span class="normal">157</span>
 <span class="normal">158</span>
 <span class="normal">159</span>
-<span class="normal">160</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ADMM_LayerConfig</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Universal configuration container for layer-specific ADMM hyperparameters.</span>
 
@@ -2177,19 +2246,19 @@ penalty after a spike is emitted (soft-reset mechanics). Defaults to <code>True<
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">163</span>
-<span class="normal">164</span>
-<span class="normal">165</span>
-<span class="normal">166</span>
-<span class="normal">167</span>
-<span class="normal">168</span>
-<span class="normal">169</span>
-<span class="normal">170</span>
-<span class="normal">171</span>
-<span class="normal">172</span>
-<span class="normal">173</span>
-<span class="normal">174</span>
-<span class="normal">175</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ADMM_LayerState</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Holds the persistent ADMM memory for a single layer for a specific batch.</span>
 
@@ -2298,18 +2367,18 @@ ordered from input (layer 0) to output (layer L-1).</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">178</span>
-<span class="normal">179</span>
-<span class="normal">180</span>
-<span class="normal">181</span>
-<span class="normal">182</span>
-<span class="normal">183</span>
-<span class="normal">184</span>
-<span class="normal">185</span>
-<span class="normal">186</span>
-<span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ADMM_BatchState</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Holds the complete network state for a single batch of data.</span>
 
@@ -2444,23 +2513,23 @@ ordered from input (layer 0) to output (layer L-1).</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">192</span>
-<span class="normal">193</span>
-<span class="normal">194</span>
-<span class="normal">195</span>
-<span class="normal">196</span>
-<span class="normal">197</span>
-<span class="normal">198</span>
-<span class="normal">199</span>
-<span class="normal">200</span>
-<span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span>
-<span class="normal">206</span>
-<span class="normal">207</span>
-<span class="normal">208</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ADMM_LayerCovariance</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Holds the global accumulated matrices for a layer&#39;s parameter (weights and bias) updates.</span>
 
@@ -2613,23 +2682,7 @@ matrix calculations during time-step iterations.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">211</span>
-<span class="normal">212</span>
-<span class="normal">213</span>
-<span class="normal">214</span>
-<span class="normal">215</span>
-<span class="normal">216</span>
-<span class="normal">217</span>
-<span class="normal">218</span>
-<span class="normal">219</span>
-<span class="normal">220</span>
-<span class="normal">221</span>
-<span class="normal">222</span>
-<span class="normal">223</span>
-<span class="normal">224</span>
-<span class="normal">225</span>
-<span class="normal">226</span>
-<span class="normal">227</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">227</span>
 <span class="normal">228</span>
 <span class="normal">229</span>
 <span class="normal">230</span>
@@ -2724,7 +2777,23 @@ matrix calculations during time-step iterations.</p>
 <span class="normal">319</span>
 <span class="normal">320</span>
 <span class="normal">321</span>
-<span class="normal">322</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">TemporalCache</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Holds precomputed tensors to accelerate unrolled SNN temporal loops.</span>
 
@@ -3007,23 +3076,7 @@ update that do not change during the unrolled sequence.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">234</span>
-<span class="normal">235</span>
-<span class="normal">236</span>
-<span class="normal">237</span>
-<span class="normal">238</span>
-<span class="normal">239</span>
-<span class="normal">240</span>
-<span class="normal">241</span>
-<span class="normal">242</span>
-<span class="normal">243</span>
-<span class="normal">244</span>
-<span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span>
-<span class="normal">250</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">250</span>
 <span class="normal">251</span>
 <span class="normal">252</span>
 <span class="normal">253</span>
@@ -3095,7 +3148,23 @@ update that do not change during the unrolled sequence.</p>
 <span class="normal">319</span>
 <span class="normal">320</span>
 <span class="normal">321</span>
-<span class="normal">322</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span>
     <span class="bp">cls</span><span class="p">,</span>
     <span class="n">layer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
@@ -3261,8 +3330,6 @@ update that do not change during the unrolled sequence.</p>
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
         <script src="../../javascripts/mathjax.js"></script>
-      
-        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       
