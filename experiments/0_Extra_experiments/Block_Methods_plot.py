@@ -34,12 +34,6 @@ def main():
     # ==========================================
     for model_name in models:
         fig, ax = plt.subplots(2, 3, figsize=(30, 10))
-        fig.suptitle(
-            f"Block Method Divergence: {model_name.replace('-', ' ').title()}",
-            fontweight="bold",
-            fontsize=20,
-        )
-
         colors = {"two-block": "blue", "multi-block": "red"}
         data_found = False
 

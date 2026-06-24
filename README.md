@@ -54,7 +54,9 @@ The codebase is modularly designed to separate the mathematical solvers from the
 
 For full API references, tutorials, and mathematical derivations of the ADMM update steps, please visit our documentation:
 
-👉 **[Read the Docs: SNN ADMM Optimizer](https://www.google.com/search?q=https://your-docs-link.com)**
+👉 **[Read the Thesis: Gradient-Free Training of Spiking Neural Networks: A Modular ADMM Framework](https://www.overleaf.com/read/fpppsbzstkjh#cfd893)**
+
+👉 **[Read the Docs: SNN ADMM Optimizer](https://josubernal.github.io/ADMM_framework)**
 
 
 To build the documentation locally, ensure you have `mkdocs` and `mkdocstrings` installed, then run:

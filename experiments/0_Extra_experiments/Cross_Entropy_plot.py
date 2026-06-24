@@ -68,10 +68,6 @@ def main():
     )
 
     # Formatting
-    ax.set_title(
-        "Computational Scalability: Z-Update Runtime vs. Number of Classes",
-        fontweight="bold",
-    )
     ax.set_xlabel("Number of Classes ($C$)")
     ax.set_ylabel("Time per Output Layer Update (Milliseconds)")
 

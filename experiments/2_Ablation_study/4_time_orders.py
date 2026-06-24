@@ -22,7 +22,7 @@ n_timesteps = config.getint("config", "n_timesteps")
 warming_iters = config.getint("config", "warming_iters")
 
 
-methods = ["sequential", "backwards"]
+methods = ["sequential", "backwards", "random", "random-last"]
 
 for method in methods:
     print(f"\nORDER: {method}")

@@ -11,11 +11,6 @@ def main():
 
     # Prepare the figure: 1x3 grid for Accuracy, F1 Score, and Loss
     fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(21, 6))
-    fig.suptitle(
-        "Impact of Network Depth on ADMM Training (MNIST)",
-        fontsize=16,
-        fontweight="bold",
-    )
 
     ax_acc = axes[0]
     ax_f1 = axes[1]

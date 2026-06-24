@@ -62,12 +62,6 @@ def main():
         # FIGURE 1: ACCURACY & F1 (2x2 Grid)
         # =========================================================
         fig_main, axes_main = plt.subplots(nrows=2, ncols=2, figsize=(14, 8))
-        fig_main.suptitle(
-            f"Optimization Comparison: {model_name.upper()}",
-            fontsize=16,
-            fontweight="bold",
-            y=1.02,
-        )
 
         # ---------------------------------------------------------
         # ROW 1: METRICS vs EPOCHS
@@ -222,11 +216,6 @@ def main():
         # =========================================================
         if is_spiking:
             fig_fr, ax_fr = plt.subplots(figsize=(8, 5))
-            fig_fr.suptitle(
-                f"Firing Rate Comparison: {model_name.upper()}",
-                fontsize=14,
-                fontweight="bold",
-            )
 
             # -- Firing Rate vs Epochs
             if gd_fr and not all(np.isnan(x) for x in gd_fr):
