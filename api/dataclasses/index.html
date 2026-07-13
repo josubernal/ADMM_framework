@@ -1771,10 +1771,7 @@ information on each solver, refer to the <a class="autorefs autorefs-internal" t
 <span class="normal">114</span>
 <span class="normal">115</span>
 <span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">117</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ADMM_Config</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Universal global configuration class for the ADMM Manager.</span>
 
@@ -1842,10 +1839,7 @@ information on each solver, refer to the <a class="autorefs autorefs-internal" t
                 <span class="sa">f</span><span class="s2">&quot;Invalid train_method &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">train_method</span><span class="si">}</span><span class="s2">&#39;. Allowed: </span><span class="si">{</span><span class="n">valid_methods</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
         <span class="c1"># Validate block methods</span>
-        <span class="n">valid_block_methods</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;multi-block&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;two-block&quot;</span><span class="p">,</span>
-        <span class="p">}</span>
+        <span class="n">valid_block_methods</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;multi-block&quot;</span><span class="p">,</span> <span class="s2">&quot;two-block&quot;</span><span class="p">,</span> <span class="s2">&quot;distributed&quot;</span><span class="p">}</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_block_methods</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Invalid block_method &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">block_method</span><span class="si">}</span><span class="s2">&#39;. Allowed: </span><span class="si">{</span><span class="n">valid_block_methods</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -2038,7 +2032,10 @@ penalty after a spike is emitted (soft-reset mechanics). Defaults to <code>True<
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">123</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
 <span class="normal">124</span>
 <span class="normal">125</span>
 <span class="normal">126</span>
@@ -2088,10 +2085,7 @@ penalty after a spike is emitted (soft-reset mechanics). Defaults to <code>True<
 <span class="normal">170</span>
 <span class="normal">171</span>
 <span class="normal">172</span>
-<span class="normal">173</span>
-<span class="normal">174</span>
-<span class="normal">175</span>
-<span class="normal">176</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">173</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ADMM_LayerConfig</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Universal configuration container for layer-specific ADMM hyperparameters.</span>
 
@@ -2246,7 +2240,10 @@ penalty after a spike is emitted (soft-reset mechanics). Defaults to <code>True<
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">179</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
 <span class="normal">180</span>
 <span class="normal">181</span>
 <span class="normal">182</span>
@@ -2255,10 +2252,7 @@ penalty after a spike is emitted (soft-reset mechanics). Defaults to <code>True<
 <span class="normal">185</span>
 <span class="normal">186</span>
 <span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">188</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ADMM_LayerState</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Holds the persistent ADMM memory for a single layer for a specific batch.</span>
 
@@ -2367,7 +2361,10 @@ ordered from input (layer 0) to output (layer L-1).</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">194</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
 <span class="normal">195</span>
 <span class="normal">196</span>
 <span class="normal">197</span>
@@ -2375,10 +2372,7 @@ ordered from input (layer 0) to output (layer L-1).</p>
 <span class="normal">199</span>
 <span class="normal">200</span>
 <span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">202</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ADMM_BatchState</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Holds the complete network state for a single batch of data.</span>
 
@@ -2513,7 +2507,10 @@ ordered from input (layer 0) to output (layer L-1).</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">208</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
 <span class="normal">209</span>
 <span class="normal">210</span>
 <span class="normal">211</span>
@@ -2526,10 +2523,7 @@ ordered from input (layer 0) to output (layer L-1).</p>
 <span class="normal">218</span>
 <span class="normal">219</span>
 <span class="normal">220</span>
-<span class="normal">221</span>
-<span class="normal">222</span>
-<span class="normal">223</span>
-<span class="normal">224</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">221</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ADMM_LayerCovariance</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Holds the global accumulated matrices for a layer&#39;s parameter (weights and bias) updates.</span>
 
@@ -2682,7 +2676,10 @@ matrix calculations during time-step iterations.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">227</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
 <span class="normal">228</span>
 <span class="normal">229</span>
 <span class="normal">230</span>
@@ -2790,10 +2787,7 @@ matrix calculations during time-step iterations.</p>
 <span class="normal">332</span>
 <span class="normal">333</span>
 <span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span>
-<span class="normal">337</span>
-<span class="normal">338</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">335</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">TemporalCache</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Holds precomputed tensors to accelerate unrolled SNN temporal loops.</span>
 
@@ -3076,7 +3070,10 @@ update that do not change during the unrolled sequence.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src\admm\dataclasses.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">250</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
 <span class="normal">251</span>
 <span class="normal">252</span>
 <span class="normal">253</span>
@@ -3161,10 +3158,7 @@ update that do not change during the unrolled sequence.</p>
 <span class="normal">332</span>
 <span class="normal">333</span>
 <span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span>
-<span class="normal">337</span>
-<span class="normal">338</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">335</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span>
     <span class="bp">cls</span><span class="p">,</span>
     <span class="n">layer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
