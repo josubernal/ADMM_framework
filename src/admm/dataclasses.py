@@ -79,10 +79,7 @@ class ADMM_Config:
                 f"Invalid train_method '{self.train_method}'. Allowed: {valid_methods}"
             )
         # Validate block methods
-        valid_block_methods = {
-            "multi-block",
-            "two-block",
-        }
+        valid_block_methods = {"multi-block", "two-block", "distributed"}
         if self.block_method not in valid_block_methods:
             raise ValueError(
                 f"Invalid block_method '{self.block_method}'. Allowed: {valid_block_methods}"

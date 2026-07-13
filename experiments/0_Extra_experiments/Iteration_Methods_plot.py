@@ -29,7 +29,7 @@ def plot_learning_curves_and_costs():
 
                 # Search for the accuracy metric list
                 acc = data.get(
-                    "Test Accuracy",
+                    "Train Accuracy",
                     data.get(
                         "test_accuracy", data.get("accuracy", data.get("Accuracy", []))
                     ),
@@ -64,7 +64,7 @@ def plot_learning_curves_and_costs():
         )
 
     ax1.set_xlabel("Epoch", fontsize=12)
-    ax1.set_ylabel("Test Accuracy (%)", fontsize=12)
+    ax1.set_ylabel("Train Accuracy (%)", fontsize=12)
     ax1.set_title("Learning Curve: Accuracy vs. Epoch", fontsize=14)
     ax1.legend(fontsize=11)
     ax1.grid(True, linestyle="--", alpha=0.7)

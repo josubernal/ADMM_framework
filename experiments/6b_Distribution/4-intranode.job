@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH --job-name admm_intranode_4
+#SBATCH --output intra_out_%j.txt
+#SBATCH --error intra_error_%j.txt
+#SBATCH --mail-user bernaljosu@dei.unipd.it
+#SBATCH --mail-type END,FAIL
+
+#SBATCH --partition=allgroups
+#SBATCH --nodes=1             # 1 Physical Node
+#SBATCH --ntasks-per-node=4   # 2 Tasks on the SAME Node
+#SBATCH --gres=gpu:a40:4          # 2 GPUs total on this Node
+#SBATCH --mem 48G             # Double RAM for two tasks
+#SBATCH --time 02:00:00
+
+nodes=$(scontrol show hostnames "$SLURM_JOB_NODELIST")
+nodes_array=($nodes)
+export MASTER_ADDR=$(srun --nodes=1 --ntasks=1 -w "${nodes_array[0]}" hostname --ip-address)
+export MASTER_PORT=$((10000 + $SLURM_JOB_ID % 10000))
+
+cd $SLURM_SUBMIT_DIR/../..
+srun uv run python -m experiments.6b_Distribution.main --mode intranode

@@ -11,6 +11,7 @@ import os
 
 import matplotlib.pyplot as plt
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 
 from .dataclasses import ADMM_BatchState, ADMM_LayerState
@@ -438,6 +439,115 @@ class ADMM_Metrics:
         self.metrics["f1"].append(epoch_f1 / num_batches)
         self.metrics["lagrangian"].append(epoch_lagr / num_batches)
         self.metrics["primal_residual"].append(epoch_primal / num_batches)
+        self.metrics["preactivation_constraint_sum"].append(
+            [x / num_batches for x in epoch_pre]
+        )
+        self.metrics["activation_constraint_sum"].append(
+            [x / num_batches for x in epoch_act]
+        )
+
+        if self.model.is_spiking:
+            self.metrics["firing_rate"].append([x / num_batches for x in epoch_fr])
+        else:
+            self.metrics["firing_rate"].append(float("nan"))
+
+    def save_distributed_metrics(
+        self,
+    ) -> None:
+        """Computes and appends all tracked metrics for the current epoch.
+
+        If inputs, labels, and batch_state are not provided, it automatically iterates
+        over all batches stored in the state handler and records the epoch-averaged metrics.
+        """
+        if (
+            not hasattr(self.model, "state_handler")
+            or self.model.state_handler.num_batches == 0
+        ):
+            print("Warning: No batches found in state_handler. Metrics not saved.")
+            return
+
+        num_batches = self.model.state_handler.num_batches
+        batch_ids = self.model.state_handler.get_batch_ids()
+
+        epoch_loss = 0.0
+        epoch_acc = 0.0
+        epoch_f1 = 0.0
+        epoch_lagr = 0.0
+        epoch_primal = 0.0
+
+        epoch_pre = [0.0] * self.model.L
+        epoch_act = [0.0] * (self.model.L - 1)
+        epoch_fr = [0.0] * (self.model.L - 1) if self.model.is_spiking else None
+
+        # Accumulate metrics across all batches
+        for batch_id in batch_ids:
+            b_inputs, b_labels, b_state = self.model.state_handler.load_batch(batch_id)
+
+            epoch_loss += self.loss(b_labels, b_state)
+
+            acc, f1, fr = self.evaluate_performance(b_inputs, b_labels)
+            epoch_acc += acc
+            epoch_f1 += f1
+            if self.model.is_spiking and isinstance(fr, list):
+                for i in range(len(fr)):
+                    epoch_fr[i] += fr[i]
+
+            epoch_lagr += self.lagrangian(b_inputs, b_labels, b_state)
+            epoch_primal += self.primal_residual_norm(b_inputs, b_state)
+
+            pre = self.preactivation_constraint_sum(b_inputs, b_state)
+            for i in range(len(pre)):
+                epoch_pre[i] += pre[i]
+
+            act = self.activation_constraint_sum(b_state)
+            for i in range(len(act)):
+                epoch_act[i] += act[i]
+
+        # 1. Calculate the local averages for this specific GPU
+        local_loss = epoch_loss / num_batches
+        local_acc = epoch_acc / num_batches
+        local_f1 = epoch_f1 / num_batches
+        local_lagr = epoch_lagr / num_batches
+        local_primal = epoch_primal / num_batches
+
+        if dist.is_initialized():
+            world_size = dist.get_world_size()
+
+            # Pack the local scalars into a tensor to send over MPI
+            sync_tensor = torch.tensor(
+                [local_loss, local_acc, local_f1, local_lagr, local_primal],
+                dtype=torch.float32,
+                device=self.model.device,
+            )
+
+            # Sum the metrics from all GPUs
+            dist.all_reduce(sync_tensor, op=dist.ReduceOp.SUM)
+
+            # Unpack the values FIRST
+            global_loss = sync_tensor[0].item()
+            global_acc = sync_tensor[1].item()
+            global_f1 = sync_tensor[2].item()
+            global_lagr = sync_tensor[3].item()
+            global_primal = sync_tensor[4].item()
+
+            # Only average the metrics that are percentages/normalized!
+            # Leave loss and lagrangian as true global sums.
+            local_loss = global_loss
+            local_lagr = global_lagr
+            local_acc = global_acc / world_size
+            local_f1 = global_f1 / world_size
+            local_primal = global_primal / world_size
+
+        # 2. Append the globally synchronized metrics to the history
+        self.metrics["loss"].append(local_loss)
+        self.metrics["accuracy"].append(local_acc)
+        self.metrics["f1"].append(local_f1)
+        self.metrics["lagrangian"].append(local_lagr)
+        self.metrics["primal_residual"].append(local_primal)
+
+        # (For the lists like pre/act constraints, we will just append the local
+        # averages for now to keep the dictionary shape intact, but they could
+        # also be flattened and reduced if you ever need perfect global lists!)
         self.metrics["preactivation_constraint_sum"].append(
             [x / num_batches for x in epoch_pre]
         )

@@ -7,12 +7,13 @@ This document outlines the current boundaries and technical debt of the SNN ADMM
 * **Decouple Spiking Logic from the Manager:** Currently, the state of whether a network is "spiking" is tracked redundantly by both the layer objects and the global manager. This duplication of state information introduces a risk of synchronization bugs. The manager should become entirely spiking-agnostic, relying instead on a unified, polymorphic layer interface.
 * **Modular Activation Functions:** Activation functions are tightly coupled to the layer definitions. Extracting these into independent, modular components will drastically improve architectural flexibility and simplify state initialization.
 * **Refactor Loss Function Module:** While functional, the current loss module's internal logic and API are not as clean or intuitive as they could be. A thorough refactor is needed to improve readability and extensibility.
+* **Distributed fit mesh:** Distributed fit function should be meshed with the two block fit.
 
 ### 🧮 Tensor Mechanics & Forward Pass
 
 * **Explicit Tensor Shape Handling:** The codebase currently relies on implicit broadcasting utilities (e.g., `broadcast_to_match`, `format_bias`) for rapid development. Replacing these with strict, explicit shape handling at every step will improve code readability and prevent silent dimensional bugs. Additionally, spiking forward tensor shaping should be checked.
 * **Dynamic Pooling Dimensions:** All pooling methods currently hardcode the output to a flattened 2D shape to ensure default compatibility with feedforward layers. The pooling mechanism needs to be generalized to support arbitrary tensor dimensions natively.
-* **Automatic Membrane Reset Handling (`use_reset`):** The `use_reset=False` parameter currently requires manual configuration for the final output layer to allow spike accumulation. This should be handled automatically by the optimizer. Additionally, this opens a broader discussion for future features regarding non-accumulating SNN output layers.
+* **Automatic Membrane Reset Handling (`use_reset`):** The `use_reset=False` parameter currently requires manual configuration for the final output layer to allow spike accumulation. This should be handled automatically by the optimizer. Additionally, this opens a broader discussion for future features regarding non-accumulating SNN output layers. My suggestion is to create a separate layer, a read-out, and assume that spiking layers always have a reset mechanism. This way we can root temporal dependencies as part of the layer dynamics (which makes more sense) and not as and if/else.
 
 ### ⚙️ Optimization & Training
 

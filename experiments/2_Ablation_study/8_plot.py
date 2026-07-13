@@ -95,7 +95,10 @@ def main():
     for j, axis in enumerate(axes_flat):
         axis.set_title(titles[j], fontsize=14)
         axis.set_xlabel("Epochs")
-        axis.legend()
+        if j == 5:
+            axis.legend(loc="lower right")
+        else:
+            axis.legend()
         axis.grid(True, linestyle=":", alpha=0.7)
 
     plt.tight_layout(w_pad=5.0, h_pad=2.0, rect=[0.01, 0, 1, 1])

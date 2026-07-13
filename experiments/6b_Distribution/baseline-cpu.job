@@ -1,0 +1,17 @@
+#!/bin/bash
+#SBATCH --job-name admm_baseline
+#SBATCH --output base_out_%j.txt
+#SBATCH --error base_error_%j.txt
+#SBATCH --mail-user bernaljosu@dei.unipd.it
+#SBATCH --mail-type END,FAIL
+
+#SBATCH --partition allgroups
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem 16G
+#SBATCH --time 02:00:00
+
+cd $SLURM_SUBMIT_DIR/../..
+
+uv run python -m experiments.6b_Distribution.main --mode baseline-cpu

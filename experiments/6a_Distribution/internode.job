@@ -1,0 +1,25 @@
+#!/bin/bash
+#SBATCH --job-name=admm_internode
+#SBATCH --output inter_out_%j.txt
+#SBATCH --error inter_error_%j.txt
+#SBATCH --mail-user bernaljosu@dei.unipd.it
+#SBATCH --mail-type END,FAIL
+
+
+#SBATCH --partition allgroups
+#SBATCH --nodes=2             # 2 Physical Nodes
+#SBATCH --nodelist=gpu5,gpu6
+#SBATCH --ntasks-per-node=1   # 1 Task per Node
+#SBATCH --gres=gpu:a40:1          # 1 GPU per Task
+#SBATCH --mem 16G
+#SBATCH --time 02:00:00
+
+nodes=$(scontrol show hostnames "$SLURM_JOB_NODELIST")
+nodes_array=($nodes)
+export MASTER_ADDR=${nodes_array[0]}
+export MASTER_PORT=$((10000 + $SLURM_JOB_ID % 10000))
+export NCCL_IB_DISABLE=1
+export NCCL_SOCKET_IFNAME=^docker0,lo,virbr0,ib0,ib1,irdma0,irdma1
+export NCCL_DEBUG=INFO
+cd $SLURM_SUBMIT_DIR/../..
+srun uv run python -m experiments.6a_Distribution.main --mode internode

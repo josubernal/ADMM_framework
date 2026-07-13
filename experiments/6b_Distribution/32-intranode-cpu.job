@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH --job-name admm_32cpu
+#SBATCH --output intra_out_%j.txt
+#SBATCH --error intra_error_%j.txt
+#SBATCH --mail-user bernaljosu@dei.unipd.it
+#SBATCH --mail-type END,FAIL
+
+#SBATCH --partition=allgroups
+#SBATCH --nodes=1             # 1 Physical Node
+#SBATCH --ntasks-per-node=32   # 2 Tasks on the SAME Node
+#SBATCH --cpus-per-task=1         # 2 GPUs total on this Node
+#SBATCH --mem 32G             # Double RAM for two tasks
+#SBATCH --time 02:00:00
+
+export GLOO_SOCKET_IFNAME=lo
+export MASTER_ADDR=127.0.0.1
+export MASTER_PORT=$((10000 + $SLURM_JOB_ID % 10000))
+
+cd $SLURM_SUBMIT_DIR/../..
+srun uv run python -m experiments.6b_Distribution.main --mode cpu_dist
