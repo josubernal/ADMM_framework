@@ -83,6 +83,7 @@ def main():
     ax_loss.set_title("Internal Loss (SSE) vs Epochs")
     ax_loss.set_xlabel("Epochs")
     ax_loss.set_ylabel("SSE")
+    ax_loss.set_yscale("log")
     ax_loss.grid(True, linestyle="--", alpha=0.6)
     ax_loss.legend()
 

@@ -35,7 +35,7 @@ def main():
         mini_sgd_time = metrics.get("mini_sgd_time", [])
         admm_time = metrics.get("admm_time", [])
 
-        # Full-Batch Adam Metrics (checking both old gd_ and new adam_ naming)
+        # Full-Batch Adam Metrics
         gd_acc = metrics.get("gd_accuracy", metrics.get("adam_accuracy", []))
         gd_f1 = metrics.get("gd_f1", metrics.get("adam_f1", []))
         raw_gd_fr = metrics.get("gd_firing_rate", metrics.get("adam_firing_rate", []))
@@ -77,221 +77,225 @@ def main():
         is_spiking = "spiking" in model_name
 
         # =========================================================
-        # FIGURE 1: ACCURACY & F1 (2x2 Grid)
+        # FIGURE 1 & 2: ACCURACY & F1 (Standard & Zoomed)
         # =========================================================
         fig_main, axes_main = plt.subplots(nrows=2, ncols=2, figsize=(14, 8))
+        fig_zoom, axes_zoom = plt.subplots(nrows=2, ncols=2, figsize=(14, 8))
 
-        # ---------------------------------------------------------
-        # ROW 1: METRICS vs EPOCHS
-        # ---------------------------------------------------------
-        ax_acc_ep = axes_main[0, 0]
-        ax_f1_ep = axes_main[0, 1]
+        plot_configs = [
+            (fig_main, axes_main, False, f"{model_name}_comparison.png"),
+            (fig_zoom, axes_zoom, True, f"{model_name}_comparison_zoomed.png"),
+        ]
 
-        # -- Accuracy vs Epochs
-        if gd_acc:
-            ax_acc_ep.plot(
-                epochs_gd,
-                gd_acc,
-                label="Full-Batch Adam",
-                ls="--",
-                color="#1f77b4",
-                linewidth=2,
-            )
-        if mini_acc:
-            ax_acc_ep.plot(
-                epochs_mini,
-                mini_acc,
-                ls="-.",
-                label="Mini-Batch Adam",
-                color="#2ca02c",
-                linewidth=2,
-            )
-        if sgd_acc:
-            ax_acc_ep.plot(
-                epochs_sgd,
-                sgd_acc,
-                label="Full-Batch SGD",
-                ls=":",
-                color="#d62728",
-                linewidth=2,
-            )
-        if mini_sgd_acc:
-            ax_acc_ep.plot(
-                epochs_mini_sgd,
-                mini_sgd_acc,
-                label="Mini-Batch SGD",
-                ls=":",
-                color="#9467bd",
-                linewidth=2,
-            )
-        if admm_acc:
-            ax_acc_ep.plot(
-                epochs_admm, admm_acc, label="ADMM", color="#ff7f0e", linewidth=2
-            )
+        # Loop through both standard and zoomed grids to avoid code duplication
+        for fig, axes, is_zoom, save_filename in plot_configs:
+            ax_acc_ep = axes[0, 0]
+            ax_f1_ep = axes[0, 1]
+            ax_acc_t = axes[1, 0]
+            ax_f1_t = axes[1, 1]
 
-        ax_acc_ep.set_title("Accuracy vs Epochs")
-        ax_acc_ep.set_xlabel("Epochs")
-        ax_acc_ep.set_ylabel("Accuracy (%)")
-        ax_acc_ep.grid(True, linestyle="--", alpha=0.6)
-        ax_acc_ep.legend()
+            # ---------------------------------------------------------
+            # ROW 1: METRICS vs EPOCHS
+            # ---------------------------------------------------------
+            if gd_acc:
+                ax_acc_ep.plot(
+                    epochs_gd,
+                    gd_acc,
+                    label="Full-Batch Adam",
+                    ls="--",
+                    color="#1f77b4",
+                    linewidth=2,
+                )
+            if mini_acc:
+                ax_acc_ep.plot(
+                    epochs_mini,
+                    mini_acc,
+                    ls="-.",
+                    label="Mini-Batch Adam",
+                    color="#2ca02c",
+                    linewidth=2,
+                )
+            if sgd_acc:
+                ax_acc_ep.plot(
+                    epochs_sgd,
+                    sgd_acc,
+                    label="Full-Batch GD",
+                    ls=":",
+                    color="#d62728",
+                    linewidth=2,
+                )
+            if mini_sgd_acc:
+                ax_acc_ep.plot(
+                    epochs_mini_sgd,
+                    mini_sgd_acc,
+                    label="Mini-Batch SGD",
+                    ls=":",
+                    color="#9467bd",
+                    linewidth=2,
+                )
+            if admm_acc:
+                ax_acc_ep.plot(
+                    epochs_admm, admm_acc, label="ADMM", color="#ff7f0e", linewidth=2
+                )
 
-        # -- F1 vs Epochs
-        if gd_f1:
-            ax_f1_ep.plot(
-                epochs_gd,
-                gd_f1,
-                label="Full-Batch Adam",
-                ls="--",
-                color="#1f77b4",
-                linewidth=2,
-            )
-        if mini_f1:
-            ax_f1_ep.plot(
-                epochs_mini,
-                mini_f1,
-                label="Mini-Batch Adam",
-                ls="-.",
-                color="#2ca02c",
-                linewidth=2,
-            )
-        if sgd_f1:
-            ax_f1_ep.plot(
-                epochs_sgd,
-                sgd_f1,
-                label="Full-Batch SGD",
-                ls=":",
-                color="#d62728",
-                linewidth=2,
-            )
-        if mini_sgd_f1:
-            ax_f1_ep.plot(
-                epochs_mini_sgd,
-                mini_sgd_f1,
-                label="Mini-Batch SGD",
-                ls=":",
-                color="#9467bd",
-                linewidth=2,
-            )
-        if admm_f1:
-            ax_f1_ep.plot(
-                epochs_admm, admm_f1, label="ADMM", color="#ff7f0e", linewidth=2
-            )
+            ax_acc_ep.set_title("Accuracy vs Epochs")
+            ax_acc_ep.set_xlabel("Epochs")
+            ax_acc_ep.set_ylabel("Accuracy (%)")
+            ax_acc_ep.grid(True, linestyle="--", alpha=0.6)
 
-        ax_f1_ep.set_title("F1 Score vs Epochs")
-        ax_f1_ep.set_xlabel("Epochs")
-        ax_f1_ep.set_ylabel("F1 Score")
-        ax_f1_ep.grid(True, linestyle="--", alpha=0.6)
+            if gd_f1:
+                ax_f1_ep.plot(
+                    epochs_gd,
+                    gd_f1,
+                    label="Full-Batch Adam",
+                    ls="--",
+                    color="#1f77b4",
+                    linewidth=2,
+                )
+            if mini_f1:
+                ax_f1_ep.plot(
+                    epochs_mini,
+                    mini_f1,
+                    label="Mini-Batch Adam",
+                    ls="-.",
+                    color="#2ca02c",
+                    linewidth=2,
+                )
+            if sgd_f1:
+                ax_f1_ep.plot(
+                    epochs_sgd,
+                    sgd_f1,
+                    label="Full-Batch GD",
+                    ls=":",
+                    color="#d62728",
+                    linewidth=2,
+                )
+            if mini_sgd_f1:
+                ax_f1_ep.plot(
+                    epochs_mini_sgd,
+                    mini_sgd_f1,
+                    label="Mini-Batch SGD",
+                    ls=":",
+                    color="#9467bd",
+                    linewidth=2,
+                )
+            if admm_f1:
+                ax_f1_ep.plot(
+                    epochs_admm, admm_f1, label="ADMM", color="#ff7f0e", linewidth=2
+                )
 
-        if gd_f1 or admm_f1 or mini_f1 or sgd_f1 or mini_sgd_f1:
-            ax_f1_ep.legend()
-        else:
-            ax_f1_ep.text(
-                0.5,
-                0.5,
-                "F1 Data Not Found",
-                ha="center",
-                va="center",
-                alpha=0.5,
-                transform=ax_f1_ep.transAxes,
-            )
+            ax_f1_ep.set_title("F1 Score vs Epochs")
+            ax_f1_ep.set_xlabel("Epochs")
+            ax_f1_ep.set_ylabel("F1 Score")
+            ax_f1_ep.grid(True, linestyle="--", alpha=0.6)
 
-        # ---------------------------------------------------------
-        # ROW 2: METRICS vs TIME
-        # ---------------------------------------------------------
-        ax_acc_t = axes_main[1, 0]
-        ax_f1_t = axes_main[1, 1]
+            # ---------------------------------------------------------
+            # ROW 2: METRICS vs TIME
+            # ---------------------------------------------------------
+            if gd_acc and gd_time:
+                t, y = match_lengths(gd_time, gd_acc)
+                ax_acc_t.plot(
+                    t, y, label="Full-Batch Adam", ls="--", color="#1f77b4", linewidth=2
+                )
+            if mini_acc and mini_time:
+                t, y = match_lengths(mini_time, mini_acc)
+                ax_acc_t.plot(
+                    t, y, label="Mini-Batch Adam", ls="-.", color="#2ca02c", linewidth=2
+                )
+            if sgd_acc and sgd_time:
+                t, y = match_lengths(sgd_time, sgd_acc)
+                ax_acc_t.plot(
+                    t, y, label="Full-Batch GD", ls=":", color="#d62728", linewidth=2
+                )
+            if mini_sgd_acc and mini_sgd_time:
+                t, y = match_lengths(mini_sgd_time, mini_sgd_acc)
+                ax_acc_t.plot(
+                    t, y, label="Mini-Batch SGD", ls=":", color="#9467bd", linewidth=2
+                )
+            if admm_acc and admm_time:
+                t, y = match_lengths(admm_time, admm_acc)
+                ax_acc_t.plot(t, y, label="ADMM", color="#ff7f0e", linewidth=2)
 
-        # -- Accuracy vs Time
-        if gd_acc and gd_time:
-            t, y = match_lengths(gd_time, gd_acc)
-            ax_acc_t.plot(
-                t, y, label="Full-Batch Adam", ls="--", color="#1f77b4", linewidth=2
-            )
-        if mini_acc and mini_time:
-            t, y = match_lengths(mini_time, mini_acc)
-            ax_acc_t.plot(
-                t, y, label="Mini-Batch Adam", ls="-.", color="#2ca02c", linewidth=2
-            )
-        if sgd_acc and sgd_time:
-            t, y = match_lengths(sgd_time, sgd_acc)
-            ax_acc_t.plot(
-                t, y, label="Full-Batch SGD", ls=":", color="#d62728", linewidth=2
-            )
-        if mini_sgd_acc and mini_sgd_time:
-            t, y = match_lengths(mini_sgd_time, mini_sgd_acc)
-            ax_acc_t.plot(
-                t, y, label="Mini-Batch SGD", ls=":", color="#9467bd", linewidth=2
-            )
-        if admm_acc and admm_time:
-            t, y = match_lengths(admm_time, admm_acc)
-            ax_acc_t.plot(t, y, label="ADMM", color="#ff7f0e", linewidth=2)
+            ax_acc_t.set_title("Accuracy vs Time")
+            ax_acc_t.set_xlabel("Time (seconds)")
+            ax_acc_t.set_ylabel("Accuracy (%)")
+            ax_acc_t.grid(True, linestyle="--", alpha=0.6)
 
-        ax_acc_t.set_title("Accuracy vs Time")
-        ax_acc_t.set_xlabel("Time (seconds)")
-        ax_acc_t.set_ylabel("Accuracy (%)")
-        ax_acc_t.grid(True, linestyle="--", alpha=0.6)
-        ax_acc_t.legend()
+            if gd_f1 and gd_time:
+                t, y = match_lengths(gd_time, gd_f1)
+                ax_f1_t.plot(
+                    t, y, label="Full-Batch Adam", ls="--", color="#1f77b4", linewidth=2
+                )
+            if mini_f1 and mini_time:
+                t, y = match_lengths(mini_time, mini_f1)
+                ax_f1_t.plot(
+                    t, y, label="Mini-Batch Adam", ls="-.", color="#2ca02c", linewidth=2
+                )
+            if sgd_f1 and sgd_time:
+                t, y = match_lengths(sgd_time, sgd_f1)
+                ax_f1_t.plot(
+                    t, y, label="Full-Batch GD", ls=":", color="#d62728", linewidth=2
+                )
+            if mini_sgd_f1 and mini_sgd_time:
+                t, y = match_lengths(mini_sgd_time, mini_sgd_f1)
+                ax_f1_t.plot(
+                    t, y, label="Mini-Batch SGD", ls=":", color="#9467bd", linewidth=2
+                )
+            if admm_f1 and admm_time:
+                t, y = match_lengths(admm_time, admm_f1)
+                ax_f1_t.plot(t, y, label="ADMM", color="#ff7f0e", linewidth=2)
 
-        # -- F1 vs Time
-        if gd_f1 and gd_time:
-            t, y = match_lengths(gd_time, gd_f1)
-            ax_f1_t.plot(
-                t, y, label="Full-Batch Adam", ls="--", color="#1f77b4", linewidth=2
-            )
-        if mini_f1 and mini_time:
-            t, y = match_lengths(mini_time, mini_f1)
-            ax_f1_t.plot(
-                t, y, label="Mini-Batch Adam", ls="-.", color="#2ca02c", linewidth=2
-            )
-        if sgd_f1 and sgd_time:
-            t, y = match_lengths(sgd_time, sgd_f1)
-            ax_f1_t.plot(
-                t, y, label="Full-Batch SGD", ls=":", color="#d62728", linewidth=2
-            )
-        if mini_sgd_f1 and mini_sgd_time:
-            t, y = match_lengths(mini_sgd_time, mini_sgd_f1)
-            ax_f1_t.plot(
-                t, y, label="Mini-Batch SGD", ls=":", color="#9467bd", linewidth=2
-            )
-        if admm_f1 and admm_time:
-            t, y = match_lengths(admm_time, admm_f1)
-            ax_f1_t.plot(t, y, label="ADMM", color="#ff7f0e", linewidth=2)
+            ax_f1_t.set_title("F1 Score vs Time")
+            ax_f1_t.set_xlabel("Time (seconds)")
+            ax_f1_t.set_ylabel("F1 Score")
+            ax_f1_t.grid(True, linestyle="--", alpha=0.6)
 
-        ax_f1_t.set_title("F1 Score vs Time")
-        ax_f1_t.set_xlabel("Time (seconds)")
-        ax_f1_t.set_ylabel("F1 Score")
-        ax_f1_t.grid(True, linestyle="--", alpha=0.6)
+            # ---------------------------------------------------------
+            # ZOOM BOUNDS APPLICATION
+            # ---------------------------------------------------------
+            if is_zoom:
+                for ax in [ax_acc_ep, ax_f1_ep, ax_acc_t, ax_f1_t]:
+                    ax.set_xlim(-5, 205)
 
-        if gd_f1 or admm_f1 or mini_f1 or sgd_f1 or mini_sgd_f1:
-            ax_f1_t.legend()
-        else:
-            ax_f1_t.text(
-                0.5,
-                0.5,
-                "F1 Data Not Found",
-                ha="center",
-                va="center",
-                alpha=0.5,
-                transform=ax_f1_t.transAxes,
-            )
+                # Accuracy is in % (e.g., 60 to 100), plus padding (58 to 102)
+                for ax in [ax_acc_ep, ax_acc_t]:
+                    ax.set_ylim(58, 102)
 
-        # Adjust layout and save main figure
-        fig_main.tight_layout()
-        save_path_main = os.path.join(
-            base_dir, model_name, f"{model_name}_comparison.png"
-        )
-        os.makedirs(os.path.dirname(save_path_main), exist_ok=True)
-        fig_main.savefig(save_path_main, bbox_inches="tight", dpi=300)
-        print(f"Saved main plot for {model_name} to: {save_path_main}")
-        plt.close(fig_main)
+                # F1 score is 0 to 1 (e.g., 0.6 to 1.0), plus padding (0.58 to 1.02)
+                for ax in [ax_f1_ep, ax_f1_t]:
+                    ax.set_ylim(0.58, 1.02)
+
+            # ---------------------------------------------------------
+            # FIGURE-LEVEL LEGEND
+            # ---------------------------------------------------------
+            handles, labels = ax_acc_ep.get_legend_handles_labels()
+            if handles:
+                fig.legend(
+                    handles,
+                    labels,
+                    loc="upper center",
+                    bbox_to_anchor=(0.5, 1.05),
+                    ncol=5,
+                    frameon=False,
+                )
+
+            # Adjust layout and save figure
+            fig.tight_layout()
+            save_path = os.path.join(base_dir, model_name, save_filename)
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            fig.savefig(save_path, bbox_inches="tight", dpi=300)
+
+            plot_type = "zoomed" if is_zoom else "main"
+            print(f"Saved {plot_type} plot for {model_name} to: {save_path}")
+
+            plt.close(fig)
 
         # =========================================================
-        # FIGURE 2: FIRING RATE (Only for Spiking Models)
+        # FIGURE 3: FIRING RATE (Only for Spiking Models)
         # =========================================================
         if is_spiking:
             fig_fr, ax_fr = plt.subplots(figsize=(8, 5))
 
-            # -- Firing Rate vs Epochs
             if gd_fr and not all(np.isnan(x) for x in gd_fr):
                 ax_fr.plot(
                     epochs_gd,
@@ -314,7 +318,7 @@ def main():
                 ax_fr.plot(
                     epochs_sgd,
                     sgd_fr,
-                    label="Full-Batch SGD",
+                    label="Full-Batch GD",
                     ls=":",
                     color="#d62728",
                     linewidth=2,
@@ -338,7 +342,6 @@ def main():
             ax_fr.set_ylabel("Mean Firing Rate")
             ax_fr.grid(True, linestyle="--", alpha=0.6)
 
-            # Show legend if data exists
             if (
                 (gd_fr and not all(np.isnan(x) for x in gd_fr))
                 or (admm_fr and not all(np.isnan(x) for x in admm_fr if x is not None))
@@ -350,7 +353,6 @@ def main():
 
             fig_fr.tight_layout()
 
-            # Save the firing rate figure specifically for this model
             save_path_fr = os.path.join(
                 base_dir, model_name, f"{model_name}_firing_rate.png"
             )
