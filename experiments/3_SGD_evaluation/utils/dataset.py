@@ -18,7 +18,9 @@ def format_images(images, model_name):
     return images.contiguous()
 
 
-def get_dataset(model_name, batch_size, device=None, seed=64, n_timesteps=150):
+def get_dataset(
+    model_name, batch_size, device=None, seed=64, n_timesteps=150, n_batches=1
+):
     spiking = model_name.startswith("spiking")
 
     if spiking:
@@ -44,16 +46,22 @@ def get_dataset(model_name, batch_size, device=None, seed=64, n_timesteps=150):
             generator=torch.Generator().manual_seed(seed),
         )
 
-        data, targets = next(iter(train_loader))
-        data = format_images(data, model_name)
+        batches = []
+        for i, (data, targets) in enumerate(train_loader):
+            if i >= n_batches:
+                break
 
-        if data.size(1) > n_timesteps:
-            data = data[:, :n_timesteps, :]
+            data = format_images(data, model_name)
 
-        data = data.transpose(0, 1)
-        data += 0.01 * torch.randn_like(data)
-        return [(data.to(device), targets.to(device))]
+            if data.size(1) > n_timesteps:
+                data = data[:, :n_timesteps, :]
 
+            data = data.transpose(0, 1).contiguous()
+            data += 0.01 * torch.randn_like(data)
+
+            batches.append((data.to(device), targets.to(device)))
+
+        return batches
     else:
         transform = transforms.Compose(
             [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
@@ -115,7 +123,7 @@ def get_data(model_name, batch_size, device=None, n_timesteps=150, seed=64):
         if data.size(1) > n_timesteps:
             data = data[:, :n_timesteps, :]
 
-        data = data.transpose(0, 1)
+        data = data.transpose(0, 1).contiguous()
         data += 0.01 * torch.randn_like(data)
         return data.to(device), targets.to(device)
     else:
