@@ -127,7 +127,7 @@ def get_dataset_giovanni(
 
         data = data.transpose(0, 1).contiguous()
 
-        batches.append((data.to(device), targets.to(device)))
+        batches.append((data, targets))
 
     return batches
 

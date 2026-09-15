@@ -213,6 +213,8 @@ for model_name in model_types:
 
         # Iterate through batches to accumulate gradients
         for batch_images, batch_labels in train_loader:
+            batch_images = batch_images.to(device)
+            batch_labels = batch_labels.to(device)
             if model_name in ["spiking-feedforward", "spiking-conv"]:
                 outputs, frs = model(batch_images, return_spikes=True)
                 epoch_frs.append(frs[0])
@@ -277,6 +279,8 @@ for model_name in model_types:
 
     #########################################
     # GRADIENT DESCENT TRAINING LOOP (Full-Batch SGD)
+    del model, optimizer
+    torch.cuda.empty_cache()
     match model_name:
         case "spiking-feedforward":
             model_sgd = GDSpFFNet().to(device)
@@ -305,6 +309,8 @@ for model_name in model_types:
 
         # Iterate through batches to accumulate gradients
         for batch_images, batch_labels in train_loader:
+            batch_images = batch_images.to(device)
+            batch_labels = batch_labels.to(device)
             if model_name in ["spiking-feedforward", "spiking-conv"]:
                 outputs, frs = model_sgd(batch_images, return_spikes=True)
                 epoch_frs.append(frs[0])
