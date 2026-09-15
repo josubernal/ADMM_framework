@@ -132,6 +132,50 @@ def get_dataset_giovanni(
     return batches
 
 
+def get_dataset_alisa(
+    model_name, batch_size, device=None, seed=64, n_timesteps=150, n_batches=1
+):
+
+    sensor_size = tonic.datasets.NMNIST.sensor_size
+    frame_transform = tr.Compose(
+        [
+            tr.Denoise(filter_time=10000),
+            tr.ToFrame(sensor_size=sensor_size, time_window=1000),
+        ]
+    )
+    trainset = tonic.datasets.NMNIST(
+        save_to="./data",
+        transform=frame_transform,
+        train=True,
+    )
+    cached_trainset = DiskCachedDataset(trainset, cache_path="./cache/nmnist/train")
+    train_loader = DataLoader(
+        cached_trainset,
+        batch_size=batch_size,
+        collate_fn=tonic.collation.PadTensors(),
+        shuffle=True,
+        drop_last=True,
+        generator=torch.Generator().manual_seed(seed),
+    )
+
+    batches = []
+    for i, (data, targets) in enumerate(train_loader):
+        if i >= n_batches:
+            break
+
+        data = format_images(data, model_name)
+
+        if data.size(1) > n_timesteps:
+            data = data[:, :n_timesteps, :]
+
+        data = data.transpose(0, 1).contiguous()
+        data += 0.01 * torch.randn_like(data)
+
+        batches.append((data, targets))
+
+    return batches
+
+
 #############################################
 # FOR GD
 def get_data(model_name, batch_size, device=None, n_timesteps=150, seed=64):
