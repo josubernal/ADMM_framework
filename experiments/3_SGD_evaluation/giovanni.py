@@ -45,6 +45,18 @@ n_timesteps = config.getint("config", "n_timesteps")
 warming_iters = config.getint("config", "warming_iters")
 
 
+def format_images(images, model_name):
+    """Formats the image tensor geometry based on the model architecture."""
+    if model_name == "spiking-feedforward":
+        # Flatten spatial dims: [T, B, C, H, W] -> [T, B, Features]
+        images = images.view(images.size(0), images.size(1), -1)
+    elif model_name == "feedforward":
+        # Flatten spatial dims: [B, C, H, W] -> [B, Features]
+        images = images.view(images.size(0), -1)
+
+    return images.contiguous()
+
+
 def calc_spatial_out(size_in, k, p, s):
     return ((size_in + 2 * p - k) // s) + 1
 
@@ -200,7 +212,7 @@ for model_name in model_types:
 
     # Determine which dimension holds the batch size
     batch_dim = 1 if model_name in ["spiking-feedforward", "spiking-conv"] else 0
-    total_samples = sum([b[0].size(batch_dim) for b in train_loader])
+    total_samples = len(train_loader.dataset)
 
     for epoch in range(epochs):
         optimizer.zero_grad()
@@ -213,6 +225,12 @@ for model_name in model_types:
 
         # Iterate through batches to accumulate gradients
         for batch_images, batch_labels in train_loader:
+            batch_images = format_images(batch_images, model_name)
+
+            if batch_images.size(1) > n_timesteps:
+                batch_images = batch_images[:, :n_timesteps, :]
+
+            batch_images = batch_images.transpose(0, 1).contiguous()
             batch_images = batch_images.to(device)
             batch_labels = batch_labels.to(device)
             if model_name in ["spiking-feedforward", "spiking-conv"]:
@@ -309,6 +327,12 @@ for model_name in model_types:
 
         # Iterate through batches to accumulate gradients
         for batch_images, batch_labels in train_loader:
+            batch_images = format_images(batch_images, model_name)
+
+            if batch_images.size(1) > n_timesteps:
+                batch_images = batch_images[:, :n_timesteps, :]
+
+            batch_images = batch_images.transpose(0, 1).contiguous()
             batch_images = batch_images.to(device)
             batch_labels = batch_labels.to(device)
             if model_name in ["spiking-feedforward", "spiking-conv"]:
