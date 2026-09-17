@@ -158,7 +158,7 @@ for model_name in model_types:
         case "conv":
             model_mini = GDConvNet().to(device)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.MSELoss()
     optimizer_mini = optim.Adam(model_mini.parameters(), lr=lr_adam_mini)
 
     # Determine which dimension holds the batch size
