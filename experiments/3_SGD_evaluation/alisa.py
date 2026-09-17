@@ -70,10 +70,8 @@ for model_name in model_types:
     train_loader = get_dataset_alisa(
         model_name=model_name,
         batch_size=batch_size_spiking,
-        device=device,
         n_timesteps=n_timesteps,
         seed=seed,
-        n_batches=n_batches,
     )
 
     match model_name:

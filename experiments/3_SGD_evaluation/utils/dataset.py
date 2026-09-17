@@ -1,9 +1,26 @@
+from functools import partial
+
 import tonic
 import tonic.transforms as tr
 import torch
 from tonic import DiskCachedDataset
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
+
+
+def alisa_collate_fn(batch, model_name, n_timesteps):
+    data, targets = tonic.collation.PadTensors()(batch)
+
+    data = format_images(data, model_name)
+
+    if data.size(1) > n_timesteps:
+        data = data[:, :n_timesteps, ...]
+
+    data = data.transpose(0, 1).contiguous()
+
+    data += 0.01 * torch.randn_like(data)
+
+    return data, targets
 
 
 def format_images(images, model_name):
@@ -176,47 +193,49 @@ def get_dataset_giovanni(
 
 
 def get_dataset_alisa(
-    model_name, batch_size, device=None, seed=64, n_timesteps=150, n_batches=1
+    model_name,
+    batch_size,
+    seed=64,
+    n_timesteps=150,
 ):
-
     sensor_size = tonic.datasets.NMNIST.sensor_size
+
     frame_transform = tr.Compose(
         [
             tr.Denoise(filter_time=10000),
-            tr.ToFrame(sensor_size=sensor_size, time_window=1000),
+            tr.ToFrame(
+                sensor_size=sensor_size,
+                time_window=1000,
+            ),
         ]
     )
+
     trainset = tonic.datasets.NMNIST(
         save_to="./data",
         transform=frame_transform,
         train=True,
     )
-    cached_trainset = DiskCachedDataset(trainset, cache_path="./cache/nmnist/train")
+
+    cached_trainset = DiskCachedDataset(
+        trainset,
+        cache_path="./cache/nmnist/train",
+    )
+
     train_loader = DataLoader(
         cached_trainset,
         batch_size=batch_size,
-        collate_fn=tonic.collation.PadTensors(),
+        collate_fn=partial(
+            alisa_collate_fn,
+            model_name=model_name,
+            n_timesteps=n_timesteps,
+        ),
         shuffle=True,
-        drop_last=True,
+        drop_last=False,
+        num_workers=0,
         generator=torch.Generator().manual_seed(seed),
     )
 
-    batches = []
-    for i, (data, targets) in enumerate(train_loader):
-        if i >= n_batches:
-            break
-
-        data = format_images(data, model_name)
-
-        if data.size(1) > n_timesteps:
-            data = data[:, :n_timesteps, :]
-
-        data = data.transpose(0, 1).contiguous()
-        data += 0.01 * torch.randn_like(data)
-
-        batches.append((data, targets))
-
-    return batches
+    return train_loader
 
 
 #############################################
