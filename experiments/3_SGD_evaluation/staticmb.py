@@ -195,13 +195,18 @@ for model_name in model_types:
             else:
                 batch_images = images[batch_indices, :]
 
-            batch_labels = labels[batch_indices].float()
+            batch_labels = labels[batch_indices].long()
 
-            # Forward pass
             outputs = model_mini(batch_images)
-            epoch_frs.append(float("nan"))
 
-            loss = criterion(outputs, batch_labels)
+            batch_targets = torch.nn.functional.one_hot(
+                batch_labels,
+                num_classes=10,
+            ).float()
+
+            loss = criterion(outputs, batch_targets)
+
+            epoch_frs.append(float("nan"))
 
             # Backward pass
             optimizer_mini.zero_grad()
@@ -211,18 +216,13 @@ for model_name in model_types:
             # Accumulate metrics
             _, predictions = torch.max(outputs, 1)
 
-            target_classes = torch.argmax(
-                batch_labels,
-                dim=1,
-            )
+            epoch_correct += (predictions == batch_labels).sum().item()
 
-            epoch_correct += (predictions == target_classes).sum().item()
-
-            epoch_total += target_classes.size(0)
+            epoch_total += batch_labels.size(0)
 
             all_preds.extend(predictions.cpu().tolist())
 
-            all_labels.extend(target_classes.cpu().tolist())
+            all_labels.extend(batch_labels.cpu().tolist())
 
         # --- EPOCH LEVEL AGGREGATION ---
         avg_epoch_loss = epoch_loss / epoch_total
@@ -304,12 +304,17 @@ for model_name in model_types:
             else:
                 batch_images = images[batch_indices, :]
 
-            batch_labels = labels[batch_indices].float()
+            batch_labels = labels[batch_indices].long()
 
-            outputs = model_mini_sgd(batch_images)
+            outputs = model_mini(batch_images)
+
+            batch_targets = torch.nn.functional.one_hot(
+                batch_labels,
+                num_classes=10,
+            ).float()
+
+            loss = criterion(outputs, batch_targets)
             epoch_frs.append(float("nan"))
-
-            loss = criterion(outputs, batch_labels)
 
             # FIXED: Using the explicit mini-batch SGD optimizer
             optimizer_mini_sgd.zero_grad()
@@ -319,18 +324,13 @@ for model_name in model_types:
             epoch_loss += loss.item() * batch_images.size(batch_dim)
             _, predictions = torch.max(outputs, 1)
 
-            target_classes = torch.argmax(
-                batch_labels,
-                dim=1,
-            )
+            epoch_correct += (predictions == batch_labels).sum().item()
 
-            epoch_correct += (predictions == target_classes).sum().item()
-
-            epoch_total += target_classes.size(0)
+            epoch_total += batch_labels.size(0)
 
             all_preds.extend(predictions.cpu().tolist())
 
-            all_labels.extend(target_classes.cpu().tolist())
+            all_labels.extend(batch_labels.cpu().tolist())
 
         avg_epoch_loss = epoch_loss / epoch_total
         epoch_accuracy = (epoch_correct / epoch_total) * 100
