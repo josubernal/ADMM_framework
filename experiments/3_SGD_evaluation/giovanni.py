@@ -184,7 +184,6 @@ for model_name in model_types:
         device=device,
         n_timesteps=n_timesteps,
         seed=seed,
-        n_batches=n_batches,
     )
 
     #########################################
