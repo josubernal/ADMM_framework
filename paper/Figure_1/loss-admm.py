@@ -69,7 +69,7 @@ for loss_f in [
     torch.backends.cudnn.benchmark = False
 
     print(f"\n{'=' * 50}")
-    print(f"EVALUATING MODEL: {loss_f.upper()}")
+    print(f"EVALUATING MODEL: {loss_f}")
     print(f"{'=' * 50}")
 
     #########################################
@@ -124,7 +124,7 @@ for loss_f in [
     # ADMM Metrics
     metrics["admm_time"] = admm_times
 
-    metrics_filename = f"/paper/results/loss-admm/{loss_f}/results.json"
+    metrics_filename = f"/paper/results/admm-spiking-{loss_f}/results.json"
     os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
     with open(metrics_filename, "w") as f:
