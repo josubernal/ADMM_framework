@@ -1,5 +1,6 @@
 import configparser
 import json
+import math
 import os
 import time
 
@@ -8,16 +9,15 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from .utils.dataset import get_dataset_giovanni
+from ..utils.dataset import get_dataset_spiking_gd
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 config = configparser.ConfigParser()
 
-config.read("experiments/3_SGD_evaluation/config/config.ini")
+config.read("paper/config/config.ini")
 
 seed = config.getint("config", "seed")
 
-n_batches = config.getint("config", "n_batches")
 batch_size_spiking = config.getint("config", "batch_size_spiking")
 epochs = config.getint("config", "epochs")
 hidden_size_spiking = config.getint("config", "hidden_size_spiking")
@@ -28,7 +28,6 @@ s = config.getint("config", "s")
 lr_gd = config.getfloat("config", "learning_rate_gd")
 lr_adam = config.getfloat("config", "learning_rate_adam")
 
-minibatch_size = config.getint("config", "minibatch_size")
 spff_rho = config.getfloat("config", "spff_rho")
 spff_beta = config.getfloat("config", "spff_beta")
 spconv_rho = config.getfloat("config", "spconv_rho")
@@ -40,9 +39,6 @@ convdeltas = config.getfloat("config", "convdeltas")
 convthetas = config.getfloat("config", "convthetas")
 input_size = 784
 n_timesteps = config.getint("config", "n_timesteps")
-
-# WARMING CONFIG
-warming_iters = config.getint("config", "warming_iters")
 
 
 def format_images(images, model_name):
@@ -178,11 +174,8 @@ for model_name in model_types:
     #########################################
     # DATA
 
-    train_loader = get_dataset_giovanni(
-        model_name=model_name,
+    train_loader = get_dataset_spiking_gd(
         batch_size=batch_size_spiking,
-        device=device,
-        n_timesteps=n_timesteps,
         seed=seed,
     )
 
@@ -210,7 +203,7 @@ for model_name in model_types:
     start_time = time.time()
 
     # Determine which dimension holds the batch size
-    batch_dim = 1 if model_name in ["spiking-feedforward", "spiking-conv"] else 0
+    batch_dim = 1
     total_samples = len(train_loader.dataset)
 
     for epoch in range(epochs):
@@ -229,15 +222,13 @@ for model_name in model_types:
             if batch_images.size(1) > n_timesteps:
                 batch_images = batch_images[:, :n_timesteps, :]
 
-            batch_images = batch_images.transpose(0, 1).contiguous()
-            batch_images = batch_images.to(device)
-            batch_labels = batch_labels.to(device)
-            if model_name in ["spiking-feedforward", "spiking-conv"]:
-                outputs, frs = model(batch_images, return_spikes=True)
-                epoch_frs.append(frs[0])
-            else:
-                outputs = model(batch_images)
-                epoch_frs.append(float("nan"))
+            batch_images = (
+                batch_images.transpose(0, 1).contiguous().to(device, non_blocking=True)
+            )
+            batch_labels = batch_labels.to(device, non_blocking=True)
+
+            outputs, frs = model(batch_images, return_spikes=True)
+            epoch_frs.append(frs[0])
 
             loss = criterion(outputs, batch_labels.long())
 
@@ -275,8 +266,6 @@ for model_name in model_types:
 
         f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
 
-        import math
-
         avg_fr = (
             float("nan")
             if math.isnan(epoch_frs[0])
@@ -298,6 +287,10 @@ for model_name in model_types:
     # GRADIENT DESCENT TRAINING LOOP (Full-Batch SGD)
     del model, optimizer
     torch.cuda.empty_cache()
+    train_loader = get_dataset_spiking_gd(
+        batch_size=batch_size_spiking,
+        seed=seed,
+    )
     match model_name:
         case "spiking-feedforward":
             model_sgd = GDSpFFNet().to(device)
@@ -331,15 +324,13 @@ for model_name in model_types:
             if batch_images.size(1) > n_timesteps:
                 batch_images = batch_images[:, :n_timesteps, :]
 
-            batch_images = batch_images.transpose(0, 1).contiguous()
-            batch_images = batch_images.to(device)
-            batch_labels = batch_labels.to(device)
-            if model_name in ["spiking-feedforward", "spiking-conv"]:
-                outputs, frs = model_sgd(batch_images, return_spikes=True)
-                epoch_frs.append(frs[0])
-            else:
-                outputs = model_sgd(batch_images)
-                epoch_frs.append(float("nan"))
+            batch_images = (
+                batch_images.transpose(0, 1).contiguous().to(device, non_blocking=True)
+            )
+            batch_labels = batch_labels.to(device, non_blocking=True)
+
+            outputs, frs = model_sgd(batch_images, return_spikes=True)
+            epoch_frs.append(frs[0])
 
             loss = criterion(outputs, batch_labels.long())
 
@@ -375,8 +366,6 @@ for model_name in model_types:
 
         f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
 
-        import math
-
         avg_fr = (
             float("nan")
             if math.isnan(epoch_frs[0])
@@ -411,7 +400,9 @@ for model_name in model_types:
     metrics["sgd_time"] = sgd_times
     metrics["sgd_f1"] = sgd_f1s
 
-    metrics_filename = f"experiments/3_SGD_evaluation/results/{model_name}/results.json"
+    metrics_filename = (
+        f"paper/results/admm_vs_gd/spiking-full-batch/{model_name}/results.json"
+    )
     os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
     with open(metrics_filename, "w") as f:

@@ -7,31 +7,26 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from .utils.dataset import get_data, get_dataset
+from ..utils.dataset import get_dataset_static_gd
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 config = configparser.ConfigParser()
 
-config.read("experiments/3_SGD_evaluation/config/config.ini")
+config.read("paper/config/config.ini")
 
 seed = config.getint("config", "seed")
 
-batch_size_static = config.getint("config", "batch_size_static")
-n_batches = config.getint("config", "n_batches")
 epochs = config.getint("config", "epochs")
 hidden_size_static = config.getint("config", "hidden_size_static")
 hidden_channels_static = config.getint("config", "hidden_channels_static")
 k = config.getint("config", "k")
 p = config.getint("config", "p")
 s = config.getint("config", "s")
-lr_gd = config.getfloat("config", "learning_rate_gd")
-lr_adam = config.getfloat("config", "learning_rate_adam")
 lr_gd_mini = config.getfloat("config", "learning_rate_gd_mini")
 lr_adam_mini = config.getfloat("config", "learning_rate_adam_mini")
 
-run_mini_batch = config.getboolean("config", "run_mini_batch")
 
-minibatch_size = config.getint("config", "minibatch_size")
+minibatch_size_static = config.getint("config", "minibatch_size_static")
 
 ff_rho = config.getfloat("config", "ff_rho")
 ff_beta = config.getfloat("config", "ff_beta")
@@ -45,9 +40,6 @@ convdeltas = config.getfloat("config", "convdeltas")
 convthetas = config.getfloat("config", "convthetas")
 input_size = 784
 n_timesteps = config.getint("config", "n_timesteps")
-
-# WARMING CONFIG
-warming_iters = config.getint("config", "warming_iters")
 
 
 def calc_spatial_out(size_in, k, p, s):
@@ -116,16 +108,6 @@ for model_name in model_types:
     print(f"{'=' * 50}")
 
     #########################################
-    # DATA
-
-    train_loader = get_dataset(
-        model_name=model_name,
-        batch_size=batch_size_static,
-        device=device,
-        seed=seed,
-    )
-
-    #########################################
     # MODEL INSTANTIATION
     match model_name:
         case "feedforward":
@@ -133,10 +115,10 @@ for model_name in model_types:
         case "conv":
             model = GDConvNet().to(device)
 
-    batch_size = batch_size_static
+    batch_size = minibatch_size_static
 
     # DATA
-    images, labels = get_data(
+    images, labels = get_dataset_static_gd(
         model_name=model_name,
         batch_size=batch_size,
         device=device,
@@ -144,8 +126,6 @@ for model_name in model_types:
         seed=seed,
     )
 
-    # if labels.dim() > 1:
-    #     labels = labels.argmax(dim=1)
     #########################################
     # MINI-BATCH GRADIENT DESCENT TRAINING LOOP
 
@@ -185,8 +165,8 @@ for model_name in model_types:
         indices = torch.randperm(total_samples)
 
         # Slice the existing batch into mini-batches
-        for start_idx in range(0, total_samples, minibatch_size):
-            end_idx = min(start_idx + minibatch_size, total_samples)
+        for start_idx in range(0, total_samples, minibatch_size_static):
+            end_idx = min(start_idx + minibatch_size_static, total_samples)
             batch_indices = indices[start_idx:end_idx]
 
             # Slice appropriately based on tensor geometry
@@ -266,6 +246,12 @@ for model_name in model_types:
     # MINI-BATCH GRADIENT DESCENT TRAINING LOOP (Mini-Batch SGD)
 
     print("\nTraining model with bare SGD (Mini-batch)...")
+    train_loader = get_dataset_static_gd(
+        model_name=model_name,
+        batch_size=minibatch_size_static,
+        device=device,
+        seed=seed,
+    )
 
     match model_name:
         case "feedforward":
@@ -295,8 +281,8 @@ for model_name in model_types:
 
         indices = torch.randperm(total_samples)
 
-        for start_idx in range(0, total_samples, minibatch_size):
-            end_idx = min(start_idx + minibatch_size, total_samples)
+        for start_idx in range(0, total_samples, minibatch_size_static):
+            end_idx = min(start_idx + minibatch_size_static, total_samples)
             batch_indices = indices[start_idx:end_idx]
 
             if batch_dim == 1:
@@ -316,7 +302,6 @@ for model_name in model_types:
             loss = criterion(outputs, batch_targets)
             epoch_frs.append(float("nan"))
 
-            # FIXED: Using the explicit mini-batch SGD optimizer
             optimizer_mini_sgd.zero_grad()
             loss.backward()
             optimizer_mini_sgd.step()
@@ -384,7 +369,9 @@ for model_name in model_types:
     metrics["mini_sgd_time"] = mini_sgd_times
     metrics["mini_sgd_f1"] = mini_sgd_f1s
 
-    metrics_filename = f"experiments/3_SGD_evaluation/results/{model_name}/results.json"
+    metrics_filename = (
+        f"paper/results/admm_vs_gd/static-mini-batch/{model_name}/results.json"
+    )
     os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
     with open(metrics_filename, "w") as f:

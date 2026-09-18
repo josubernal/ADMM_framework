@@ -5,32 +5,32 @@ import time
 
 import torch
 
-from src.admm import ADMM_CrossEntropy_Taylor, ADMM_Metrics
+from src.admm import ADMM_SSE, ADMM_Metrics
 
-from .utils.dataset import get_dataset_alisa
-from .utils.models import get_model
+from ..utils.dataset import get_dataset_static_admm
+from ..utils.models import get_model
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 config = configparser.ConfigParser()
 
-config.read("experiments/3_SGD_evaluation/config/config.ini")
+config.read("paper/config/config.ini")
 
 seed = config.getint("config", "seed")
 
+batch_size_static = config.getint("config", "batch_size_static")
 n_batches = config.getint("config", "n_batches")
-batch_size_spiking = config.getint("config", "batch_size_spiking")
 epochs = config.getint("config", "epochs")
-hidden_size_spiking = config.getint("config", "hidden_size_spiking")
-hidden_channels_spiking = config.getint("config", "hidden_channels_spiking")
+hidden_size_static = config.getint("config", "hidden_size_static")
+hidden_channels_static = config.getint("config", "hidden_channels_static")
 k = config.getint("config", "k")
 p = config.getint("config", "p")
 s = config.getint("config", "s")
 
-minibatch_size = config.getint("config", "minibatch_size")
-spff_rho = config.getfloat("config", "spff_rho")
-spff_beta = config.getfloat("config", "spff_beta")
-spconv_rho = config.getfloat("config", "spconv_rho")
-spconv_beta = config.getfloat("config", "spconv_beta")
+ff_rho = config.getfloat("config", "ff_rho")
+ff_beta = config.getfloat("config", "ff_beta")
+conv_rho = config.getfloat("config", "conv_rho")
+conv_beta = config.getfloat("config", "conv_beta")
+
 
 ffdeltas = config.getfloat("config", "ffdeltas")
 ffthetas = config.getfloat("config", "ffthetas")
@@ -51,7 +51,7 @@ def calc_spatial_out(size_in, k, p, s):
 # AUTOMATED ITERATION OVER MODELS
 #########################################
 # Un-commented array to loop through all models
-model_types = ["spiking-feedforward", "spiking-conv"]
+model_types = ["feedforward", "conv"]
 
 for model_name in model_types:
     torch.manual_seed(seed)
@@ -67,36 +67,36 @@ for model_name in model_types:
     #########################################
     # DATA
 
-    train_loader = get_dataset_alisa(
+    train_loader = get_dataset_static_admm(
         model_name=model_name,
-        batch_size=batch_size_spiking,
-        n_timesteps=n_timesteps,
+        batch_size=batch_size_static,
         seed=seed,
     )
 
+    #########################################
+    # MODEL INSTANTIATION
+
     match model_name:
-        case "spiking-feedforward":
-            batch_size = batch_size_spiking
+        case "feedforward":
+            batch_size = batch_size_static
             admm_model = get_model(
                 model_name=model_name,
-                init="s-uniform",
-                train_method="decoupled",
-                time_order="backwards",
+                init="pytorch",
+                train_method="vectorized",
                 layer_order="backwards",
-                loss=ADMM_CrossEntropy_Taylor(),
-                z_first=True,
+                loss=ADMM_SSE(),
+                z_first=False,
                 block_method="two-block",
             )
-        case "spiking-conv":
-            batch_size = batch_size_spiking
+        case "conv":
+            batch_size = batch_size_static
             admm_model = get_model(
                 model_name=model_name,
-                init="s-uniform",
-                train_method="decoupled",
-                time_order="backwards",
+                init="pytorch",
+                train_method="vectorized",
                 layer_order="backwards",
-                loss=ADMM_CrossEntropy_Taylor(),
-                z_first=True,
+                loss=ADMM_SSE(),
+                z_first=False,
                 block_method="two-block",
             )
 
@@ -120,7 +120,7 @@ for model_name in model_types:
                 )
                 print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
 
-    ############################
+    #########################################
     # SAVING RESULTS AND PLOTTING
     metrics = m.get_dic()
     metrics["architecture"] = model_name
@@ -130,7 +130,7 @@ for model_name in model_types:
     # ADMM Metrics
     metrics["admm_time"] = admm_times
 
-    metrics_filename = f"experiments/3_SGD_evaluation/results/{model_name}/results.json"
+    metrics_filename = f"paper/results/admm_vs_gd/static-admm/{model_name}/results.json"
     os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
     with open(metrics_filename, "w") as f:
