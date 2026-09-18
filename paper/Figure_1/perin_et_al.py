@@ -1029,24 +1029,24 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read("paper/config/config.ini")
     # Define the ADMM SNN model parameters (use command line args if provided, otherwise use config)
-    batch_size = config.getint("admm_snn", "batch_size_spiking")
+    batch_size = config.getint("config", "batch_size_spiking")
     n_samples = batch_size  # Update both variables
 
-    n_timesteps = config.getint("admm_snn", "n_timesteps")
+    n_timesteps = config.getint("config", "n_timesteps")
 
     # Handle hidden_dims specially since it's a list
-    hidden_dims = eval(config.get("admm_snn", "hidden_dims"))
+    hidden_dims = eval(config.get("config", "hidden_dims"))
 
-    n_outputs = config.getint("admm_snn", "n_outputs")
+    n_outputs = config.getint("config", "n_outputs")
 
-    rho = config.getfloat("admm_snn", "spff_rho")
-    deltas = config.getfloat("admm_snn", "ffdeltas")
+    rho = config.getfloat("config", "spff_rho")
+    deltas = config.getfloat("config", "ffdeltas")
 
-    thetas = config.getfloat("admm_snn", "ffthetas")
+    thetas = config.getfloat("config", "ffthetas")
 
-    beta = config.getfloat("admm_snn", "spff_beta")
+    beta = config.getfloat("config", "spff_beta")
 
-    num_batches = config.getint("admm_snn", "num_batches")
+    num_batches = config.getint("config", "num_batches")
 
     # Define transformations
     sensor_size = tonic.datasets.NMNIST.sensor_size
@@ -1063,7 +1063,7 @@ if __name__ == "__main__":
     )
 
     # Load datasets
-    batch_size = config.getint("admm_snn", "batch_size_spiking")
+    batch_size = config.getint("config", "batch_size_spiking")
 
     trainset = tonic.datasets.NMNIST(
         save_to="./data", transform=frame_transform, train=True
@@ -1110,9 +1110,9 @@ if __name__ == "__main__":
     print("Sample target shape:", sample_target.shape)
 
     # Training parameters
-    num_epochs = config.getint("admm_snn", "epochs")
+    num_epochs = config.getint("config", "epochs")
 
-    n_warming_iters = config.getint("admm_snn", "warming_iters")
+    n_warming_iters = config.getint("config", "warming_iters")
 
     data_iterator = iter(trainloader)
     data, targets = next(data_iterator)
