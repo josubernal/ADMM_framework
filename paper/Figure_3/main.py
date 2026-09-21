@@ -3,7 +3,7 @@ import json
 import os
 import random
 import time
-from typing import List
+from typing import List, Optional
 
 import tonic
 import tonic.transforms as transforms
@@ -59,10 +59,10 @@ class ADMM_SNN:
         self.deltas = deltas
         self.thetas = thetas
         self.beta = beta
-        self.pinv_l_0 = None  # Attribute to store the pseudoinverse at layer 0
+        self.pinv_l_0 = None
 
-        self.L = len(hidden_dims) + 1  # Total number of layers (including output)
-        self.T = n_timesteps  # Number of timesteps
+        self.L = len(hidden_dims) + 1
+        self.T = n_timesteps
 
         # === Initialize W_l (Weights) ===
         self.W = []
@@ -78,8 +78,6 @@ class ADMM_SNN:
         self.z = []
         for i, hidden_dim in enumerate(hidden_dims + [n_outputs]):
             self.z.append(
-                # torch.rand((n_timesteps, n_samples, hidden_dim)).to(self.device)
-                # CHANGE
                 torch.zeros((n_timesteps, n_samples, hidden_dim)).to(self.device)
             )
 
@@ -87,64 +85,27 @@ class ADMM_SNN:
         self.a = []
         for i, hidden_dim in enumerate(hidden_dims):
             self.a.append(
-                # torch.rand((n_timesteps, n_samples, hidden_dim)).to(self.device)
-                # CHANGE
                 torch.zeros((n_timesteps, n_samples, hidden_dim)).to(self.device)
             )
 
-        # === Initialize lagrange multipliers (only for the output layer constraint) ===
+        # === Initialize lagrange multipliers ===
         self.lambda_lagrange = torch.zeros((n_samples, n_outputs)).to(self.device)
 
     def _heaviside(self, x):
-        """
-        Applies the Heaviside step function element-wise.
-
-        Returns 1 if x > threshold, 0 otherwise.
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor: Tensor with Heaviside function applied.
-        """
         return (x > self.thetas).double()
 
     def _weight_update(self, x_l, a_lminus1, l):
-        """
-        Implements the weight update for layers 1 to L-1 (Equation 4).
-
-        Args:
-            x_l (torch.Tensor): Precomputed term related to z_l.
-            a_lminus1 (torch.Tensor): Activations of the previous layer.
-
-        Returns:
-            torch.Tensor: Updated weight matrix W_l.
-        """
         numerator = sum(x_l[t].T @ a_lminus1[t] for t in range(self.T))
         denominator = sum((a_lminus1[t].T @ a_lminus1[t]) for t in range(self.T))
 
         if l == 0:
             if self.pinv_l_0 is None:
                 self.pinv_l_0 = torch.linalg.pinv(denominator)
-
             return numerator @ self.pinv_l_0
 
         return numerator @ torch.linalg.pinv(denominator)
 
     def _weight_update_L(self, x_L, a_Lminus1):
-        """
-        Implements the weight update for the output layer L (Equation 6).
-
-        Includes the Lagrange multiplier term.
-
-        Args:
-            x_L (torch.Tensor): Precomputed term related to z_L.
-            a_Lminus1 (torch.Tensor): Activations of the previous layer (L-1).
-
-        Returns:
-            torch.Tensor: Updated weight matrix W_L.
-        """
-
         lambda_term = self.lambda_lagrange.T / self.rho
         numerator = lambda_term @ a_Lminus1[-1] + sum(
             x_L[t].T @ a_Lminus1[t] for t in range(self.T)
@@ -154,63 +115,19 @@ class ADMM_SNN:
         return numerator @ torch.linalg.pinv(denominator)
 
     def _z_update(self, q_l, r_l, a_l):
-        """
-        Implements the z_{l,t} update for hidden layers l = 1..L-1 and t < T (Equation 14).
-
-        Args:
-            q_l (torch.Tensor): Precomputed term q_{l,t}.
-            r_l (torch.Tensor): Precomputed term r_{l,t+1}.
-            a_l (torch.Tensor): Activation a_{l,t}.
-
-        Returns:
-            torch.Tensor: Updated pre-activation z_{l,t}.
-        """
         return (q_l.T + self.deltas * (r_l.T + self.thetas * a_l)) / (
             1 + self.deltas**2
         )
 
     def _z_update_L(self, s_Lt, r_Ltnext, lam):
-        """
-        Implements the z_{L,t} update for the output layer l = L and t < T (Equation 16, t < T).
-
-        Args:
-            s_Lt (torch.Tensor): Precomputed term s_{L,t}.
-            r_Ltnext (torch.Tensor): Precomputed term r_{L,t+1}.
-            lam (torch.Tensor): Lagrange multiplier term (lambda/rho or 0).
-
-        Returns:
-            torch.Tensor: Updated pre-activation z_{L,t}.
-        """
         return (s_Lt + self.deltas * r_Ltnext + self.deltas * lam / self.rho) / (
             1 + self.deltas**2
         )
 
     def _z_update_L_T(self, s_LT, y):
-        """
-        Implements the z_{L,T} update for the output layer l = L and t = T (Equation 16, t = T).
-
-        Args:
-            s_LT (torch.Tensor): Precomputed term s_{L,T}.
-            y (torch.Tensor): Target labels.
-
-        Returns:
-            torch.Tensor: Updated pre-activation z_{L,T}.
-        """
         return (self.rho * s_LT + 2 * y - self.lambda_lagrange.T) / (2 + self.rho)
 
     def check_entries(self, z, a_lt, q_lt, r_ltnext):
-        """
-        Implements Algorithm 1 for t < T.
-
-        Args:
-            z (torch.Tensor): Current estimate of z_{l,t}.
-            a_lt (torch.Tensor): Activation a_{l,t}.
-            q_lt (torch.Tensor): Precomputed term q_{l,t}.
-            r_ltnext (torch.Tensor): Precomputed term r_{l,t+1}.
-
-        Returns:
-            torch.Tensor: Adjusted z_{l,t}.
-        """
         delta1 = self.beta * (1 - 2 * a_lt)
         delta2 = (
             self.rho * (z - q_lt.T) ** 2
@@ -233,20 +150,7 @@ class ADMM_SNN:
         return z
 
     def check_entries_T(self, z, a_lt, q_lt):
-        """
-        Implements Algorithm 1 variant for the final timestep T.
-
-        Args:
-            z (torch.Tensor): Current estimate of z_{l,T}.
-            a_lt (torch.Tensor): Activation a_{l,T}.
-            q_lt (torch.Tensor): Precomputed term q_{l,T}.
-
-        Returns:
-            torch.Tensor: Adjusted z_{l,T}.
-        """
         delta1 = self.beta * (1 - 2 * a_lt).T
-        # delta2 = self.rho * ((z - q_lt) ** 2 - self.rho * (self.thetas - q_lt) ** 2)
-        # CHANGE: Fix delta2
         delta2 = self.rho * (z - q_lt) ** 2 - self.rho * (self.thetas - q_lt) ** 2
 
         mask_z_greater = (z > self.thetas).double()
@@ -262,18 +166,6 @@ class ADMM_SNN:
         return z
 
     def _activation_update(self, Wl_next, wl, zl, vl_next):
-        """
-        Implements the Activation update for l=1..L-2, t=1..T-1.
-
-        Args:
-            Wl_next (torch.Tensor): Weights of the next layer (l+1).
-            wl (torch.Tensor): Precomputed term w_{l,t+1}.
-            zl (torch.Tensor): Pre-activation z_{l,t}.
-            vl_next (torch.Tensor): Precomputed term v_{l+1,t}.
-
-        Returns:
-            torch.Tensor: Updated activation a_{l,t}. Clipped between 0 and 1.
-        """
         WtW = Wl_next.T @ Wl_next
         term1 = WtW + ((self.thetas**2) + (self.beta / self.rho)) * torch.eye(
             Wl_next.size(1)
@@ -288,17 +180,6 @@ class ADMM_SNN:
         return torch.clip(activation_update, 0, 1)
 
     def _activation_update_T(self, W_lnext, v_lnext, z_l):
-        """
-        Implements the Activation update for l=1..L-2, t=T.
-
-        Args:
-            W_lnext (torch.Tensor): Weights of the next layer (l+1).
-            v_lnext (torch.Tensor): Precomputed term v_{l+1,T}.
-            z_l (torch.Tensor): Pre-activation z_{l,T}.
-
-        Returns:
-            torch.Tensor: Updated activation a_{l,T}. Clipped between 0 and 1.
-        """
         term1 = W_lnext.T @ W_lnext + (self.beta / self.rho) * torch.eye(
             W_lnext.size(1)
         ).to(self.device)
@@ -309,18 +190,6 @@ class ADMM_SNN:
         return torch.clip(a, 0, 1)
 
     def _activation_update_Lminus1(self, Wl_next, u_L, w_Lminus1, zl):
-        """
-        Implements the Activation update for l=L-1, t=1..T-1.
-
-        Args:
-            Wl_next (torch.Tensor): Weights of the next layer (L).
-            u_L (torch.Tensor): Precomputed term u_{L,t}.
-            w_Lminus1 (torch.Tensor): Precomputed term w_{L-1,t+1}.
-            zl (torch.Tensor): Pre-activation z_{L-1,t}.
-
-        Returns:
-            torch.Tensor: Updated activation a_{L-1,t}. Clipped between 0 and 1.
-        """
         WtW = Wl_next.T @ Wl_next
         term1 = WtW + ((self.thetas**2) + (self.beta / self.rho)) * torch.eye(
             Wl_next.size(1)
@@ -336,17 +205,6 @@ class ADMM_SNN:
         return torch.clip(activation_update_Lminus1, 0, 1)
 
     def _activation_update_Lminus1_T(self, W_L, u_L, zl):
-        """
-        Implements the Activation update for l=L-1, t=T.
-
-        Args:
-            W_L (torch.Tensor): Weights of the output layer (L).
-            u_L (torch.Tensor): Precomputed term u_{L,T}.
-            zl (torch.Tensor): Pre-activation z_{L-1,T}.
-
-        Returns:
-            torch.Tensor: Updated activation a_{L-1,T}. Clipped between 0 and 1.
-        """
         WtW = W_L.T @ W_L
         term1 = WtW + (self.beta / self.rho) * torch.eye(W_L.size(1)).to(self.device)
         term2 = (
@@ -359,44 +217,27 @@ class ADMM_SNN:
         return torch.clip(activation_update_Lminus1_T, 0, 1)
 
     def _lambda_update(self, z_LT, z_LTprev, W_L, aL_minus_1_T):
-        """
-        Implements the update of the Lagrange multiplier lambda.
-
-        Args:
-            z_LT (torch.Tensor): Pre-activation z_{L,T}.
-            z_LTprev (torch.Tensor): Pre-activation z_{L,T-1}.
-            W_L (torch.Tensor): Weights of the output layer.
-            aL_minus_1_T (torch.Tensor): Activation a_{L-1,T}.
-
-        Returns:
-            torch.Tensor: Updated Lagrange multiplier lambda.
-        """
         return self.lambda_lagrange.T + self.rho * (
             z_LT.T - self.deltas * z_LTprev.T - W_L @ aL_minus_1_T.T
         )
 
     def fit(self, inputs, labels, warming=False):
-        """
-        Performs one iteration of the ADMM optimization algorithm.
+        metrics = {
+            "weight_time": 0.0,
+            "weight_mem": 0.0,
+            "act_time": 0.0,
+            "act_mem": 0.0,
+            "z_time": 0.0,
+            "z_mem": 0.0,
+            "global_peak": 0.0,
+        }
 
-        Updates weights (W), pre-activations (z), activations (a), and the
-        Lagrange multiplier (lambda) based on the input batch and labels.
-
-        Args:
-            inputs (torch.Tensor): Input data batch.
-            labels (torch.Tensor): Target labels (one-hot encoded).
-            warming (bool, optional): If True, skips the Lagrange multiplier update
-                                      (useful during initial iterations). Defaults to False.
-        """
-
-        # random_time_steps = random.sample(range(self.T - 1), self.T - 1)
-        # random_layers = random.sample(range(self.L - 1), self.L - 1)
-        # CHANGE
         random_time_steps = list(range(self.T - 1))
         random_layers = list(range(self.L - 1))
 
         for l in random_layers:
-            # Update self.W[l] using the function _weight_update
+            torch.cuda.reset_peak_memory_stats()
+            start = time.time()
             output_spikes = inputs if l == 0 else self.a[l - 1]
 
             u_lnext = self.z[l + 1].clone()
@@ -411,15 +252,16 @@ class ADMM_SNN:
             x_l[1:] += self.thetas * self.a[l][:-1]
 
             self.W[l] = self._weight_update(x_l.to(self.device), output_spikes, l)
+            torch.cuda.synchronize()
 
-            # u_l = self.z[l].clone()
-            # u_l[1:] -= self.deltas * u_l[:-1]
-
-            # w_l = u_l - torch.matmul(
-            #     self.W[l].unsqueeze(0).unsqueeze(0), output_spikes.unsqueeze(-1)
-            # ).squeeze(-1)
+            w_peak = torch.cuda.max_memory_allocated()
+            metrics["weight_time"] += time.time() - start
+            metrics["weight_mem"] = max(metrics["weight_mem"], w_peak)
+            metrics["global_peak"] = max(metrics["global_peak"], w_peak)
 
             for t in random_time_steps:
+                torch.cuda.reset_peak_memory_stats()
+                start = time.time()
                 u_l = self.z[l].clone()
                 u_l[1:] -= self.deltas * u_l[:-1]
 
@@ -434,7 +276,15 @@ class ADMM_SNN:
                     self.a[l][t] = self._activation_update_Lminus1(
                         self.W[l + 1], u_lnext[t], w_l[t + 1], self.z[l][t]
                     ).T
+                torch.cuda.synchronize()
 
+                a_peak = torch.cuda.max_memory_allocated()
+                metrics["act_time"] += time.time() - start
+                metrics["act_mem"] = max(metrics["act_mem"], a_peak)
+                metrics["global_peak"] = max(metrics["global_peak"], a_peak)
+
+                torch.cuda.reset_peak_memory_stats()
+                start = time.time()
                 q_lt = self.W[l] @ output_spikes[t].T
                 if t >= 1:
                     q_lt += (
@@ -442,25 +292,38 @@ class ADMM_SNN:
                     ).T
                 r_ltnext = -self.W[l] @ output_spikes[t + 1].T + self.z[l][t + 1].T
 
-                # update self.z[l][t] using the function _z_update and check_entries
                 self.z[l][t] = self.check_entries(
                     self._z_update(q_lt, r_ltnext, self.a[l][t]),
                     self.a[l][t],
                     q_lt,
                     r_ltnext,
                 )
+                torch.cuda.synchronize()
 
+                z_peak = torch.cuda.max_memory_allocated()
+                metrics["z_time"] += time.time() - start
+                metrics["z_mem"] = max(metrics["z_mem"], z_peak)
+                metrics["global_peak"] = max(metrics["global_peak"], z_peak)
+
+            torch.cuda.reset_peak_memory_stats()
+            start = time.time()
             if l < self.L - 2:
-                # update self.a[l][T] using the function _activation_update_T
                 self.a[l][self.T - 1] = self._activation_update_T(
                     self.W[l + 1], v_lnext[self.T - 1], self.z[l][self.T - 1]
                 ).T
             else:
-                # update self.a[l][T] using the function _activation_update_Lminus1_T
                 self.a[l][self.T - 1] = self._activation_update_Lminus1_T(
                     self.W[self.L - 1], u_lnext[self.T - 1], self.z[l][self.T - 1]
                 ).T
+            torch.cuda.synchronize()
 
+            a_peak = torch.cuda.max_memory_allocated()
+            metrics["act_time"] += time.time() - start
+            metrics["act_mem"] = max(metrics["act_mem"], a_peak)
+            metrics["global_peak"] = max(metrics["global_peak"], a_peak)
+
+            torch.cuda.reset_peak_memory_stats()
+            start = time.time()
             q_lt = (
                 self.W[l] @ output_spikes[self.T - 1].T
                 + (
@@ -468,19 +331,31 @@ class ADMM_SNN:
                     - self.thetas * self.a[l][self.T - 2]
                 ).T
             )
-            # update self.z[l][T] using the function _z_update_T and check_entries
             self.z[l][self.T - 1] = self.check_entries_T(
                 q_lt, self.a[l][self.T - 1], q_lt
             ).T
+            torch.cuda.synchronize()
 
-        # ----- Update the last layer -----
-        # Update self.W[L] using the function _weight_update_L
+            z_peak = torch.cuda.max_memory_allocated()
+            metrics["z_time"] += time.time() - start
+            metrics["z_mem"] = max(metrics["z_mem"], z_peak)
+            metrics["global_peak"] = max(metrics["global_peak"], z_peak)
+
+        torch.cuda.reset_peak_memory_stats()
+        start = time.time()
         x_L = self.z[self.L - 1].clone()
         x_L[1:] -= self.deltas * x_L[:-1]
-
         self.W[self.L - 1] = self._weight_update_L(x_L, self.a[self.L - 2])
+        torch.cuda.synchronize()
+
+        w_peak = torch.cuda.max_memory_allocated()
+        metrics["weight_time"] += time.time() - start
+        metrics["weight_mem"] = max(metrics["weight_mem"], w_peak)
+        metrics["global_peak"] = max(metrics["global_peak"], w_peak)
+
         for t in random_time_steps:
-            # update self.z[L][t] using the function _z_update_L
+            torch.cuda.reset_peak_memory_stats()
+            start = time.time()
             s_Lt = self.W[self.L - 1] @ self.a[self.L - 2][t].T
             if t >= 1:
                 s_Lt += self.deltas * self.z[self.L - 1][t - 1].T
@@ -495,17 +370,21 @@ class ADMM_SNN:
                 else torch.zeros_like(self.lambda_lagrange.T)
             )
             self.z[self.L - 1][t] = self._z_update_L(s_Lt, r_Ltnext, lam).T
+            torch.cuda.synchronize()
 
-        # ----- Update the last layer at time T -----
-        # update self.z[L][T] using the function _z_update_L_T
+            z_peak = torch.cuda.max_memory_allocated()
+            metrics["z_time"] += time.time() - start
+            metrics["z_mem"] = max(metrics["z_mem"], z_peak)
+            metrics["global_peak"] = max(metrics["global_peak"], z_peak)
+
+        torch.cuda.reset_peak_memory_stats()
+        start = time.time()
         s_LT = (
             self.W[self.L - 1] @ self.a[self.L - 2][self.T - 1].T
             + self.deltas * self.z[self.L - 1][self.T - 2].T
         )
-
         self.z[self.L - 1][self.T - 1] = self._z_update_L_T(s_LT, labels).T
 
-        # Update the lagrange multiplier using the function _lambda_update
         if not warming:
             self.lambda_lagrange = self._lambda_update(
                 self.z[self.L - 1][self.T - 1],
@@ -513,21 +392,16 @@ class ADMM_SNN:
                 self.W[self.L - 1],
                 self.a[self.L - 2][self.T - 1],
             ).T
-        return
+        torch.cuda.synchronize()
+
+        z_peak = torch.cuda.max_memory_allocated()
+        metrics["z_time"] += time.time() - start
+        metrics["z_mem"] = max(metrics["z_mem"], z_peak)
+        metrics["global_peak"] = max(metrics["global_peak"], z_peak)
+
+        return metrics
 
     def forward_model(self, inputs):
-        """
-        Performs a forward pass using the ADMM variables (W, z, a).
-
-        This function simulates the network dynamics based on the learned ADMM parameters.
-
-        Args:
-            inputs (torch.Tensor): Input data batch.
-
-        Returns:
-            torch.Tensor: Output potentials (z) of the last layer
-                          at the final timestep.
-        """
         inputs = inputs.to(self.device)
         potential = [torch.zeros_like(z_l).to(self.device) for z_l in self.z]
 
@@ -539,7 +413,6 @@ class ADMM_SNN:
             )
 
             for l in range(self.L):
-                # Calculate post-synaptic current for the current layer
                 post_syn_current = current_input @ self.W[l].T
                 potential[l][t, :, :] = post_syn_current
                 if t > 0:
@@ -566,13 +439,132 @@ class ADMM_SNN:
         return potential[-1][-1], firing_rate
 
 
+# ==========================================
+# CUSTOM NEW MODEL TRACKER
+# ==========================================
+class ProfiledADMM(ADMM):
+    def _fit_multi_block(
+        self, layer_indices: List[int], time_steps: Optional[List[int]], warming: bool
+    ) -> None:
+        metrics = {
+            "phase1_cov_time": 0.0,
+            "phase1_cov_mem": 0.0,
+            "phase2_weight_time": 0.0,
+            "phase2_weight_mem": 0.0,
+            "phase3_state_time": 0.0,
+            "phase3_state_mem": 0.0,
+            "global_peak": 0.0,
+        }
+
+        for layer_idx in layer_indices:
+            layer = self.layers[layer_idx]
+
+            # ---------------------------------------------
+            # PHASE 1: COMPUTE COVARIANCES
+            # ---------------------------------------------
+            torch.cuda.reset_peak_memory_stats()
+            start_time = time.time()
+            self.cov_handler.reset_accumulators()
+            for batch_id in self.state_handler.get_batch_ids():
+                inputs, labels, batch_state = self.state_handler.load_batch(batch_id)
+                state = batch_state.layer_states[layer_idx]
+                a_prev = self._get_a_prev(
+                    layer_idx=layer_idx, inputs=inputs, batch_state=batch_state
+                )
+
+                numerator, denominator, bias_sum, bias_count = (
+                    layer.compute_batch_covariances(state=state, a_prev=a_prev)
+                )
+                self.cov_handler.accumulate(
+                    layer_idx=layer_idx,
+                    numerator=numerator,
+                    denominator=denominator,
+                    bias_sum=bias_sum,
+                    bias_count=bias_count,
+                )
+            torch.cuda.synchronize()
+
+            p1_peak = torch.cuda.max_memory_allocated()
+            metrics["phase1_cov_time"] += time.time() - start_time
+            metrics["phase1_cov_mem"] = max(metrics["phase1_cov_mem"], p1_peak)
+            metrics["global_peak"] = max(metrics["global_peak"], p1_peak)
+
+            # ---------------------------------------------
+            # PHASE 2: WEIGHT & BIAS UPDATE
+            # ---------------------------------------------
+            torch.cuda.reset_peak_memory_stats()
+            start_time = time.time()
+            covariances = self.cov_handler.get_covariances(layer_idx)
+            new_pinv = self._optimize_weights_and_biases(
+                layer=layer, covariances=covariances, cache_pinv=(layer_idx == 0)
+            )
+            self.cov_handler.set_pinv(layer_idx=layer_idx, pinv=new_pinv)
+            torch.cuda.synchronize()
+
+            p2_peak = torch.cuda.max_memory_allocated()
+            metrics["phase2_weight_time"] += time.time() - start_time
+            metrics["phase2_weight_mem"] = max(metrics["phase2_weight_mem"], p2_peak)
+            metrics["global_peak"] = max(metrics["global_peak"], p2_peak)
+
+            # ---------------------------------------------
+            # PHASE 3: STATE UPDATE
+            # ---------------------------------------------
+            torch.cuda.reset_peak_memory_stats()
+            start_time = time.time()
+            for batch_id in self.state_handler.get_batch_ids():
+                inputs, labels, batch_state = self.state_handler.load_batch(batch_id)
+                state = batch_state.layer_states[layer_idx]
+                a_prev = self._get_a_prev(
+                    layer_idx=layer_idx, inputs=inputs, batch_state=batch_state
+                )
+
+                self._optimize_states(
+                    layer_idx=layer_idx,
+                    layer=layer,
+                    batch_state=batch_state,
+                    state=state,
+                    a_prev=a_prev,
+                    labels=labels,
+                    time_steps=time_steps,
+                )
+                if not warming:
+                    layer.update_lambda(state=state, a_prev=a_prev)
+
+                self.state_handler.save_batch(
+                    batch_state=batch_state, inputs=inputs, labels=labels
+                )
+            torch.cuda.synchronize()
+
+            p3_peak = torch.cuda.max_memory_allocated()
+            metrics["phase3_state_time"] += time.time() - start_time
+            metrics["phase3_state_mem"] = max(metrics["phase3_state_mem"], p3_peak)
+            metrics["global_peak"] = max(metrics["global_peak"], p3_peak)
+
+        self.last_metrics = metrics
+
+    def fit(self, dataloader, warming=False):
+        if not self.initialized:
+            self.state_handler.initialize_all_batches(dataloader=dataloader)
+            self.initialized = True
+
+        time_steps = self._get_time_steps()
+        layer_indices = self._get_layer_order()
+
+        if self.config.block_method == "multi-block":
+            self._fit_multi_block(layer_indices, time_steps, warming)
+        elif self.config.block_method == "two-block":
+            super()._fit_two_block(layer_indices, time_steps, warming)
+        elif self.config.block_method == "distributed":
+            super()._fit_distributed(layer_indices, time_steps, warming)
+
+        return getattr(self, "last_metrics", {})
+
+
 def format_mb(memory_bytes):
-    """Converts bytes to Megabytes for clean printing."""
     return memory_bytes / (1024**2)
 
 
 def get_tensor_memory_log():
-    """Iterates through GC to find all CUDA tensors and logs their footprint."""
     tensor_logs = []
     total_tracked_mb = 0.0
 
@@ -580,7 +572,7 @@ def get_tensor_memory_log():
         try:
             if torch.is_tensor(obj) and obj.is_cuda:
                 size_mb = obj.element_size() * obj.nelement() / (1024**2)
-                if size_mb > 0:  # Filter out empty tensors
+                if size_mb > 0:
                     tensor_logs.append(
                         {
                             "shape": list(obj.size()),
@@ -594,6 +586,19 @@ def get_tensor_memory_log():
 
     tensor_logs = sorted(tensor_logs, key=lambda x: x["memory_mb"], reverse=True)
     return tensor_logs, total_tracked_mb
+
+
+def aggregate_metrics(metrics_list):
+    if not metrics_list:
+        return {}
+    keys = [k for k in metrics_list[0].keys() if k != "global_peak"]
+    aggregated = {}
+    for k in keys:
+        if "time" in k:
+            aggregated[f"total_{k}"] = sum(m[k] for m in metrics_list)
+        elif "mem" in k:
+            aggregated[f"peak_{k}_mb"] = format_mb(max(m[k] for m in metrics_list))
+    return aggregated
 
 
 if __name__ == "__main__":
@@ -622,6 +627,18 @@ if __name__ == "__main__":
 
     batch_sizes = [4, 8, 16, 32, 64, 128, 256]
 
+    frame_transform = transforms.Compose(
+        [
+            transforms.Denoise(filter_time=10000),
+            transforms.ToFrame(sensor_size=sensor_size, time_window=1000),
+        ]
+    )
+
+    trainset = tonic.datasets.NMNIST(
+        save_to="./data", transform=frame_transform, train=True
+    )
+    cached_trainset = DiskCachedDataset(trainset, cache_path="./cache/nmnist/train")
+
     for batch_size in batch_sizes:
         print(f"Processing batch size: {batch_size}")
         for repeat in range(n_repeats):
@@ -631,20 +648,6 @@ if __name__ == "__main__":
             torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
             torch.backends.cudnn.benchmark = False
-
-            frame_transform = transforms.Compose(
-                [
-                    transforms.Denoise(filter_time=10000),
-                    transforms.ToFrame(sensor_size=sensor_size, time_window=1000),
-                ]
-            )
-
-            trainset = tonic.datasets.NMNIST(
-                save_to="./data", transform=frame_transform, train=True
-            )
-            cached_trainset = DiskCachedDataset(
-                trainset, cache_path="./cache/nmnist/train"
-            )
 
             trainloader = DataLoader(
                 cached_trainset,
@@ -696,19 +699,29 @@ if __name__ == "__main__":
             torch.cuda.synchronize()
             mem_init = format_mb(torch.cuda.memory_allocated())
 
+            detailed_old_metrics = []
+
+            # 1. Run the warmup epoch and IGNORE its times
             torch.cuda.reset_peak_memory_stats()
             old_model.fit(data, targets_one_hot, warming=False)
             torch.cuda.synchronize()
             mem_peak_1 = format_mb(torch.cuda.max_memory_allocated())
 
-            torch.cuda.reset_peak_memory_stats()
+            # 2. START THE TOTAL TIMER NOW
             start_time = time.time()
+
+            # 3. Track the next 9 epochs
+            global_peak_all = 0
             for _ in range(9):
-                old_model.fit(data, targets_one_hot, warming=False)
+                m = old_model.fit(data, targets_one_hot, warming=False)
+                global_peak_all = max(global_peak_all, m["global_peak"])
+                detailed_old_metrics.append(m)
+
             torch.cuda.synchronize()
-            mem_peak_10 = format_mb(torch.cuda.max_memory_allocated())
+            mem_peak_10 = format_mb(global_peak_all)
             end_time = time.time()
 
+            old_breakdown = aggregate_metrics(detailed_old_metrics)
             tensor_details, tracked_mb = get_tensor_memory_log()
 
             metrics = {
@@ -717,6 +730,7 @@ if __name__ == "__main__":
                 "peak_10_epoch_mb": mem_peak_10,
                 "tracked_tensors_mb": tracked_mb,
                 "time": end_time - start_time,
+                "detailed_parts": old_breakdown,
                 "tensor_objects": tensor_details,
             }
 
@@ -769,7 +783,7 @@ if __name__ == "__main__":
                 )
 
             #################################################################
-            # UNROLLED (Default cache)
+            # UNROLLED (Default cache) - PROFILED
             #################################################################
             config = ADMM_Config(
                 init="zeros",
@@ -779,26 +793,36 @@ if __name__ == "__main__":
                 update_z_first=False,
                 block_method="multi-block",
             )
-            new_model = ADMM(
+            new_model = ProfiledADMM(
                 get_spff_layers(), loss_f=ADMM_SSE(), T=n_timesteps, config=config
             ).to(device)
 
             torch.cuda.synchronize()
             mem_init = format_mb(torch.cuda.memory_allocated())
 
+            detailed_new_metrics = []
+
+            # 1. Run the warmup epoch and IGNORE its times
             torch.cuda.reset_peak_memory_stats()
             new_model.fit(new_train_loader, warming=False)
             torch.cuda.synchronize()
             mem_peak_1 = format_mb(torch.cuda.max_memory_allocated())
 
-            torch.cuda.reset_peak_memory_stats()
+            # 2. START THE TOTAL TIMER NOW
             start_time = time.time()
+
+            # 3. Track the next 9 epochs
+            global_peak_all = 0
             for _ in range(9):
-                new_model.fit(new_train_loader, warming=False)
+                m = new_model.fit(new_train_loader, warming=False)
+                global_peak_all = max(global_peak_all, m["global_peak"])
+                detailed_new_metrics.append(m)
+
             torch.cuda.synchronize()
-            mem_peak_10 = format_mb(torch.cuda.max_memory_allocated())
+            mem_peak_10 = format_mb(global_peak_all)
             end_time = time.time()
 
+            new_breakdown = aggregate_metrics(detailed_new_metrics)
             tensor_details, tracked_mb = get_tensor_memory_log()
 
             metrics = {
@@ -807,6 +831,7 @@ if __name__ == "__main__":
                 "peak_10_epoch_mb": mem_peak_10,
                 "tracked_tensors_mb": tracked_mb,
                 "time": end_time - start_time,
+                "detailed_parts": new_breakdown,
                 "tensor_objects": tensor_details,
             }
             metrics_filename = f"paper/results/performance/framework/{batch_size}_{repeat}/results.json"
