@@ -46,6 +46,9 @@ def load_data(batch_sizes, base_path, model_type, n_repeats=5):
             else:
                 print(f"Warning: Missing data: {filepath}")
 
+        if len(data[bs]) < n_repeats:
+            print(f"Warning: Batch size {bs} has {len(data[bs])}/{n_repeats} trials.")
+
     return data
 
 
@@ -65,7 +68,7 @@ def main():
     n_repeats = 5
 
     # ============================================================
-    # LOAD DATA
+    # LOAD ALL TRIALS
     # ============================================================
 
     old_data = load_data(
@@ -82,7 +85,7 @@ def main():
         n_repeats,
     )
 
-    # Only use batch sizes where all 5 trials exist
+    # Only keep batch sizes for which both methods have all trials
     valid_batches = [
         bs
         for bs in batch_sizes
@@ -97,26 +100,38 @@ def main():
     print(f"Using {n_repeats} trials per batch size.")
 
     # ============================================================
-    # CALCULATE MEANS AND STANDARD DEVIATIONS
+    # EXTRACT MEAN + STD FOR EACH BATCH SIZE
     # ============================================================
 
-    old_time_mean = []
-    old_time_std = []
+    old_time_params_mean = []
+    old_time_params_std = []
 
-    new_time_mean = []
-    new_time_std = []
+    old_time_states_mean = []
+    old_time_states_std = []
 
-    old_mem_1_mean = []
-    old_mem_1_std = []
+    old_time_total_mean = []
+    old_time_total_std = []
 
-    new_mem_1_mean = []
-    new_mem_1_std = []
+    new_time_params_mean = []
+    new_time_params_std = []
 
-    old_mem_10_mean = []
-    old_mem_10_std = []
+    new_time_states_mean = []
+    new_time_states_std = []
 
-    new_mem_10_mean = []
-    new_mem_10_std = []
+    new_time_total_mean = []
+    new_time_total_std = []
+
+    old_mem_weights_mean = []
+    old_mem_weights_std = []
+
+    old_mem_states_mean = []
+    old_mem_states_std = []
+
+    new_mem_cov_weights_mean = []
+    new_mem_cov_weights_std = []
+
+    new_mem_states_mean = []
+    new_mem_states_std = []
 
     for bs in valid_batches:
         old_trials = old_data[bs]
@@ -126,64 +141,94 @@ def main():
         # Execution time
         # --------------------------------------------------------
 
-        old_times = [trial["time"] for trial in old_trials]
+        old_params = [d["detailed_parts"]["total_weight_time"] for d in old_trials]
 
-        new_times = [trial["time"] for trial in new_trials]
+        old_states = [
+            d["detailed_parts"]["total_act_time"] + d["detailed_parts"]["total_z_time"]
+            for d in old_trials
+        ]
 
-        mean, std = mean_std(old_times)
-        old_time_mean.append(mean)
-        old_time_std.append(std)
+        old_total = [p + s for p, s in zip(old_params, old_states)]
 
-        mean, std = mean_std(new_times)
-        new_time_mean.append(mean)
-        new_time_std.append(std)
+        new_params = [
+            d["detailed_parts"]["total_phase1_cov_time"]
+            + d["detailed_parts"]["total_phase2_weight_time"]
+            for d in new_trials
+        ]
+
+        new_states = [
+            d["detailed_parts"]["total_phase3_state_time"] for d in new_trials
+        ]
+
+        new_total = [p + s for p, s in zip(new_params, new_states)]
+
+        mean, std = mean_std(old_params)
+        old_time_params_mean.append(mean)
+        old_time_params_std.append(std)
+
+        mean, std = mean_std(old_states)
+        old_time_states_mean.append(mean)
+        old_time_states_std.append(std)
+
+        mean, std = mean_std(old_total)
+        old_time_total_mean.append(mean)
+        old_time_total_std.append(std)
+
+        mean, std = mean_std(new_params)
+        new_time_params_mean.append(mean)
+        new_time_params_std.append(std)
+
+        mean, std = mean_std(new_states)
+        new_time_states_mean.append(mean)
+        new_time_states_std.append(std)
+
+        mean, std = mean_std(new_total)
+        new_time_total_mean.append(mean)
+        new_time_total_std.append(std)
 
         # --------------------------------------------------------
-        # Peak memory after first epoch
+        # Peak memory
         # --------------------------------------------------------
 
-        old_mem_1 = [trial["peak_1_epoch_mb"] for trial in old_trials]
+        old_mem_weights = [
+            d["detailed_parts"]["peak_weight_mem_mb"] for d in old_trials
+        ]
 
-        new_mem_1 = [trial["peak_1_epoch_mb"] for trial in new_trials]
+        old_mem_states = [
+            max(
+                d["detailed_parts"]["peak_act_mem_mb"],
+                d["detailed_parts"]["peak_z_mem_mb"],
+            )
+            for d in old_trials
+        ]
 
-        mean, std = mean_std(old_mem_1)
-        old_mem_1_mean.append(mean)
-        old_mem_1_std.append(std)
+        new_mem_cov_weights = [
+            max(
+                d["detailed_parts"]["peak_phase1_cov_mem_mb"],
+                d["detailed_parts"]["peak_phase2_weight_mem_mb"],
+            )
+            for d in new_trials
+        ]
 
-        mean, std = mean_std(new_mem_1)
-        new_mem_1_mean.append(mean)
-        new_mem_1_std.append(std)
+        new_mem_states = [
+            d["detailed_parts"]["peak_phase3_state_mem_mb"] for d in new_trials
+        ]
 
-        # --------------------------------------------------------
-        # Peak memory after 10 epochs
-        # --------------------------------------------------------
+        mean, std = mean_std(old_mem_weights)
+        old_mem_weights_mean.append(mean)
+        old_mem_weights_std.append(std)
 
-        old_mem_10 = [trial["peak_10_epoch_mb"] for trial in old_trials]
+        mean, std = mean_std(old_mem_states)
+        old_mem_states_mean.append(mean)
+        old_mem_states_std.append(std)
 
-        new_mem_10 = [trial["peak_10_epoch_mb"] for trial in new_trials]
+        mean, std = mean_std(new_mem_cov_weights)
+        new_mem_cov_weights_mean.append(mean)
+        new_mem_cov_weights_std.append(std)
 
-        mean, std = mean_std(old_mem_10)
-        old_mem_10_mean.append(mean)
-        old_mem_10_std.append(std)
-
-        mean, std = mean_std(new_mem_10)
-        new_mem_10_mean.append(mean)
-        new_mem_10_std.append(std)
-
-    # ============================================================
-    # PRINT RESULTS
-    # ============================================================
-
-    print("\nResults:")
-    print("-" * 70)
-
-    for i, bs in enumerate(valid_batches):
-        print(
-            f"Batch {bs:3d} | "
-            f"Time: "
-            f"Old={old_time_mean[i]:.3f} ± {old_time_std[i]:.3f} s | "
-            f"New={new_time_mean[i]:.3f} ± {new_time_std[i]:.3f} s"
-        )
+        mean, std = mean_std(new_mem_states)
+        new_mem_states_mean.append(mean)
+        new_mem_states_std.append(std)
 
     # ============================================================
     # PLOTTING
@@ -192,132 +237,142 @@ def main():
     fig, (ax1, ax2) = plt.subplots(1, 2)
 
     x = np.arange(len(valid_batches))
+    width = 0.35
 
-    # ------------------------------------------------------------
-    # COLORS / HATCHES
-    # ------------------------------------------------------------
-
-    old_color = "dimgray"
-    new_color = "white"
+    # IEEE grayscale / hatch styling
+    c_sota_param = "dimgray"
+    c_sota_state = "lightgray"
+    c_new_param = "black"
+    c_new_state = "white"
     edge_color = "black"
 
     # ============================================================
-    # (A) EXECUTION TIME
+    # 1. EXECUTION TIME
     # ============================================================
 
-    width = 0.35
-
+    # Perin et al. -- Parameters
     ax1.bar(
         x - width / 2,
-        old_time_mean,
+        old_time_params_mean,
         width,
-        yerr=old_time_std,
-        capsize=3,
-        error_kw={"elinewidth": 0.8},
-        label="Perin et al.",
-        color=old_color,
+        label="Perin et al.: Parameters",
+        color=c_sota_param,
         edgecolor=edge_color,
     )
 
+    # Perin et al. -- States
+    # Error bar is placed on the TOTAL height of the stack.
     ax1.bar(
-        x + width / 2,
-        new_time_mean,
+        x - width / 2,
+        old_time_states_mean,
         width,
-        yerr=new_time_std,
+        bottom=old_time_params_mean,
+        label="Perin et al.: States",
+        color=c_sota_state,
+        edgecolor=edge_color,
+        yerr=old_time_total_std,
         capsize=3,
         error_kw={"elinewidth": 0.8},
-        label="Framework",
-        color=new_color,
+    )
+
+    # Framework -- Parameters
+    ax1.bar(
+        x + width / 2,
+        new_time_params_mean,
+        width,
+        label="Framework: Parameters",
+        color=c_new_param,
+        edgecolor=edge_color,
+    )
+
+    # Framework -- States
+    # Error bar is placed on the TOTAL height of the stack.
+    ax1.bar(
+        x + width / 2,
+        new_time_states_mean,
+        width,
+        bottom=new_time_params_mean,
+        label="Framework: States",
+        color=c_new_state,
         edgecolor=edge_color,
         hatch="////",
+        yerr=new_time_total_std,
+        capsize=3,
+        error_kw={"elinewidth": 0.8},
     )
 
     ax1.set_ylabel("Execution Time (s)")
     ax1.set_xlabel("Batch Size")
-    ax1.set_title("(a) Execution Time", size=8)
-
+    ax1.set_title("(a) Execution Time Breakdown", size=8)
     ax1.set_xticks(x)
     ax1.set_xticklabels(valid_batches)
-
-    ax1.grid(
-        axis="y",
-        linestyle=":",
-        alpha=0.6,
-        color="gray",
-    )
+    ax1.grid(axis="y", linestyle=":", alpha=0.6, color="gray")
 
     # ============================================================
-    # (B) PEAK MEMORY
+    # 2. PEAK MEMORY
     # ============================================================
 
-    width_mem = 0.18
+    width_mem = 0.2
 
-    # Old - epoch 1
+    # Perin et al. -- Parameter memory
     ax2.bar(
-        x - 1.5 * width_mem,
-        old_mem_1_mean,
+        x - width_mem * 1.5,
+        old_mem_weights_mean,
         width_mem,
-        yerr=old_mem_1_std,
+        label="SOTA: Parameter Peak Mem",
+        color=c_sota_param,
+        edgecolor=edge_color,
+        yerr=old_mem_weights_std,
         capsize=3,
         error_kw={"elinewidth": 0.8},
-        label="Perin et al.: Epoch 1",
-        color=old_color,
-        edgecolor=edge_color,
     )
 
-    # Old - epoch 10
+    # Perin et al. -- State memory
     ax2.bar(
-        x - 0.5 * width_mem,
-        old_mem_10_mean,
+        x - width_mem * 0.5,
+        old_mem_states_mean,
         width_mem,
-        yerr=old_mem_10_std,
+        label="SOTA: State Peak Mem",
+        color=c_sota_state,
+        edgecolor=edge_color,
+        yerr=old_mem_states_std,
         capsize=3,
         error_kw={"elinewidth": 0.8},
-        label="Perin et al.: Epoch 10",
-        color="lightgray",
-        edgecolor=edge_color,
     )
 
-    # New - epoch 1
+    # Framework -- Parameter memory
     ax2.bar(
-        x + 0.5 * width_mem,
-        new_mem_1_mean,
+        x + width_mem * 0.5,
+        new_mem_cov_weights_mean,
         width_mem,
-        yerr=new_mem_1_std,
+        label="Framework: Parameter Peak Mem",
+        color=c_new_param,
+        edgecolor=edge_color,
+        yerr=new_mem_cov_weights_std,
         capsize=3,
         error_kw={"elinewidth": 0.8},
-        label="Framework: Epoch 1",
-        color="white",
-        edgecolor=edge_color,
     )
 
-    # New - epoch 10
+    # Framework -- State memory
     ax2.bar(
-        x + 1.5 * width_mem,
-        new_mem_10_mean,
+        x + width_mem * 1.5,
+        new_mem_states_mean,
         width_mem,
-        yerr=new_mem_10_std,
-        capsize=3,
-        error_kw={"elinewidth": 0.8},
-        label="Framework: Epoch 10",
-        color="white",
+        label="Framework: State Peak Mem",
+        color=c_new_state,
         edgecolor=edge_color,
         hatch="////",
+        yerr=new_mem_states_std,
+        capsize=3,
+        error_kw={"elinewidth": 0.8},
     )
 
     ax2.set_ylabel("Peak Memory (MB)")
     ax2.set_xlabel("Batch Size")
-    ax2.set_title("(b) Peak Memory", size=8)
-
+    ax2.set_title("(b) Peak Memory Comparison", size=8)
     ax2.set_xticks(x)
     ax2.set_xticklabels(valid_batches)
-
-    ax2.grid(
-        axis="y",
-        linestyle=":",
-        alpha=0.6,
-        color="gray",
-    )
+    ax2.grid(axis="y", linestyle=":", alpha=0.6, color="gray")
 
     # ============================================================
     # CLEAN UP
@@ -328,14 +383,21 @@ def main():
         ax.spines["right"].set_visible(False)
 
     # ============================================================
-    # LEGEND
+    # SHARED LEGEND
     # ============================================================
 
-    handles1, labels1 = ax1.get_legend_handles_labels()
+    handles, _ = ax1.get_legend_handles_labels()
+
+    shared_labels = [
+        "Perin et al.: Parameters",
+        "Perin et al.: States",
+        "Framework: Parameters",
+        "Framework: States",
+    ]
 
     fig.legend(
-        handles1,
-        labels1,
+        handles,
+        shared_labels,
         loc="center",
         bbox_to_anchor=(0.5, 0.92),
         ncol=2,
@@ -359,17 +421,11 @@ def main():
     # SAVE
     # ============================================================
 
-    plot_filepath = os.path.join(
-        base_path,
-        "loop_parts_benchmark_plot.pdf",
-    )
+    plot_filepath = "paper/results/Figure_3.pdf"
 
-    plt.savefig(
-        plot_filepath,
-        format="pdf",
-    )
+    plt.savefig(plot_filepath, format="pdf")
 
-    print(f"\nPlot successfully saved to: {plot_filepath}")
+    print(f"Plot successfully saved to: {plot_filepath}")
 
     plt.show()
 
