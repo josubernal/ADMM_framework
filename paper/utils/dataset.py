@@ -9,6 +9,14 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 
+def collate_static(batch, model_name):
+    data, targets = torch.utils.data.default_collate(batch)
+
+    data = format_images(data, model_name)
+
+    return data, targets
+
+
 def collate_spiking(batch, model_name, n_timesteps):
     data, targets = tonic.collation.PadTensors()(batch)
 
@@ -39,31 +47,38 @@ def format_images(images, model_name):
 def get_dataset_static_gd(
     model_name,
     batch_size,
-    device=None,
 ):
     transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
+        [
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,)),
+        ]
     )
 
-    mnist_train = datasets.MNIST(
-        root="./data", train=True, download=True, transform=transform
+    trainset = datasets.MNIST(
+        root="./data",
+        train=True,
+        download=True,
+        transform=transform,
     )
-    dataloader = torch.utils.data.DataLoader(
-        mnist_train, batch_size=batch_size, shuffle=True
+
+    train_loader = DataLoader(
+        trainset,
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=partial(
+            collate_static,
+            model_name=model_name,
+        ),
     )
-    images, labels = next(iter(dataloader))
-    images = format_images(images, model_name)
-
-    images = images.to(device).float()
-    labels = labels.to(device)
-
-    return images, labels
+    return train_loader
 
 
 def get_dataset_static_admm(
     model_name,
     batch_size,
     device=None,
+    seed=64,
 ):
 
     transform = transforms.Compose(
@@ -82,6 +97,7 @@ def get_dataset_static_admm(
         batch_size=batch_size,
         shuffle=True,
         drop_last=True,
+        generator=torch.Generator().manual_seed(seed),
     )
     data, targets = next(iter(train_loader))
     data = format_images(data, model_name)

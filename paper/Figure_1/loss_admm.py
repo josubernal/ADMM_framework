@@ -109,9 +109,6 @@ for loss_f in [
                 m.save_metrics()
                 elapsed_time = time.time() - start_time
                 admm_times.append(elapsed_time)
-                print(
-                    f"Epoch {epoch} | W_norm: {admm_model.layers[0].W.norm().item():.2f}"
-                )
                 print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
 
     ############################
@@ -124,7 +121,7 @@ for loss_f in [
     # ADMM Metrics
     metrics["admm_time"] = admm_times
 
-    metrics_filename = f"/paper/results/admm-spiking-{loss_f}/results.json"
+    metrics_filename = f"/paper/results/admm_spiking_feedforward_{loss_f}/results.json"
     os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
     with open(metrics_filename, "w") as f:

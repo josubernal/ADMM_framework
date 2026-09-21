@@ -27,22 +27,7 @@ lr_gd = config.getfloat("config", "learning_rate_gd")
 lr_adam = config.getfloat("config", "learning_rate_adam")
 
 
-ff_rho = config.getfloat("config", "ff_rho")
-ff_beta = config.getfloat("config", "ff_beta")
-conv_rho = config.getfloat("config", "conv_rho")
-conv_beta = config.getfloat("config", "conv_beta")
-
-
-ffdeltas = config.getfloat("config", "ffdeltas")
-ffthetas = config.getfloat("config", "ffthetas")
-convdeltas = config.getfloat("config", "convdeltas")
-convthetas = config.getfloat("config", "convthetas")
 input_size = 784
-n_timesteps = config.getint("config", "n_timesteps")
-
-
-def calc_spatial_out(size_in, k, p, s):
-    return ((size_in + 2 * p - k) // s) + 1
 
 
 ########################################
@@ -116,64 +101,65 @@ for model_name in model_types:
 
     #########################################
     # ADAM GRADIENT DESCENT TRAINING LOOP
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.MSELoss()
     # DATA
-    images, labels = get_dataset_static_gd(
-        model_name=model_name, batch_size=batch_size_static, device=device
+    train_loader = get_dataset_static_gd(
+        model_name=model_name, batch_size=batch_size_static
     )
-
-    if labels.dim() > 1:
-        labels = labels.argmax(dim=1)
 
     optimizer = optim.Adam(model.parameters(), lr=lr_adam)
 
     adam_accs = []
     adam_losses = []
-    adam_frs = []
     adam_f1s = []
     adam_times = []
 
     print("\nTraining model with gradient descent...")
     start_time = time.time()
     for epoch in range(epochs):
-        # Extract outputs and conditionally extract firing rates
+        for images, labels in train_loader:
+            images = images.to(device)
+            labels = labels.to(device)
 
-        outputs = model(images)
-        frs = [float("nan")]
+            batch_targets = torch.nn.functional.one_hot(
+                labels.long(),
+                num_classes=10,
+            ).float()
 
-        loss = criterion(outputs, labels.long())
+            outputs = model(images)
 
-        _, predictions = torch.max(outputs, 1)
-        correct = (predictions == labels).sum().item()
-        accuracy = (correct / labels.size(0)) * 100
+            loss = criterion(outputs, batch_targets)
 
-        # F1 Score Calculation
-        classes = torch.unique(torch.cat((labels, predictions)))
-        f1_sum = 0.0
+            _, predictions = torch.max(outputs, 1)
+            correct = (predictions == labels).sum().item()
+            accuracy = (correct / labels.size(0)) * 100
 
-        for c in classes:
-            # Calculate True Positives, False Positives, and False Negatives for class 'c'
-            tp = ((predictions == c) & (labels == c)).sum().float()
-            fp = ((predictions == c) & (labels != c)).sum().float()
-            fn = ((predictions != c) & (labels == c)).sum().float()
+            # F1 Score Calculation
+            classes = torch.unique(torch.cat((labels, predictions)))
+            f1_sum = 0.0
 
-            # Calculate F1 for this class (1e-8 is an epsilon to prevent division by zero)
-            f1_sum += (2 * tp) / (2 * tp + fp + fn + 1e-8)
+            for c in classes:
+                # Calculate True Positives, False Positives, and False Negatives for class 'c'
+                tp = ((predictions == c) & (labels == c)).sum().float()
+                fp = ((predictions == c) & (labels != c)).sum().float()
+                fn = ((predictions != c) & (labels == c)).sum().float()
 
-        # Macro F1 average across all found classes
-        f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
+                # Calculate F1 for this class (1e-8 is an epsilon to prevent division by zero)
+                f1_sum += (2 * tp) / (2 * tp + fp + fn + 1e-8)
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            # Macro F1 average across all found classes
+            f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
 
-        # Append metrics
-        adam_accs.append(accuracy)
-        adam_losses.append(loss.item())
-        adam_frs.append(frs)
-        adam_f1s.append(f1)
-        elapsed_time = time.time() - start_time
-        adam_times.append(elapsed_time)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            # Append metrics
+            adam_accs.append(accuracy)
+            adam_losses.append(loss.item())
+            adam_f1s.append(f1)
+            elapsed_time = time.time() - start_time
+            adam_times.append(elapsed_time)
 
         print(f"Step {epoch + 1} | Loss: {loss.item():.4f} | Acc: {accuracy:.4f}")
 
@@ -181,49 +167,55 @@ for model_name in model_types:
     # GRADIENT DESCENT TRAINING LOOP (Full-Batch SGD)
     match model_name:
         case "feedforward":
-            model_sgd = GDFFNet().to(device)
+            model = GDFFNet().to(device)
         case "conv":
-            model_sgd = GDConvNet().to(device)
+            model = GDConvNet().to(device)
 
-    optimizer_sgd = optim.SGD(model_sgd.parameters(), lr=lr_gd)
+    optimizer = optim.SGD(model.parameters(), lr=lr_gd)
 
     sgd_accs = []
     sgd_losses = []
-    sgd_frs = []
     sgd_f1s = []
     sgd_times = []
 
     print("\nTraining model with bare SGD (Full-batch)...")
     start_time = time.time()
     for epoch in range(epochs):
-        outputs = model_sgd(images)
-        frs = [float("nan")]
+        for images, labels in train_loader:
+            images = images.to(device)
+            labels = labels.to(device)
 
-        loss = criterion(outputs, labels.long())
+            batch_targets = torch.nn.functional.one_hot(
+                labels.long(),
+                num_classes=10,
+            ).float()
 
-        _, predictions = torch.max(outputs, 1)
-        correct = (predictions == labels).sum().item()
-        accuracy = (correct / labels.size(0)) * 100
+            outputs = model(images)
 
-        classes = torch.unique(torch.cat((labels, predictions)))
-        f1_sum = 0.0
-        for c in classes:
-            tp = ((predictions == c) & (labels == c)).sum().float()
-            fp = ((predictions == c) & (labels != c)).sum().float()
-            fn = ((predictions != c) & (labels == c)).sum().float()
-            f1_sum += (2 * tp) / (2 * tp + fp + fn + 1e-8)
+            loss = criterion(outputs, batch_targets)
 
-        f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
+            _, predictions = torch.max(outputs, 1)
+            correct = (predictions == labels).sum().item()
+            accuracy = (correct / labels.size(0)) * 100
 
-        optimizer_sgd.zero_grad()
-        loss.backward()
-        optimizer_sgd.step()
+            classes = torch.unique(torch.cat((labels, predictions)))
+            f1_sum = 0.0
+            for c in classes:
+                tp = ((predictions == c) & (labels == c)).sum().float()
+                fp = ((predictions == c) & (labels != c)).sum().float()
+                fn = ((predictions != c) & (labels == c)).sum().float()
+                f1_sum += (2 * tp) / (2 * tp + fp + fn + 1e-8)
 
-        sgd_accs.append(accuracy)
-        sgd_losses.append(loss.item())
-        sgd_frs.append(frs)
-        sgd_f1s.append(f1)
-        sgd_times.append(time.time() - start_time)
+            f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            sgd_accs.append(accuracy)
+            sgd_losses.append(loss.item())
+            sgd_f1s.append(f1)
+            sgd_times.append(time.time() - start_time)
 
         print(f"Step {epoch + 1} | Loss: {loss.item():.4f} | Acc: {accuracy:.4f}")
 
@@ -237,19 +229,15 @@ for model_name in model_types:
     # Full-Batch adam Metrics
     metrics["adam_accuracy"] = adam_accs
     metrics["adam_loss"] = adam_losses
-    metrics["adam_firing_rate"] = adam_frs
     metrics["adam_time"] = adam_times
     metrics["adam_f1"] = adam_f1s
 
     metrics["sgd_accuracy"] = sgd_accs
     metrics["sgd_loss"] = sgd_losses
-    metrics["sgd_firing_rate"] = sgd_frs
     metrics["sgd_time"] = sgd_times
     metrics["sgd_f1"] = sgd_f1s
 
-    metrics_filename = (
-        f"paper/results/admm_vs_gd/static-full-batch/{model_name}/results.json"
-    )
+    metrics_filename = f"paper/results/full_batch_{model_name}/results.json"
     os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
     with open(metrics_filename, "w") as f:

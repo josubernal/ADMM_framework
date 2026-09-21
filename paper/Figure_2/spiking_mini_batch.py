@@ -381,9 +381,7 @@ for model_name in model_types:
     metrics["sgd_time"] = sgd_times
     metrics["sgd_f1"] = sgd_f1s
 
-    metrics_filename = (
-        f"paper/results/admm_vs_gd/spiking-mini-batch/{model_name}/results.json"
-    )
+    metrics_filename = f"paper/results/mini_batch_{model_name}/results.json"
     os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
     with open(metrics_filename, "w") as f:

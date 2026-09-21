@@ -28,22 +28,8 @@ lr_adam_mini = config.getfloat("config", "learning_rate_adam_mini")
 
 minibatch_size_static = config.getint("config", "minibatch_size_static")
 
-ff_rho = config.getfloat("config", "ff_rho")
-ff_beta = config.getfloat("config", "ff_beta")
-conv_rho = config.getfloat("config", "conv_rho")
-conv_beta = config.getfloat("config", "conv_beta")
 
-
-ffdeltas = config.getfloat("config", "ffdeltas")
-ffthetas = config.getfloat("config", "ffthetas")
-convdeltas = config.getfloat("config", "convdeltas")
-convthetas = config.getfloat("config", "convthetas")
 input_size = 784
-n_timesteps = config.getint("config", "n_timesteps")
-
-
-def calc_spatial_out(size_in, k, p, s):
-    return ((size_in + 2 * p - k) // s) + 1
 
 
 ########################################
@@ -118,12 +104,9 @@ for model_name in model_types:
     batch_size = minibatch_size_static
 
     # DATA
-    images, labels = get_dataset_static_gd(
+    train_loader = get_dataset_static_gd(
         model_name=model_name,
         batch_size=batch_size,
-        device=device,
-        n_timesteps=n_timesteps,
-        seed=seed,
     )
 
     #########################################
@@ -143,11 +126,9 @@ for model_name in model_types:
 
     # Determine which dimension holds the batch size
     batch_dim = 0
-    total_samples = images.size(batch_dim)
 
     mini_adam_accs = []
     mini_adam_losses = []
-    mini_adam_frs = []
     mini_adam_f1s = []
     mini_adam_times = []
 
@@ -159,39 +140,24 @@ for model_name in model_types:
         epoch_total = 0
         all_preds = []
         all_labels = []
-        epoch_frs = []
 
-        # Create a randomized permutation of indices for shuffling data each epoch
-        indices = torch.randperm(total_samples)
-
-        # Slice the existing batch into mini-batches
-        for start_idx in range(0, total_samples, minibatch_size_static):
-            end_idx = min(start_idx + minibatch_size_static, total_samples)
-            batch_indices = indices[start_idx:end_idx]
-
-            # Slice appropriately based on tensor geometry
-            if batch_dim == 1:
-                batch_images = images[:, batch_indices, :]
-            else:
-                batch_images = images[batch_indices, :]
-
-            batch_labels = labels[batch_indices].long()
-
-            outputs = model_mini(batch_images)
+        for batch_images, batch_labels in train_loader:
+            batch_images = batch_images.to(device)
+            batch_labels = batch_labels.to(device)
 
             batch_targets = torch.nn.functional.one_hot(
-                batch_labels,
+                batch_labels.long(),
                 num_classes=10,
             ).float()
 
+            outputs = model_mini(batch_images)
+
             loss = criterion(outputs, batch_targets)
 
-            epoch_frs.append(float("nan"))
-
-            # Backward pass
             optimizer_mini.zero_grad()
             loss.backward()
             optimizer_mini.step()
+            epoch_loss += loss.item() * batch_labels.size(0)
 
             # Accumulate metrics
             _, predictions = torch.max(outputs, 1)
@@ -222,17 +188,8 @@ for model_name in model_types:
 
         epoch_f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
 
-        import math
-
-        avg_fr = (
-            float("nan")
-            if math.isnan(epoch_frs[0])
-            else sum(epoch_frs) / len(epoch_frs)
-        )
-
         mini_adam_accs.append(epoch_accuracy)
         mini_adam_losses.append(avg_epoch_loss)
-        mini_adam_frs.append([avg_fr])
         mini_adam_f1s.append(epoch_f1)
 
         elapsed_time = time.time() - start_time
@@ -246,26 +203,17 @@ for model_name in model_types:
     # MINI-BATCH GRADIENT DESCENT TRAINING LOOP (Mini-Batch SGD)
 
     print("\nTraining model with bare SGD (Mini-batch)...")
-    train_loader = get_dataset_static_gd(
-        model_name=model_name,
-        batch_size=minibatch_size_static,
-        device=device,
-        seed=seed,
-    )
 
     match model_name:
         case "feedforward":
-            model_mini_sgd = GDFFNet().to(device)
+            model_mini = GDFFNet().to(device)
         case "conv":
-            model_mini_sgd = GDConvNet().to(device)
+            model_mini = GDConvNet().to(device)
 
-    optimizer_mini_sgd = optim.SGD(model_mini_sgd.parameters(), lr=lr_gd_mini)
-
-    total_samples = images.size(batch_dim)
+    optimizer_mini = optim.SGD(model_mini.parameters(), lr=lr_gd_mini)
 
     mini_sgd_accs = []
     mini_sgd_losses = []
-    mini_sgd_frs = []
     mini_sgd_f1s = []
     mini_sgd_times = []
 
@@ -277,34 +225,23 @@ for model_name in model_types:
         epoch_total = 0
         all_preds = []
         all_labels = []
-        epoch_frs = []
 
-        indices = torch.randperm(total_samples)
-
-        for start_idx in range(0, total_samples, minibatch_size_static):
-            end_idx = min(start_idx + minibatch_size_static, total_samples)
-            batch_indices = indices[start_idx:end_idx]
-
-            if batch_dim == 1:
-                batch_images = images[:, batch_indices, :]
-            else:
-                batch_images = images[batch_indices, :]
-
-            batch_labels = labels[batch_indices].long()
-
-            outputs = model_mini(batch_images)
+        for batch_images, batch_labels in train_loader:
+            batch_images = batch_images.to(device)
+            batch_labels = batch_labels.to(device)
 
             batch_targets = torch.nn.functional.one_hot(
-                batch_labels,
+                batch_labels.long(),
                 num_classes=10,
             ).float()
 
-            loss = criterion(outputs, batch_targets)
-            epoch_frs.append(float("nan"))
+            outputs = model_mini(batch_images)
 
-            optimizer_mini_sgd.zero_grad()
+            loss = criterion(outputs, batch_targets)
+
+            optimizer_mini.zero_grad()
             loss.backward()
-            optimizer_mini_sgd.step()
+            optimizer_mini.step()
 
             epoch_loss += loss.item() * batch_images.size(batch_dim)
             _, predictions = torch.max(outputs, 1)
@@ -333,17 +270,8 @@ for model_name in model_types:
 
         epoch_f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
 
-        import math
-
-        avg_fr = (
-            float("nan")
-            if math.isnan(epoch_frs[0])
-            else sum(epoch_frs) / len(epoch_frs)
-        )
-
         mini_sgd_accs.append(epoch_accuracy)
         mini_sgd_losses.append(avg_epoch_loss)
-        mini_sgd_frs.append([avg_fr])
         mini_sgd_f1s.append(epoch_f1)
         mini_sgd_times.append(time.time() - start_time)
 
@@ -359,19 +287,15 @@ for model_name in model_types:
 
     metrics["mini_adam_accuracy"] = mini_adam_accs
     metrics["mini_adam_loss"] = mini_adam_losses
-    metrics["mini_adam_firing_rate"] = mini_adam_frs
     metrics["mini_adam_time"] = mini_adam_times
     metrics["mini_adam_f1"] = mini_adam_f1s
 
     metrics["mini_sgd_accuracy"] = mini_sgd_accs
     metrics["mini_sgd_loss"] = mini_sgd_losses
-    metrics["mini_sgd_firing_rate"] = mini_sgd_frs
     metrics["mini_sgd_time"] = mini_sgd_times
     metrics["mini_sgd_f1"] = mini_sgd_f1s
 
-    metrics_filename = (
-        f"paper/results/admm_vs_gd/static-mini-batch/{model_name}/results.json"
-    )
+    metrics_filename = f"paper/results/mini_batch_{model_name}/results.json"
     os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
     with open(metrics_filename, "w") as f:
