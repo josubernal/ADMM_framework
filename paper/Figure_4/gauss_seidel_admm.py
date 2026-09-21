@@ -6,7 +6,7 @@ import time
 import torch
 
 from src.admm import (
-    ADMM_Hinge,
+    ADMM_CrossEntropy_Taylor,
     ADMM_Metrics,
 )
 
@@ -59,10 +59,10 @@ train_loader = get_dataset_spiking_admm(
 admm_model = get_model(
     model_name="spiking-feedforward",
     init="s-uniform",
-    train_method="decoupled",
+    train_method="unrolled",
     time_order="backwards",
     layer_order="backwards",
-    loss=ADMM_Hinge(),
+    loss=ADMM_CrossEntropy_Taylor(),
     z_first=True,
     block_method="two-block",
 )
@@ -87,14 +87,14 @@ for epoch in range(epochs + 1):
 ############################
 # SAVING RESULTS AND PLOTTING
 metrics = m.get_dic()
-metrics["loss_function"] = "ADMM_Hinge"
+metrics["method"] = "Gauss-Seidel"
 metrics["epochs"] = epochs
 metrics["seed"] = seed
 
 # ADMM Metrics
 metrics["admm_time"] = admm_times
 
-metrics_filename = "paper/results/admm_spiking_feedforward_hinge/results.json"
+metrics_filename = "paper/results/admm_spiking_feedforward_gauss_seidel/results.json"
 os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
 with open(metrics_filename, "w") as f:

@@ -95,7 +95,7 @@ metrics["seed"] = seed
 metrics["admm_time"] = admm_times
 
 metrics_filename = (
-    "/paper/results/admm_spiking_feedforward_cross_entropy_taylor/results.json"
+    "paper/results/admm_spiking_feedforward_cross_entropy_taylor/results.json"
 )
 os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 

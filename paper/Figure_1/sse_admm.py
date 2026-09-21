@@ -94,7 +94,7 @@ metrics["seed"] = seed
 # ADMM Metrics
 metrics["admm_time"] = admm_times
 
-metrics_filename = "/paper/results/admm_spiking_feedforward_sse/results.json"
+metrics_filename = "paper/results/admm_spiking_feedforward_sse/results.json"
 os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
 with open(metrics_filename, "w") as f:
