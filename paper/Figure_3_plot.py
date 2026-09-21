@@ -7,279 +7,369 @@ import numpy as np
 # IEEE publication standard settings
 plt.rcParams.update(
     {
-        "font.family": "serif",  # IEEE uses serif fonts (usually Times)
-        "font.size": 8,  # Standard text size for legends/ticks
-        "axes.labelsize": 8,  # Axis labels slightly larger
+        "font.family": "serif",
+        "font.size": 8,
+        "axes.labelsize": 8,
         "xtick.labelsize": 8,
         "ytick.labelsize": 8,
         "legend.fontsize": 8,
-        "figure.figsize": (
-            7.16,
-            3.0,
-        ),  # 7.16 inches fits exactly across a two-column IEEE page
-        "figure.dpi": 300,  # High resolution for print
-        "hatch.linewidth": 0.5,  # Keep hatch lines thin and clean
+        "figure.figsize": (7.16, 3.0),
+        "figure.dpi": 300,
+        "hatch.linewidth": 0.5,
     }
 )
 
 
-def load_data(batch_sizes, base_path, model_type):
-    """Loads metrics from JSON files for a given model type."""
-    data = []
+def load_data(batch_sizes, base_path, model_type, n_repeats=5):
+    """
+    Load all repeated measurements for each batch size.
+
+    Expected structure:
+        base_path/model_type/{batch_size}_{repeat}/results.json
+    """
+    data = {}
+
     for bs in batch_sizes:
-        filepath = os.path.join(base_path, f"{model_type}", str(bs), "results.json")
-        if os.path.exists(filepath):
-            with open(filepath, "r") as f:
-                data.append((bs, json.load(f)))
-        else:
-            print(f"Warning: Missing data for {model_type} at batch size {bs}")
+        data[bs] = []
+
+        for repeat in range(n_repeats):
+            filepath = os.path.join(
+                base_path,
+                model_type,
+                f"{bs}_{repeat}",
+                "results.json",
+            )
+
+            if os.path.exists(filepath):
+                with open(filepath, "r") as f:
+                    data[bs].append(json.load(f))
+            else:
+                print(f"Warning: Missing data: {filepath}")
+
     return data
 
 
+def mean_std(values):
+    """Return mean and sample standard deviation."""
+    values = np.asarray(values, dtype=float)
+
+    if len(values) == 1:
+        return values[0], 0.0
+
+    return np.mean(values), np.std(values, ddof=1)
+
+
 def main():
-    # Setup paths and batch sizes
-    base_path = "experiments/4_Performance_benchmark/results/detailed"
+    base_path = "paper/results/performance"
     batch_sizes = [4, 8, 16, 32, 64, 128, 256]
+    n_repeats = 5
 
-    # Load data
-    old_data = load_data(batch_sizes, base_path, "Old")
-    new_data = load_data(batch_sizes, base_path, "New")
+    # ============================================================
+    # LOAD DATA
+    # ============================================================
 
-    # Ensure we only plot batch sizes where both models have data
-    valid_batches = [bs for bs, _ in old_data if any(b == bs for b, _ in new_data)]
+    old_data = load_data(
+        batch_sizes,
+        base_path,
+        "perin_et_al",
+        n_repeats,
+    )
+
+    new_data = load_data(
+        batch_sizes,
+        base_path,
+        "framework",
+        n_repeats,
+    )
+
+    # Only use batch sizes where all 5 trials exist
+    valid_batches = [
+        bs
+        for bs in batch_sizes
+        if len(old_data[bs]) == n_repeats and len(new_data[bs]) == n_repeats
+    ]
 
     if not valid_batches:
         print("No valid overlapping data found to plot.")
         return
 
-    # ------------------------------------------
-    # Extract Time Data
-    # ------------------------------------------
-    old_time_weights = [
-        d["detailed_parts"]["total_weight_time"]
-        for bs, d in old_data
-        if bs in valid_batches
-    ]
-    old_time_act = [
-        d["detailed_parts"]["total_act_time"]
-        for bs, d in old_data
-        if bs in valid_batches
-    ]
-    old_time_z = [
-        d["detailed_parts"]["total_z_time"] for bs, d in old_data if bs in valid_batches
-    ]
+    print(f"Using batch sizes: {valid_batches}")
+    print(f"Using {n_repeats} trials per batch size.")
 
-    new_time_cov = [
-        d["detailed_parts"]["total_phase1_cov_time"]
-        for bs, d in new_data
-        if bs in valid_batches
-    ]
-    new_time_weights = [
-        d["detailed_parts"]["total_phase2_weight_time"]
-        for bs, d in new_data
-        if bs in valid_batches
-    ]
-    new_time_states = [
-        d["detailed_parts"]["total_phase3_state_time"]
-        for bs, d in new_data
-        if bs in valid_batches
-    ]
+    # ============================================================
+    # CALCULATE MEANS AND STANDARD DEVIATIONS
+    # ============================================================
 
-    # Aggregate Times into 1:1 Logical Blocks
-    old_time_params = old_time_weights
-    old_time_states_combined = np.add(old_time_act, old_time_z)
+    old_time_mean = []
+    old_time_std = []
 
-    new_time_params = np.add(new_time_cov, new_time_weights)
-    new_time_states_combined = new_time_states
+    new_time_mean = []
+    new_time_std = []
 
-    # ------------------------------------------
-    # Extract Memory Data
-    # ------------------------------------------
-    old_mem_weights = [
-        d["detailed_parts"]["peak_weight_mem_mb"]
-        for bs, d in old_data
-        if bs in valid_batches
-    ]
-    old_mem_states = [
-        max(
-            d["detailed_parts"]["peak_act_mem_mb"], d["detailed_parts"]["peak_z_mem_mb"]
+    old_mem_1_mean = []
+    old_mem_1_std = []
+
+    new_mem_1_mean = []
+    new_mem_1_std = []
+
+    old_mem_10_mean = []
+    old_mem_10_std = []
+
+    new_mem_10_mean = []
+    new_mem_10_std = []
+
+    for bs in valid_batches:
+        old_trials = old_data[bs]
+        new_trials = new_data[bs]
+
+        # --------------------------------------------------------
+        # Execution time
+        # --------------------------------------------------------
+
+        old_times = [trial["time"] for trial in old_trials]
+
+        new_times = [trial["time"] for trial in new_trials]
+
+        mean, std = mean_std(old_times)
+        old_time_mean.append(mean)
+        old_time_std.append(std)
+
+        mean, std = mean_std(new_times)
+        new_time_mean.append(mean)
+        new_time_std.append(std)
+
+        # --------------------------------------------------------
+        # Peak memory after first epoch
+        # --------------------------------------------------------
+
+        old_mem_1 = [trial["peak_1_epoch_mb"] for trial in old_trials]
+
+        new_mem_1 = [trial["peak_1_epoch_mb"] for trial in new_trials]
+
+        mean, std = mean_std(old_mem_1)
+        old_mem_1_mean.append(mean)
+        old_mem_1_std.append(std)
+
+        mean, std = mean_std(new_mem_1)
+        new_mem_1_mean.append(mean)
+        new_mem_1_std.append(std)
+
+        # --------------------------------------------------------
+        # Peak memory after 10 epochs
+        # --------------------------------------------------------
+
+        old_mem_10 = [trial["peak_10_epoch_mb"] for trial in old_trials]
+
+        new_mem_10 = [trial["peak_10_epoch_mb"] for trial in new_trials]
+
+        mean, std = mean_std(old_mem_10)
+        old_mem_10_mean.append(mean)
+        old_mem_10_std.append(std)
+
+        mean, std = mean_std(new_mem_10)
+        new_mem_10_mean.append(mean)
+        new_mem_10_std.append(std)
+
+    # ============================================================
+    # PRINT RESULTS
+    # ============================================================
+
+    print("\nResults:")
+    print("-" * 70)
+
+    for i, bs in enumerate(valid_batches):
+        print(
+            f"Batch {bs:3d} | "
+            f"Time: "
+            f"Old={old_time_mean[i]:.3f} ± {old_time_std[i]:.3f} s | "
+            f"New={new_time_mean[i]:.3f} ± {new_time_std[i]:.3f} s"
         )
-        for bs, d in old_data
-        if bs in valid_batches
-    ]
 
-    new_mem_cov_weights = [
-        max(
-            d["detailed_parts"]["peak_phase1_cov_mem_mb"],
-            d["detailed_parts"]["peak_phase2_weight_mem_mb"],
-        )
-        for bs, d in new_data
-        if bs in valid_batches
-    ]
-    new_mem_states = [
-        d["detailed_parts"]["peak_phase3_state_mem_mb"]
-        for bs, d in new_data
-        if bs in valid_batches
-    ]
-
-    # ==========================================
+    # ============================================================
     # PLOTTING
-    # ==========================================
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    x = np.arange(len(valid_batches))
-    width = 0.35
+    # ============================================================
 
-    # IEEE Grayscale/Hatch Styling Palette
-    c_sota_param = "dimgray"
-    c_sota_state = "lightgray"
-    c_new_param = "black"
-    c_new_state = "white"
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+
+    x = np.arange(len(valid_batches))
+
+    # ------------------------------------------------------------
+    # COLORS / HATCHES
+    # ------------------------------------------------------------
+
+    old_color = "dimgray"
+    new_color = "white"
     edge_color = "black"
 
-    # ------------------------------------------
-    # 1. Execution Time (Stacked Bar Chart)
-    # ------------------------------------------
+    # ============================================================
+    # (A) EXECUTION TIME
+    # ============================================================
 
-    # SOTA Stack
+    width = 0.35
+
     ax1.bar(
         x - width / 2,
-        old_time_params,
+        old_time_mean,
         width,
-        label="Perin et al.: Parameters",
-        color=c_sota_param,
-        edgecolor=edge_color,
-    )
-    ax1.bar(
-        x - width / 2,
-        old_time_states_combined,
-        width,
-        bottom=old_time_params,
-        label="Perin et al.: States",
-        color=c_sota_state,
+        yerr=old_time_std,
+        capsize=3,
+        error_kw={"elinewidth": 0.8},
+        label="Perin et al.",
+        color=old_color,
         edgecolor=edge_color,
     )
 
-    # Modular Framework Stack
     ax1.bar(
         x + width / 2,
-        new_time_params,
+        new_time_mean,
         width,
-        label="Framework: Parameters",
-        color=c_new_param,
+        yerr=new_time_std,
+        capsize=3,
+        error_kw={"elinewidth": 0.8},
+        label="Framework",
+        color=new_color,
         edgecolor=edge_color,
-    )
-    ax1.bar(
-        x + width / 2,
-        new_time_states_combined,
-        width,
-        bottom=new_time_params,
-        label="Framework: States",
-        color=c_new_state,
-        edgecolor=edge_color,
-        hatch="////",  # Hatched for B&W contrast
+        hatch="////",
     )
 
     ax1.set_ylabel("Execution Time (s)")
     ax1.set_xlabel("Batch Size")
-    ax1.set_title("(a) Execution Time Breakdown", size=8)
+    ax1.set_title("(a) Execution Time", size=8)
+
     ax1.set_xticks(x)
     ax1.set_xticklabels(valid_batches)
-    ax1.grid(axis="y", linestyle=":", alpha=0.6, color="gray")
 
-    # ------------------------------------------
-    # 2. Peak Memory (Grouped Bar Chart)
-    # ------------------------------------------
-
-    width_mem = 0.2
-
-    # SOTA Memory
-    ax2.bar(
-        x - width_mem * 1.5,
-        old_mem_weights,
-        width_mem,
-        label="SOTA: Parameter Peak Mem",
-        color=c_sota_param,
-        edgecolor=edge_color,
-    )
-    ax2.bar(
-        x - width_mem * 0.5,
-        old_mem_states,
-        width_mem,
-        label="SOTA: State Peak Mem",
-        color=c_sota_state,
-        edgecolor=edge_color,
+    ax1.grid(
+        axis="y",
+        linestyle=":",
+        alpha=0.6,
+        color="gray",
     )
 
-    # Modular Framework Memory
+    # ============================================================
+    # (B) PEAK MEMORY
+    # ============================================================
+
+    width_mem = 0.18
+
+    # Old - epoch 1
     ax2.bar(
-        x + width_mem * 0.5,
-        new_mem_cov_weights,
+        x - 1.5 * width_mem,
+        old_mem_1_mean,
         width_mem,
-        label="Modular: Parameter Peak Mem",
-        color=c_new_param,
+        yerr=old_mem_1_std,
+        capsize=3,
+        error_kw={"elinewidth": 0.8},
+        label="Perin et al.: Epoch 1",
+        color=old_color,
         edgecolor=edge_color,
     )
+
+    # Old - epoch 10
     ax2.bar(
-        x + width_mem * 1.5,
-        new_mem_states,
+        x - 0.5 * width_mem,
+        old_mem_10_mean,
         width_mem,
-        label="Modular: State Peak Mem",
-        color=c_new_state,
+        yerr=old_mem_10_std,
+        capsize=3,
+        error_kw={"elinewidth": 0.8},
+        label="Perin et al.: Epoch 10",
+        color="lightgray",
+        edgecolor=edge_color,
+    )
+
+    # New - epoch 1
+    ax2.bar(
+        x + 0.5 * width_mem,
+        new_mem_1_mean,
+        width_mem,
+        yerr=new_mem_1_std,
+        capsize=3,
+        error_kw={"elinewidth": 0.8},
+        label="Framework: Epoch 1",
+        color="white",
+        edgecolor=edge_color,
+    )
+
+    # New - epoch 10
+    ax2.bar(
+        x + 1.5 * width_mem,
+        new_mem_10_mean,
+        width_mem,
+        yerr=new_mem_10_std,
+        capsize=3,
+        error_kw={"elinewidth": 0.8},
+        label="Framework: Epoch 10",
+        color="white",
         edgecolor=edge_color,
         hatch="////",
     )
 
     ax2.set_ylabel("Peak Memory (MB)")
     ax2.set_xlabel("Batch Size")
-    ax2.set_title("(b) Peak Memory Comparison", size=8)
+    ax2.set_title("(b) Peak Memory", size=8)
+
     ax2.set_xticks(x)
     ax2.set_xticklabels(valid_batches)
-    ax2.grid(axis="y", linestyle=":", alpha=0.6, color="gray")
 
-    # Clean up IEEE aesthetics
+    ax2.grid(
+        axis="y",
+        linestyle=":",
+        alpha=0.6,
+        color="gray",
+    )
+
+    # ============================================================
+    # CLEAN UP
+    # ============================================================
+
     for ax in [ax1, ax2]:
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        # REMOVED: ax.legend() so the local legends disappear
 
-    # ==========================================
-    # LAYOUT & LEGEND FIXES
-    # ==========================================
+    # ============================================================
+    # LEGEND
+    # ============================================================
 
-    handles, _ = ax1.get_legend_handles_labels()
-    shared_labels = [
-        "Perin et al.: Parameters",
-        "Perin et al.: States",
-        "Framework: Parameters",
-        "Framework: States",
-    ]
+    handles1, labels1 = ax1.get_legend_handles_labels()
 
-    # 1. Place the legend in the top margin space
-    leg = fig.legend(
-        handles,
-        shared_labels,
+    fig.legend(
+        handles1,
+        labels1,
         loc="center",
-        bbox_to_anchor=(0.5, 0.92),  # Centered vertically in the top 25% of the figure
+        bbox_to_anchor=(0.5, 0.92),
         ncol=2,
         columnspacing=3.0,
         frameon=False,
     )
 
-    # 2. Use manual margins INSTEAD of tight_layout
-    # This guarantees your text will not be cut off while keeping the 7.16" width.
+    # ============================================================
+    # LAYOUT
+    # ============================================================
+
     fig.subplots_adjust(
-        left=0.09,  # Reserves 9% of the width (~0.64 inches) for the y-axis label
-        right=0.98,  # 2% margin on the right side
-        bottom=0.15,  # 15% margin at the bottom for x-axis labels
-        top=0.75,  # Caps the plot at 75% height, leaving the top 25% for the legend
-        wspace=0.3,  # Spacing between ax1 and ax2
+        left=0.09,
+        right=0.98,
+        bottom=0.15,
+        top=0.75,
+        wspace=0.3,
     )
 
-    plot_filepath = os.path.join(base_path, "loop_parts_benchmark_plot.pdf")
+    # ============================================================
+    # SAVE
+    # ============================================================
 
-    # Save exactly to the 7.16" canvas without bbox_inches changing the dimensions
-    plt.savefig(plot_filepath, format="pdf")
-    print(f"Plot successfully saved to: {plot_filepath}")
+    plot_filepath = os.path.join(
+        base_path,
+        "loop_parts_benchmark_plot.pdf",
+    )
+
+    plt.savefig(
+        plot_filepath,
+        format="pdf",
+    )
+
+    print(f"\nPlot successfully saved to: {plot_filepath}")
 
     plt.show()
 
