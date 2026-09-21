@@ -213,11 +213,6 @@ for model_name in model_types:
         epoch_frs = []
 
         for batch_images, batch_labels in train_loader:
-            batch_images = format_images(batch_images, model_name)
-
-            if batch_images.size(1) > n_timesteps:
-                batch_images = batch_images[:, :n_timesteps, :]
-
             batch_images = (
                 batch_images.transpose(0, 1).contiguous().to(device, non_blocking=True)
             )
@@ -306,11 +301,6 @@ for model_name in model_types:
         epoch_frs = []
 
         for batch_images, batch_labels in train_loader:
-            batch_images = format_images(batch_images, model_name)
-
-            if batch_images.size(1) > n_timesteps:
-                batch_images = batch_images[:, :n_timesteps, :]
-
             batch_images = (
                 batch_images.transpose(0, 1).contiguous().to(device, non_blocking=True)
             )

@@ -49,7 +49,7 @@ def calc_spatial_out(size_in, k, p, s):
 # AUTOMATED ITERATION OVER MODELS
 #########################################
 # Un-commented array to loop through all models
-model_types = ["spiking-feedforward", "spiking-conv"]
+model_types = ["spiking-conv"]
 
 for model_name in model_types:
     torch.manual_seed(seed)
@@ -125,7 +125,7 @@ for model_name in model_types:
     # ADMM Metrics
     metrics["admm_time"] = admm_times
 
-    metrics_filename = f"/paper/results/admm_{model_name}/results.json"
+    metrics_filename = f"paper/results/admm_{model_name}/results.json"
     os.makedirs(os.path.dirname(metrics_filename), exist_ok=True)
 
     with open(metrics_filename, "w") as f:
