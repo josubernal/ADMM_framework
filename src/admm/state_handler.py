@@ -11,6 +11,7 @@ training to be agnostic to the user.
 """
 
 import os
+import uuid
 from typing import List, Optional, Tuple, Union
 
 import torch
@@ -45,7 +46,7 @@ class ADMM_StateHandler:
         self.device = device
         self.layers = layers
         self.init_strategy = init_strategy
-        self.cache_dir = cache_dir
+        self.cache_dir = os.path.join(cache_dir, f"run_{uuid.uuid4().hex}")
         self.num_batches = 0
 
         self.in_memory = False
