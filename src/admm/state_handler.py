@@ -11,8 +11,10 @@ training to be agnostic to the user.
 """
 
 import os
+import queue
+import threading
 import uuid
-from typing import List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import torch
 from safetensors.torch import load_file, save_file
@@ -34,6 +36,8 @@ class ADMM_StateHandler:
         init_strategy: str = "s-uniform",
         cache_dir: str = "./admm_cache",
         device: Optional[Union[str, torch.device]] = None,
+        async_writes: bool = True,
+        writer_workers: int = 2,
     ):
         """Initializes the State Handler.
 
@@ -48,6 +52,8 @@ class ADMM_StateHandler:
         self.init_strategy = init_strategy
         self.cache_dir = os.path.join(cache_dir, f"run_{uuid.uuid4().hex}")
         self.num_batches = 0
+        self._writer = AsyncWriter(num_workers=writer_workers) if async_writes else None
+        self._pending_writes: set = set()  # filepaths with unflushed writes
 
         self.in_memory = False
         self.memory_cache = {}
@@ -134,7 +140,16 @@ class ADMM_StateHandler:
                         l_state.lambda_lagrange
                     )
 
-            save_file(tensors_to_save, filepath)
+            if self._writer is not None:
+                cpu_tensors = {
+                    k: v.detach().to("cpu", copy=True)
+                    for k, v in tensors_to_save.items()
+                }
+                self._writer.enqueue(cpu_tensors, filepath)
+                self._pending_writes.add(filepath)
+
+            else:
+                save_file(tensors_to_save, filepath)
 
     def load_batch(
         self, batch_id: int
@@ -153,6 +168,9 @@ class ADMM_StateHandler:
             return cached["inputs"], cached["labels"], cached["batch_state"]
 
         filepath = os.path.join(self.cache_dir, f"batch_{batch_id}.safetensors")
+        if self._writer is not None and filepath in self._pending_writes:
+            self._writer.flush(filepath)
+            self._pending_writes.discard(filepath)
         tensors = load_file(filepath, device=str(self.device))
 
         inputs = tensors["inputs"].clone()
@@ -178,3 +196,81 @@ class ADMM_StateHandler:
 
         batch_state = ADMM_BatchState(batch_id=batch_id, layer_states=layer_states)
         return inputs, labels, batch_state
+
+
+class AsyncWriter:
+    """Per-path serialized background writer.
+
+    Guarantees that writes to the same filepath never overlap, but allows
+    writes to different paths to proceed in parallel via a small thread pool.
+    """
+
+    def __init__(self, num_workers: int = 2, max_queue_size: int = 0):
+        self._queues: Dict[str, queue.Queue] = {}
+        self._queues_lock = threading.Lock()
+        self._workers: Dict[str, threading.Thread] = {}
+        self._max_queue_size = max_queue_size
+        self._shutdown = threading.Event()
+
+    def _get_queue(self, filepath: str) -> queue.Queue:
+        # One queue per filepath -> serializes read-modify-write on that file.
+        with self._queues_lock:
+            if filepath not in self._queues:
+                q = queue.Queue(maxsize=self._max_queue_size)
+                self._queues[filepath] = q
+                t = threading.Thread(
+                    target=self._worker_loop, args=(q, filepath), daemon=True
+                )
+                t.start()
+                self._workers[filepath] = t
+            return self._queues[filepath]
+
+    def _worker_loop(self, q: queue.Queue, filepath: str):
+        while True:
+            try:
+                item = q.get(timeout=0.5)
+            except queue.Empty:
+                if self._shutdown.is_set():
+                    return
+                continue
+            if item is None:
+                q.task_done()
+                return
+            tensors_dict, callback = item
+            try:
+                os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+                save_file(tensors_dict, filepath)
+            except Exception as e:
+                print(f"[AsyncWriter] Error saving {filepath}: {e}")
+            finally:
+                if callback is not None:
+                    callback()
+                q.task_done()
+
+    def enqueue(
+        self, tensors_dict: dict, filepath: str, callback: Optional[Callable] = None
+    ):
+        """Tensors must already be on CPU and detached/cloned."""
+        self._get_queue(filepath).put((tensors_dict, callback))
+
+    def flush(self, filepath: Optional[str] = None):
+        """Block until pending writes for `filepath` (or all) are done."""
+        if filepath is not None:
+            with self._queues_lock:
+                q = self._queues.get(filepath)
+            if q is not None:
+                q.join()
+        else:
+            with self._queues_lock:
+                queues = list(self._queues.values())
+            for q in queues:
+                q.join()
+
+    def shutdown(self):
+        self.flush()
+        self._shutdown.set()
+        with self._queues_lock:
+            for q in self._queues.values():
+                q.put(None)
+            for t in self._workers.values():
+                t.join()

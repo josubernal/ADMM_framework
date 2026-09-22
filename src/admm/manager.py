@@ -711,6 +711,11 @@ class ADMM(nn.Module):
             self._fit_distributed(layer_indices, time_steps, warming)
         else:
             raise ValueError(f"Unknown update mode: {self.config.update_mode}")
+        if (
+            hasattr(self.state_handler, "_writer")
+            and self.state_handler._writer is not None
+        ):
+            self.state_handler._writer.flush()
 
     def _fit_distributed(
         self, layer_indices: List[int], time_steps: Optional[List[int]], warming: bool
