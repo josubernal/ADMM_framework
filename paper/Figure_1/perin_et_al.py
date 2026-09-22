@@ -1157,7 +1157,7 @@ if __name__ == "__main__":
 
     metrics = {}
 
-    metrics_path = "/paper/results/admm-spiking-perin-et-al/results.json"
+    metrics_path = "/paper/results/admm_spiking_perin_et_al/results.json"
     os.makedirs(metrics_path, exist_ok=True)
 
     # Initialize lists to track metrics

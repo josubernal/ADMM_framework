@@ -20,6 +20,12 @@ plt.rcParams.update(
 )
 
 
+def visible_std(mean, std, relative_threshold=0.01):
+    if std / abs(mean) < relative_threshold:
+        return np.nan
+    return std
+
+
 def load_data(batch_sizes, base_path, model_type, n_repeats=5):
     """
     Load all repeated measurements for each batch size.
@@ -230,6 +236,38 @@ def main():
         new_mem_states_mean.append(mean)
         new_mem_states_std.append(std)
 
+    old_time_total_std_plot = [
+        visible_std(mean, std)
+        for mean, std in zip(old_time_total_mean, old_time_total_std)
+    ]
+
+    new_time_total_std_plot = [
+        visible_std(mean, std)
+        for mean, std in zip(new_time_total_mean, new_time_total_std)
+    ]
+
+    old_memory_weights_std_plot = [
+        visible_std(mean, std)
+        for mean, std in zip(old_mem_weights_mean, old_mem_weights_std)
+    ]
+    old_memory_states_std_plot = [
+        visible_std(mean, std)
+        for mean, std in zip(old_mem_states_mean, old_mem_states_std)
+    ]
+
+    new_memory_weights_std_plot = [
+        visible_std(mean, std)
+        for mean, std in zip(new_mem_cov_weights_mean, new_mem_cov_weights_std)
+    ]
+    new_memory_states_std_plot = [
+        visible_std(mean, std)
+        for mean, std in zip(new_mem_states_mean, new_mem_states_std)
+    ]
+
+    print("old weights:", old_memory_weights_std_plot)
+    print("old states:", old_memory_states_std_plot)
+    print("new weights:", new_memory_weights_std_plot)
+    print("new states:", new_memory_states_std_plot)
     # ============================================================
     # PLOTTING
     # ============================================================
@@ -270,7 +308,7 @@ def main():
         label="Perin et al.: States",
         color=c_sota_state,
         edgecolor=edge_color,
-        yerr=old_time_total_std,
+        yerr=old_time_total_std_plot,
         capsize=3,
         error_kw={"elinewidth": 0.8},
     )
@@ -296,7 +334,7 @@ def main():
         color=c_new_state,
         edgecolor=edge_color,
         hatch="////",
-        yerr=new_time_total_std,
+        yerr=new_time_total_std_plot,
         capsize=3,
         error_kw={"elinewidth": 0.8},
     )
@@ -322,7 +360,7 @@ def main():
         label="SOTA: Parameter Peak Mem",
         color=c_sota_param,
         edgecolor=edge_color,
-        yerr=old_mem_weights_std,
+        yerr=old_memory_weights_std_plot,
         capsize=3,
         error_kw={"elinewidth": 0.8},
     )
@@ -335,7 +373,7 @@ def main():
         label="SOTA: State Peak Mem",
         color=c_sota_state,
         edgecolor=edge_color,
-        yerr=old_mem_states_std,
+        yerr=old_memory_states_std_plot,
         capsize=3,
         error_kw={"elinewidth": 0.8},
     )
@@ -348,7 +386,7 @@ def main():
         label="Framework: Parameter Peak Mem",
         color=c_new_param,
         edgecolor=edge_color,
-        yerr=new_mem_cov_weights_std,
+        yerr=new_memory_weights_std_plot,
         capsize=3,
         error_kw={"elinewidth": 0.8},
     )
@@ -362,7 +400,7 @@ def main():
         color=c_new_state,
         edgecolor=edge_color,
         hatch="////",
-        yerr=new_mem_states_std,
+        yerr=new_memory_states_std_plot,
         capsize=3,
         error_kw={"elinewidth": 0.8},
     )
