@@ -15,7 +15,7 @@ import tempfile
 import threading
 import uuid
 from concurrent.futures import Future, ThreadPoolExecutor
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional, Union
 
 import torch
 from safetensors.torch import load_file, save_file
@@ -49,7 +49,9 @@ class ADMM_StateHandler:
             cache_dir (Union[str, Path], optional): Directory to save disk caches. Defaults to "./admm_cache".
             device (Optional[Union[str, torch.device]], optional): The execution device.
         """
-        self.device = device
+        self.device = (
+            torch.device(device) if device is not None else torch.device("cpu")
+        )
         self.layers = layers
         self.init_strategy = init_strategy
         self.cache_dir = os.path.join(cache_dir, f"run_{uuid.uuid4().hex}")
@@ -60,45 +62,59 @@ class ADMM_StateHandler:
         self.async_writes = async_writes
         self.max_queue_size = max_queue_size
         self.num_workers = num_workers
+        self._initialized_batches: set[int] = set()
+        self._initializer = get_initializer(self.init_strategy)
 
-    def get_batch_ids(self) -> List[int]:
-        """Returns a list of all initialized batch IDs."""
-        return list(range(self.num_batches))
+    def is_batch_initialized(self, batch_id: int) -> bool:
+        """Return whether a persistent state already exists for this batch."""
+        return batch_id in self._initialized_batches
 
-    def initialize_all_batches(self, dataloader: DataLoader) -> None:
-        """Iterates through the DataLoader, creates initial states, and persists them.
+    def initialize(self, dataloader: DataLoader) -> None:
+        """Prepare the state handler without creating any batch states.
 
-        Automatically decides whether to use only RAM or Disk based on batch count.
-
-        Args:
-            dataloader (DataLoader): The dataset loader to process.
+        Batch states are initialized lazily when they are first requested.
         """
-
+        if self._writer is not None:
+            self._writer.shutdown()
+            self._writer = None
+        # Keep the existing single-batch optimization.
         self.in_memory = len(dataloader) == 1
 
+        # Disk-backed mode needs the cache directory.
         if not self.in_memory:
             os.makedirs(self.cache_dir, exist_ok=True)
             self._writer = (
                 AsyncWriter(
-                    max_queue_size=self.max_queue_size, num_workers=self.num_workers
+                    max_queue_size=self.max_queue_size,
+                    num_workers=self.num_workers,
                 )
                 if self.async_writes
                 else None
             )
 
-        initializer = get_initializer(self.init_strategy)
-
         self.num_batches = 0
-        for batch_id, (inputs, labels) in enumerate(dataloader):
-            inputs = inputs.to(self.device)
+        self._initialized_batches.clear()
+        self.memory_cache.clear()
 
-            layer_states = initializer.init_states(self.layers, inputs, self.device)
-            batch_state = ADMM_BatchState(batch_id=batch_id, layer_states=layer_states)
+    def _initialize_batch(
+        self,
+        batch_id: int,
+        inputs: torch.Tensor,
+    ) -> ADMM_BatchState:
+        """Create the initial ADMM state for one batch."""
 
-            self.save_batch(batch_state)
-            self.num_batches += 1
-        if self._writer is not None:
-            self._writer.flush()
+        inputs = inputs.to(self.device)
+
+        layer_states = self._initializer.init_states(
+            self.layers,
+            inputs,
+            self.device,
+        )
+
+        return ADMM_BatchState(
+            batch_id=batch_id,
+            layer_states=layer_states,
+        )
 
     def save_batch(
         self,
@@ -115,32 +131,39 @@ class ADMM_StateHandler:
             self.memory_cache[batch_id] = {
                 "batch_state": batch_state,
             }
-            return
-        tensors_to_save = {}
-        filepath = os.path.join(self.cache_dir, f"batch_{batch_id}.safetensors")
+        else:
+            tensors_to_save = {}
+            filepath = os.path.join(self.cache_dir, f"batch_{batch_id}.safetensors")
 
-        for layer_idx, l_state in enumerate(batch_state.layer_states):
-            tensors_to_save[f"layer_{layer_idx}_z"] = l_state.z
-            if l_state.a is not None:
-                tensors_to_save[f"layer_{layer_idx}_a"] = l_state.a
-            if l_state.lambda_lagrange is not None:
-                tensors_to_save[f"layer_{layer_idx}_lambda_lagrange"] = (
-                    l_state.lambda_lagrange
+            for layer_idx, l_state in enumerate(batch_state.layer_states):
+                tensors_to_save[f"layer_{layer_idx}_z"] = l_state.z
+                if l_state.a is not None:
+                    tensors_to_save[f"layer_{layer_idx}_a"] = l_state.a
+                if l_state.lambda_lagrange is not None:
+                    tensors_to_save[f"layer_{layer_idx}_lambda_lagrange"] = (
+                        l_state.lambda_lagrange
+                    )
+
+            if self._writer is not None:
+                cpu_tensors = {
+                    key: value.detach().to("cpu", copy=True)
+                    for key, value in tensors_to_save.items()
+                }
+
+                self._writer.enqueue(
+                    cpu_tensors,
+                    filepath,
                 )
 
-        if self._writer is not None:
-            cpu_tensors = {
-                key: value.detach().to("cpu", copy=True)
-                for key, value in tensors_to_save.items()
-            }
+            else:
+                save_file(tensors_to_save, filepath)
 
-            self._writer.enqueue(
-                cpu_tensors,
-                filepath,
-            )
+        self._initialized_batches.add(batch_id)
 
-        else:
-            save_file(tensors_to_save, filepath)
+        self.num_batches = max(
+            self.num_batches,
+            batch_id + 1,
+        )
 
     def _load_batch_from_disk(self, batch_id: int) -> ADMM_BatchState:
         """Loads a batch state from disk. Caller must not use this in in-memory mode."""
@@ -176,7 +199,15 @@ class ADMM_StateHandler:
         del tensors
         return ADMM_BatchState(batch_id=batch_id, layer_states=layer_states)
 
-    def load_batch(self, batch_id: int) -> ADMM_BatchState:
+    def load_batch(self, batch_id: int, inputs: torch.Tensor) -> ADMM_BatchState:
+        if batch_id not in self._initialized_batches:
+            batch_state = self._initialize_batch(
+                batch_id=batch_id,
+                inputs=inputs,
+            )
+            self.save_batch(batch_state)
+
+            return batch_state
         if self.in_memory:
             return self.memory_cache[batch_id]["batch_state"]
         return self._load_batch_from_disk(batch_id)
