@@ -103,7 +103,11 @@ class ADMM_StateHandler:
     ) -> ADMM_BatchState:
         """Create the initial ADMM state for one batch."""
 
-        inputs = inputs.to(self.device)
+        if inputs.device != self.device:
+            inputs = inputs.to(
+                self.device,
+                non_blocking=True,
+            )
 
         layer_states = self._initializer.init_states(
             self.layers,

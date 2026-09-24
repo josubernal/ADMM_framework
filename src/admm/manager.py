@@ -204,6 +204,15 @@ class ADMM(nn.Module):
 
             inputs, labels = first_batch
             batch_id = 0
+            # Move current inputs/labels to the device.
+            inputs = inputs.to(
+                self.device,
+                non_blocking=True,
+            )
+            labels = labels.to(
+                self.device,
+                non_blocking=True,
+            )
 
             # -----------------------------------------------------
             # We can only prefetch states that already exist.
@@ -246,16 +255,6 @@ class ADMM(nn.Module):
                     current_state = prefetcher.get(batch_id)
                     current_prefetched = False
 
-                # Move current inputs/labels to the device.
-                inputs = inputs.to(
-                    self.device,
-                    non_blocking=True,
-                )
-                labels = labels.to(
-                    self.device,
-                    non_blocking=True,
-                )
-
                 # Give the current batch to the ADMM algorithm.
                 yield (
                     batch_id,
@@ -271,6 +270,16 @@ class ADMM(nn.Module):
                 # Move to the next batch.
                 inputs, labels = next_batch
                 batch_id = next_id
+
+                # Move current inputs/labels to the device.
+                inputs = inputs.to(
+                    self.device,
+                    non_blocking=True,
+                )
+                labels = labels.to(
+                    self.device,
+                    non_blocking=True,
+                )
 
                 # The state for this batch may already be loading.
                 # If it wasn't initialized yet, initialize it now.
