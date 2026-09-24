@@ -205,13 +205,11 @@ class ADMM_StateHandler:
 
     def load_batch(self, batch_id: int, inputs: torch.Tensor) -> ADMM_BatchState:
         if batch_id not in self._initialized_batches:
-            batch_state = self._initialize_batch(
+            return self._initialize_batch(
                 batch_id=batch_id,
                 inputs=inputs,
             )
-            self.save_batch(batch_state)
 
-            return batch_state
         if self.in_memory:
             return self.memory_cache[batch_id]["batch_state"]
         return self._load_batch_from_disk(batch_id)

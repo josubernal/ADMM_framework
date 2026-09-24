@@ -648,18 +648,75 @@ class ADMM(nn.Module):
             warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.
         """
         # PHASE 1: COMPUTE COVARIANCES
-        self.cov_handler.reset_accumulators()
-        start = time.perf_counter()
-        for batch_id, inputs, labels, batch_state in self._iterate_batches(dataloader):
+        # self.cov_handler.reset_accumulators()
+        # start = time.perf_counter()
+        # for batch_id, inputs, labels, batch_state in self._iterate_batches(dataloader):
+        #     for layer_idx in layer_indices:
+        #         layer = self.layers[layer_idx]
+        #         state = batch_state.layer_states[layer_idx]
+        #         a_prev = self._get_a_prev(
+        #             layer_idx=layer_idx, inputs=inputs, batch_state=batch_state
+        #         )
+        #         numerator, denominator, bias_sum, bias_count = (
+        #             layer.compute_batch_covariances(state=state, a_prev=a_prev)
+        #         )
+        #         self.cov_handler.accumulate(
+        #             layer_idx=layer_idx,
+        #             numerator=numerator,
+        #             denominator=denominator,
+        #             bias_sum=bias_sum,
+        #             bias_count=bias_count,
+        #         )
+        # if self.device.type == "cuda":
+        #     torch.cuda.synchronize()
+
+        # print(f"PHASE 1: {time.perf_counter() - start:.2f}s")
+        iterator = iter(self._iterate_batches(dataloader))
+
+        while True:
+            # ---------------------------------------------------------
+            # DATA LOADING / ITERATOR
+            # ---------------------------------------------------------
+            start = time.perf_counter()
+
+            try:
+                batch_id, inputs, labels, batch_state = next(iterator)
+            except StopIteration:
+                break
+
+            load_time = time.perf_counter() - start
+
+            # ---------------------------------------------------------
+            # REST OF PHASE
+            # ---------------------------------------------------------
+
             for layer_idx in layer_indices:
                 layer = self.layers[layer_idx]
                 state = batch_state.layer_states[layer_idx]
+
+                start = time.perf_counter()
+
                 a_prev = self._get_a_prev(
-                    layer_idx=layer_idx, inputs=inputs, batch_state=batch_state
+                    layer_idx=layer_idx,
+                    inputs=inputs,
+                    batch_state=batch_state,
                 )
+
+                aprev_time = time.perf_counter() - start
+
+                start = time.perf_counter()
+
                 numerator, denominator, bias_sum, bias_count = (
-                    layer.compute_batch_covariances(state=state, a_prev=a_prev)
+                    layer.compute_batch_covariances(
+                        state=state,
+                        a_prev=a_prev,
+                    )
                 )
+
+                covariance_time = time.perf_counter() - start
+
+                start = time.perf_counter()
+
                 self.cov_handler.accumulate(
                     layer_idx=layer_idx,
                     numerator=numerator,
@@ -667,12 +724,17 @@ class ADMM(nn.Module):
                     bias_sum=bias_sum,
                     bias_count=bias_count,
                 )
-        if self.device.type == "cuda":
-            torch.cuda.synchronize()
 
-        print(f"PHASE 1: {time.perf_counter() - start:.2f}s")
+                accumulate_time = time.perf_counter() - start
+
+                print(
+                    f"batch={batch_id} layer={layer_idx} | "
+                    f"load={load_time:.3f}s | "
+                    f"a_prev={aprev_time:.3f}s | "
+                    f"cov={covariance_time:.3f}s | "
+                    f"acc={accumulate_time:.3f}s"
+                )
         # PHASE 2: GLOBAL WEIGHT & BIAS UPDATE
-        start = time.perf_counter()
         for layer_idx in layer_indices:
             layer = self.layers[layer_idx]
             covariances = self.cov_handler.get_covariances(layer_idx)
@@ -689,10 +751,6 @@ class ADMM(nn.Module):
                 cache_pinv=(layer_idx == 0) and self.config.cache_pinv,
             )
             self.cov_handler.set_pinv(layer_idx=layer_idx, pinv=new_pinv)
-        if self.device.type == "cuda":
-            torch.cuda.synchronize()
-
-        print(f"PHASE 2: {time.perf_counter() - start:.2f}s")
 
         # PHASE 3: LOCAL STATE UPDATES (a, z, lambda)
         start = time.perf_counter()
