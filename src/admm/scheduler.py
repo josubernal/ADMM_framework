@@ -71,7 +71,7 @@ class ADMM_Scheduler:
                 "Please reduce your dataset or increase your batch size to encompass the entire dataset."
             )
 
-        _, _, batch_state = self.model.state_handler.load_batch(0)
+        batch_state = self.model.state_handler.load_batch(0)
 
         self.state_old = []
         for l_state in batch_state.layer_states:
@@ -147,7 +147,7 @@ class ADMM_Scheduler:
             self.state_old = None
             return
 
-        _, _, batch_state = self.model.state_handler.load_batch(0)
+        batch_state = self.model.state_handler.load_batch(0)
 
         # Balance rho and lambda
         for i, (layer, l_state, p_rho) in enumerate(
