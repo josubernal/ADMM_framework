@@ -35,7 +35,7 @@ def get_model(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     config = configparser.ConfigParser()
 
-    config.read("experiments/3_SGD_evaluation/config/config.ini")
+    config.read("paper/config/config.ini")
 
     hidden_size_static = config.getint("config", "hidden_size_static")
     hidden_channels_static = config.getint("config", "hidden_channels_static")
