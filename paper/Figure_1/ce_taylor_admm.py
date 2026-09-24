@@ -10,7 +10,11 @@ from src.admm import (
     ADMM_Metrics,
 )
 
-from ..utils.dataset import get_dataset_spiking_admm
+from ..utils.dataset import (
+    get_dataset_spiking_admm,
+    get_dataset_spiking_only_pad,
+    get_dataset_spiking_wo_noise,
+)
 from ..utils.models import get_model
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -67,6 +71,44 @@ for i in range(3):
     t1 = time.perf_counter()
 
     print(f"DataLoader batch {i}: {t1 - t0:.3f}s | inputs={inputs.shape}")
+
+train_loader = get_dataset_spiking_wo_noise(
+    model_name="spiking-feedforward",
+    batch_size=batch_size_spiking,
+    n_timesteps=n_timesteps,
+    seed=seed,
+)
+
+
+iterator = iter(train_loader)
+
+for i in range(3):
+    t0 = time.perf_counter()
+
+    inputs, labels = next(iterator)
+
+    t1 = time.perf_counter()
+
+    print(f"DataLoader batch {i}: {t1 - t0:.3f}s | inputs={inputs.shape}")
+
+train_loader = get_dataset_spiking_only_pad(
+    model_name="spiking-feedforward",
+    batch_size=batch_size_spiking,
+    n_timesteps=n_timesteps,
+    seed=seed,
+)
+
+
+iterator = iter(train_loader)
+
+for i in range(3):
+    t0 = time.perf_counter()
+
+    inputs, labels = next(iterator)
+
+    t1 = time.perf_counter()
+
+    print(f"DataLoader only pad batch {i}: {t1 - t0:.3f}s | inputs={inputs.shape}")
 
 admm_model = get_model(
     model_name="spiking-feedforward",
