@@ -9,6 +9,17 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 
+def add_noise_in_chunks(data, std=0.01, chunk_size=10):
+    for start in range(0, data.size(0), chunk_size):
+        end = min(start + chunk_size, data.size(0))
+
+        noise = torch.empty_like(data[start:end])
+        noise.normal_(0.0, std)
+        data[start:end].add_(noise)
+
+    return data
+
+
 def collate_static(batch, model_name):
     data, targets = torch.utils.data.default_collate(batch)
 
@@ -27,7 +38,7 @@ def collate_spiking(batch, model_name, n_timesteps):
 
     data = data.transpose(0, 1).contiguous()
 
-    data += 0.01 * torch.randn_like(data)
+    data = add_noise_in_chunks(data)
 
     return data, targets
 
@@ -238,11 +249,7 @@ def get_dataset_spiking_only_pad(
     train_loader = DataLoader(
         cached_trainset,
         batch_size=batch_size,
-        collate_fn=partial(
-            collate_only_pad,
-            model_name=model_name,
-            n_timesteps=n_timesteps,
-        ),
+        collate_fn=partial(collate_only_pad),
         shuffle=False,
         drop_last=False,
         num_workers=1,
