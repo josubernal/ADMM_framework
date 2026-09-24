@@ -55,6 +55,18 @@ train_loader = get_dataset_spiking_admm(
     seed=seed,
 )
 
+print("Starting pure DataLoader test...")
+
+iterator = iter(train_loader)
+
+for i in range(3):
+    t0 = time.perf_counter()
+
+    inputs, labels = next(iterator)
+
+    t1 = time.perf_counter()
+
+    print(f"DataLoader batch {i}: {t1 - t0:.3f}s | inputs={inputs.shape}")
 
 admm_model = get_model(
     model_name="spiking-feedforward",

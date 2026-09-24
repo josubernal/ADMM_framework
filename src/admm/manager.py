@@ -152,16 +152,175 @@ class ADMM(nn.Module):
         """
         return inputs if layer_idx == 0 else batch_state.layer_states[layer_idx - 1].a
 
+        # def _iterate_batches(self, dataloader: DataLoader):
+        #     """Yield DataLoader batches while prefetching existing ADMM states."""
+
+        #     loader_iter = iter(dataloader)
+
+        #     # =========================================================
+        #     # SINGLE-BATCH / RAM MODE
+        #     # =========================================================
+        #     if self.state_handler.in_memory:
+        #         for batch_id, (inputs, labels) in enumerate(loader_iter):
+        #             inputs = inputs.to(
+        #                 self.device,
+        #                 non_blocking=True,
+        #             )
+        #             labels = labels.to(
+        #                 self.device,
+        #                 non_blocking=True,
+        #             )
+
+        #             batch_state = self.state_handler.load_batch(
+        #                 batch_id=batch_id,
+        #                 inputs=inputs,
+        #             )
+
+        #             yield (
+        #                 batch_id,
+        #                 inputs,
+        #                 labels,
+        #                 batch_state,
+        #             )
+
+        #         return
+
+        #     # =========================================================
+        #     # DISK-BACKED MODE
+        #     # =========================================================
+
+        #     prefetcher = AsyncStatePrefetcher(
+        #         state_handler=self.state_handler,
+        #         max_in_flight=2,
+        #         num_workers=1,
+        #     )
+
+        #     try:
+        #         # Load the first DataLoader batch.
+
+        #         first_batch = next(loader_iter, None)
+
+        #         if first_batch is None:
+        #             return
+
+        #         inputs, labels = first_batch
+        #         batch_id = 0
+        #         # Move current inputs/labels to the device.
+        #         inputs = inputs.to(
+        #             self.device,
+        #             non_blocking=True,
+        #         )
+        #         labels = labels.to(
+        #             self.device,
+        #             non_blocking=True,
+        #         )
+
+        #         # -----------------------------------------------------
+        #         # We can only prefetch states that already exist.
+        #         #
+        #         # If this is the first epoch, batch 0 does not exist,
+        #         # so it is initialized synchronously.
+        #         # -----------------------------------------------------
+        #         current_prefetched = False
+        #         current_state = None
+
+        #         if self.state_handler.is_batch_initialized(batch_id):
+        #             prefetcher.schedule(batch_id)
+        #             current_prefetched = True
+
+        #         else:
+        #             current_state = self.state_handler.load_batch(
+        #                 batch_id=batch_id,
+        #                 inputs=inputs,
+        #             )
+
+        #         # -----------------------------------------------------
+        #         # Main loop.
+        #         # -----------------------------------------------------
+        #         while True:
+        #             # Get the NEXT DataLoader batch.
+        #             next_batch = next(loader_iter, None)
+        #             next_id = batch_id + 1
+
+        #             if next_batch is not None:
+        #                 if self.state_handler.is_batch_initialized(next_id):
+        #                     prefetcher.schedule(next_id)
+
+        #             # -------------------------------------------------
+        #             # Obtain the CURRENT batch state.
+        #             #
+        #             # If it was prefetched, Future.result() waits only
+        #             # if the disk read hasn't finished yet.
+        #             # -------------------------------------------------
+        #             if current_prefetched:
+        #                 current_state = prefetcher.get(batch_id)
+        #                 current_prefetched = False
+
+        #             # Give the current batch to the ADMM algorithm.
+        #             yield (
+        #                 batch_id,
+        #                 inputs,
+        #                 labels,
+        #                 current_state,
+        #             )
+
+        #             # No next batch → we are finished.
+        #             if next_batch is None:
+        #                 break
+
+        #             # Move to the next batch.
+        #             inputs, labels = next_batch
+        #             batch_id = next_id
+
+        #             # Move current inputs/labels to the device.
+        #             inputs = inputs.to(
+        #                 self.device,
+        #                 non_blocking=True,
+        #             )
+        #             labels = labels.to(
+        #                 self.device,
+        #                 non_blocking=True,
+        #             )
+
+        #             # The state for this batch may already be loading.
+        #             # If it wasn't initialized yet, initialize it now.
+        #             if self.state_handler.is_batch_initialized(batch_id):
+        #                 current_prefetched = True
+
+        #             else:
+        #                 current_state = self.state_handler.load_batch(
+        #                     batch_id=batch_id,
+        #                     inputs=inputs,
+        #                 )
+
+        #     finally:
+        #         prefetcher.shutdown()
+
     def _iterate_batches(self, dataloader: DataLoader):
-        """Yield DataLoader batches while prefetching existing ADMM states."""
+        """Temporary detailed profiler for _iterate_batches()."""
+
+        print("\n" + "=" * 70)
+        print("PROFILING _iterate_batches")
+        print("=" * 70)
+
+        # ---------------------------------------------------------
+        # 1. Create DataLoader iterator
+        # ---------------------------------------------------------
+        t0 = time.perf_counter()
 
         loader_iter = iter(dataloader)
 
-        # =========================================================
+        t1 = time.perf_counter()
+
+        print(f"[1] iter(dataloader):       {t1 - t0:.3f}s")
+
+        # ---------------------------------------------------------
         # SINGLE-BATCH / RAM MODE
-        # =========================================================
+        # ---------------------------------------------------------
         if self.state_handler.in_memory:
             for batch_id, (inputs, labels) in enumerate(loader_iter):
+                t0 = time.perf_counter()
+
                 inputs = inputs.to(
                     self.device,
                     non_blocking=True,
@@ -171,10 +330,23 @@ class ADMM(nn.Module):
                     non_blocking=True,
                 )
 
+                t1 = time.perf_counter()
+
+                print(f"[batch {batch_id}] .to(device): {t1 - t0:.3f}s")
+
+                # ---------------------------------------------
+                # load_batch
+                # ---------------------------------------------
+                t0 = time.perf_counter()
+
                 batch_state = self.state_handler.load_batch(
                     batch_id=batch_id,
                     inputs=inputs,
                 )
+
+                t1 = time.perf_counter()
+
+                print(f"[batch {batch_id}] load_batch: {t1 - t0:.3f}s")
 
                 yield (
                     batch_id,
@@ -185,9 +357,16 @@ class ADMM(nn.Module):
 
             return
 
-        # =========================================================
+        # ---------------------------------------------------------
         # DISK-BACKED MODE
-        # =========================================================
+        # ---------------------------------------------------------
+
+        print("Mode: DISK-BACKED")
+
+        # ---------------------------------------------------------
+        # Create prefetcher
+        # ---------------------------------------------------------
+        t0 = time.perf_counter()
 
         prefetcher = AsyncStatePrefetcher(
             state_handler=self.state_handler,
@@ -195,68 +374,179 @@ class ADMM(nn.Module):
             num_workers=1,
         )
 
+        t1 = time.perf_counter()
+
+        print(f"[2] AsyncStatePrefetcher creation: {t1 - t0:.3f}s")
+
         try:
-            # Load the first DataLoader batch.
+            # =====================================================
+            # FIRST DATALOADER BATCH
+            # =====================================================
+
+            t0 = time.perf_counter()
 
             first_batch = next(loader_iter, None)
+
+            t1 = time.perf_counter()
+
+            print(f"[3] FIRST next(loader_iter): {t1 - t0:.3f}s")
 
             if first_batch is None:
                 return
 
             inputs, labels = first_batch
+
+            print(f"    inputs shape: {inputs.shape}")
+            print(f"    labels shape: {labels.shape}")
+
             batch_id = 0
-            # Move current inputs/labels to the device.
+
+            # =====================================================
+            # MOVE TO DEVICE
+            # =====================================================
+
+            t0 = time.perf_counter()
+
             inputs = inputs.to(
                 self.device,
                 non_blocking=True,
             )
+
             labels = labels.to(
                 self.device,
                 non_blocking=True,
             )
 
-            # -----------------------------------------------------
-            # We can only prefetch states that already exist.
-            #
-            # If this is the first epoch, batch 0 does not exist,
-            # so it is initialized synchronously.
-            # -----------------------------------------------------
+            # IMPORTANT for accurate CUDA timing
+            if self.device.type == "cuda":
+                torch.cuda.synchronize()
+
+            t1 = time.perf_counter()
+
+            print(f"[4] FIRST .to(device): {t1 - t0:.3f}s")
+
+            # =====================================================
+            # CHECK WHETHER BATCH 0 EXISTS
+            # =====================================================
+
+            t0 = time.perf_counter()
+
+            initialized = self.state_handler.is_batch_initialized(batch_id)
+
+            t1 = time.perf_counter()
+
+            print(f"[5] is_batch_initialized(0): {t1 - t0:.3f}s -> {initialized}")
+
             current_prefetched = False
             current_state = None
 
-            if self.state_handler.is_batch_initialized(batch_id):
+            # =====================================================
+            # BATCH 0 STATE
+            # =====================================================
+
+            if initialized:
+                # -------------------------------------------------
+                # Schedule async read
+                # -------------------------------------------------
+
+                t0 = time.perf_counter()
+
                 prefetcher.schedule(batch_id)
+
+                t1 = time.perf_counter()
+
+                print(f"[6] schedule(0): {t1 - t0:.3f}s")
+
                 current_prefetched = True
 
             else:
+                # -------------------------------------------------
+                # SYNCHRONOUS INITIALIZATION / LOAD
+                # -------------------------------------------------
+
+                print("[6] Batch 0 is NOT initialized.")
+                print("    Calling load_batch() synchronously...")
+
+                t0 = time.perf_counter()
+
                 current_state = self.state_handler.load_batch(
                     batch_id=batch_id,
                     inputs=inputs,
                 )
 
-            # -----------------------------------------------------
-            # Main loop.
-            # -----------------------------------------------------
+                t1 = time.perf_counter()
+
+                print(f"[6] load_batch(0): {t1 - t0:.3f}s")
+
+            # =====================================================
+            # MAIN LOOP
+            # =====================================================
+
             while True:
-                # Get the NEXT DataLoader batch.
+                # -------------------------------------------------
+                # Get NEXT DataLoader batch
+                # -------------------------------------------------
+
+                t0 = time.perf_counter()
+
                 next_batch = next(loader_iter, None)
+
+                t1 = time.perf_counter()
+
+                print(f"[batch {batch_id}] next(loader_iter): {t1 - t0:.3f}s")
+
                 next_id = batch_id + 1
 
+                # -------------------------------------------------
+                # Schedule next state
+                # -------------------------------------------------
+
                 if next_batch is not None:
-                    if self.state_handler.is_batch_initialized(next_id):
+                    t0 = time.perf_counter()
+
+                    next_initialized = self.state_handler.is_batch_initialized(next_id)
+
+                    t1 = time.perf_counter()
+
+                    print(
+                        f"[batch {next_id}] "
+                        f"is_initialized: "
+                        f"{t1 - t0:.3f}s "
+                        f"-> {next_initialized}"
+                    )
+
+                    if next_initialized:
+                        t0 = time.perf_counter()
+
                         prefetcher.schedule(next_id)
 
+                        t1 = time.perf_counter()
+
+                        print(f"[batch {next_id}] schedule: {t1 - t0:.3f}s")
+
                 # -------------------------------------------------
-                # Obtain the CURRENT batch state.
-                #
-                # If it was prefetched, Future.result() waits only
-                # if the disk read hasn't finished yet.
+                # Get CURRENT prefetched state
                 # -------------------------------------------------
+
                 if current_prefetched:
+                    print(f"[batch {batch_id}] waiting for prefetcher.get()...")
+
+                    t0 = time.perf_counter()
+
                     current_state = prefetcher.get(batch_id)
+
+                    t1 = time.perf_counter()
+
+                    print(f"[batch {batch_id}] prefetcher.get: {t1 - t0:.3f}s")
+
                     current_prefetched = False
 
-                # Give the current batch to the ADMM algorithm.
+                # -------------------------------------------------
+                # YIELD
+                # -------------------------------------------------
+
+                print(f"[batch {batch_id}] YIELD")
+
                 yield (
                     batch_id,
                     inputs,
@@ -264,37 +554,83 @@ class ADMM(nn.Module):
                     current_state,
                 )
 
-                # No next batch → we are finished.
+                # -------------------------------------------------
+                # Finished?
+                # -------------------------------------------------
+
                 if next_batch is None:
                     break
 
-                # Move to the next batch.
+                # -------------------------------------------------
+                # Move to next batch
+                # -------------------------------------------------
+
                 inputs, labels = next_batch
                 batch_id = next_id
 
-                # Move current inputs/labels to the device.
+                t0 = time.perf_counter()
+
                 inputs = inputs.to(
                     self.device,
                     non_blocking=True,
                 )
+
                 labels = labels.to(
                     self.device,
                     non_blocking=True,
                 )
 
-                # The state for this batch may already be loading.
-                # If it wasn't initialized yet, initialize it now.
-                if self.state_handler.is_batch_initialized(batch_id):
+                if self.device.type == "cuda":
+                    torch.cuda.synchronize()
+
+                t1 = time.perf_counter()
+
+                print(f"[batch {batch_id}] .to(device): {t1 - t0:.3f}s")
+
+                # -------------------------------------------------
+                # Check state
+                # -------------------------------------------------
+
+                t0 = time.perf_counter()
+
+                initialized = self.state_handler.is_batch_initialized(batch_id)
+
+                t1 = time.perf_counter()
+
+                print(
+                    f"[batch {batch_id}] "
+                    f"is_initialized: "
+                    f"{t1 - t0:.3f}s "
+                    f"-> {initialized}"
+                )
+
+                if initialized:
                     current_prefetched = True
 
                 else:
+                    print(f"[batch {batch_id}] NOT initialized -> load_batch()")
+
+                    t0 = time.perf_counter()
+
                     current_state = self.state_handler.load_batch(
                         batch_id=batch_id,
                         inputs=inputs,
                     )
 
+                    t1 = time.perf_counter()
+
+                    print(f"[batch {batch_id}] load_batch: {t1 - t0:.3f}s")
+
         finally:
+            print("Shutting down prefetcher...")
+
+            t0 = time.perf_counter()
+
             prefetcher.shutdown()
+
+            t1 = time.perf_counter()
+
+            print(f"prefetcher.shutdown(): {t1 - t0:.3f}s")
 
     def _sync_covariances(self, layer_indices: List[int]) -> None:
         """Synchronizes accumulated covariances across all MPI processes.
@@ -647,6 +983,18 @@ class ADMM(nn.Module):
             time_steps (Optional[List[int]], optional): List of timesteps for SNN simulation. Defaults to None.
             warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.
         """
+        print("Starting _iterate_batches test...")
+
+        iterator = iter(self._iterate_batches(dataloader))
+
+        for i in range(3):
+            t0 = time.perf_counter()
+
+            batch_id, inputs, labels, batch_state = next(iterator)
+
+            t1 = time.perf_counter()
+
+            print(f"_iterate_batches batch {batch_id}: {t1 - t0:.3f}s")
         # PHASE 1: COMPUTE COVARIANCES
         # self.cov_handler.reset_accumulators()
         # start = time.perf_counter()
