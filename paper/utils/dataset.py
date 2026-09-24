@@ -196,10 +196,10 @@ def get_dataset_spiking_admm(
         ),
         shuffle=False,
         drop_last=False,
-        num_workers=2,
-        pin_memory=True,
-        persistent_workers=True,
-        prefetch_factor=2,
+        num_workers=1,
+        pin_memory=False,
+        persistent_workers=False,
+        prefetch_factor=1,
         generator=torch.Generator().manual_seed(seed),
     )
 

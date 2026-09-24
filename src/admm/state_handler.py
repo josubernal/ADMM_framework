@@ -38,8 +38,8 @@ class ADMM_StateHandler:
         cache_dir: str = "./admm_cache",
         device: Optional[Union[str, torch.device]] = None,
         async_writes: bool = True,
-        max_queue_size: int = 4,
-        num_workers: int = 2,
+        max_queue_size: int = 2,
+        num_workers: int = 1,
     ):
         """Initializes the State Handler.
 
@@ -227,8 +227,8 @@ class AsyncWriter:
 
     def __init__(
         self,
-        max_queue_size: int = 4,
-        num_workers: int = 2,
+        max_queue_size: int = 2,
+        num_workers: int = 1,
     ):
         if max_queue_size < 1:
             raise ValueError("max_queue_size must be >= 1.")
