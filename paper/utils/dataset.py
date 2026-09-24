@@ -65,7 +65,7 @@ def get_dataset_static_gd(
     train_loader = DataLoader(
         trainset,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
         collate_fn=partial(
             collate_static,
             model_name=model_name,
@@ -95,7 +95,7 @@ def get_dataset_static_admm(
     train_loader = DataLoader(
         trainset,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
         drop_last=True,
         generator=torch.Generator().manual_seed(seed),
     )
@@ -146,7 +146,7 @@ def get_dataset_spiking_gd(
         cached_trainset,
         batch_size=batch_size,
         collate_fn=tonic.collation.PadTensors(),
-        shuffle=True,
+        shuffle=False,
         drop_last=False,
         num_workers=num_workers,
         pin_memory=True,
@@ -194,9 +194,12 @@ def get_dataset_spiking_admm(
             model_name=model_name,
             n_timesteps=n_timesteps,
         ),
-        shuffle=True,
+        shuffle=False,
         drop_last=False,
-        num_workers=0,
+        num_workers=2,
+        pin_memory=True,
+        persistent_workers=True,
+        prefetch_factor=2,
         generator=torch.Generator().manual_seed(seed),
     )
 
