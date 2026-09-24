@@ -79,7 +79,7 @@ for epoch in range(epochs + 1):
     admm_model.fit(train_loader, warming=epoch < warming_iters)
     if epoch % 1 == 0:
         with torch.no_grad():
-            m.save_metrics()
+            m.save_metrics(train_loader)
             elapsed_time = time.time() - start_time
             admm_times.append(elapsed_time)
             print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
