@@ -470,18 +470,26 @@ class ADMM(nn.Module):
             forward = layer.spatial_forward(a_prev)
 
             if self.config.update_z_first:
+                start_z = time.perf_counter()
                 layer.h.update_z_decoupled(
                     state=state,
                     forward=forward,
                     time_steps=time_steps,
                     config=layer.config,
                 )
+                print(f"z comp: {time.perf_counter() - start_z:.2f}s")
+                if self.device.type == "cuda":
+                    torch.cuda.synchronize()
+                start_a = time.perf_counter()
                 layer.update_a(
                     state=state,
                     next_layer=next_layer,
                     next_state=next_state,
                     a_prev=a_prev,
                 )
+                print(f"a comp: {time.perf_counter() - start_a:.2f}s")
+                if self.device.type == "cuda":
+                    torch.cuda.synchronize()
             else:
                 layer.update_a(
                     state=state,
@@ -658,9 +666,14 @@ class ADMM(nn.Module):
                 a_prev = self._get_a_prev(
                     layer_idx=layer_idx, inputs=inputs, batch_state=batch_state
                 )
+                start_cov = time.perf_counter()
                 numerator, denominator, bias_sum, bias_count = (
                     layer.compute_batch_covariances(state=state, a_prev=a_prev)
                 )
+                print(f"Cov comp: {time.perf_counter() - start_cov:.2f}s")
+                if self.device.type == "cuda":
+                    torch.cuda.synchronize()
+                start_acc = time.perf_counter()
                 self.cov_handler.accumulate(
                     layer_idx=layer_idx,
                     numerator=numerator,
@@ -668,6 +681,9 @@ class ADMM(nn.Module):
                     bias_sum=bias_sum,
                     bias_count=bias_count,
                 )
+                print(f"Acc comp: {time.perf_counter() - start_acc:.2f}s")
+                if self.device.type == "cuda":
+                    torch.cuda.synchronize()
         if self.device.type == "cuda":
             torch.cuda.synchronize()
 

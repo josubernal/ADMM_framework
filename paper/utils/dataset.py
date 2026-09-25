@@ -42,7 +42,7 @@ def format_images(images, model_name):
         # Flatten spatial dims: [B, C, H, W] -> [B, Features]
         images = images.view(images.size(0), -1)
 
-    return images.contiguous()
+    return images
 
 
 def get_dataset_static_gd(
@@ -183,14 +183,14 @@ def get_dataset_spiking_admm(
     )
 
     # Existing Tonic cache.
-    cached_trainset = DiskCachedDataset(
-        trainset,
-        cache_path="./cache/nmnist/train",
-    )
+    # cached_trainset = DiskCachedDataset(
+    #     trainset,
+    #     cache_path="./cache/nmnist/train",
+    # )
 
     # padding + formatting + truncation + transpose + fixed noise
     processed_trainset = CachedSpikingDataset(
-        dataset=cached_trainset,
+        dataset=trainset,
         cache_path=f"./cache/nmnist/temp_admm_{model_name}_{batch_size}_{n_timesteps}_{seed}",
         batch_size=batch_size,
         n_timesteps=n_timesteps,
@@ -246,20 +246,21 @@ class CachedSpikingDataset(Dataset):
         generator = torch.Generator()
         generator.manual_seed(self.seed)
 
-        batch_id = 0
+        raw_loader = DataLoader(
+            self.dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=4,
+            collate_fn=tonic.collation.PadTensors(),
+            pin_memory=False,
+            persistent_workers=True,
+        )
 
-        for start in range(0, len(self.dataset), self.batch_size):
-            end = min(start + self.batch_size, len(self.dataset))
-
+        for batch_id, (data, targets) in enumerate(raw_loader):
             print(
                 f"Batch: {batch_id + 1} "
                 f"of {(len(self.dataset) + self.batch_size - 1) // self.batch_size}"
             )
-
-            # Get the individual samples belonging to this batch
-            batch = [self.dataset[idx] for idx in range(start, end)]
-
-            data, targets = tonic.collation.PadTensors()(batch)
 
             data = format_images(
                 data,
