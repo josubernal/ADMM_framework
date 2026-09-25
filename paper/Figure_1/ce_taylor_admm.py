@@ -78,6 +78,7 @@ start_time = time.time()
 
 for epoch in range(epochs + 1):
     admm_model.fit(train_loader, warming=epoch < warming_iters)
+    print(f"Epoch time:{time.time() - start_time}")
     if epoch % 1 == 0:
         with torch.no_grad():
             m.save_metrics(train_loader)
