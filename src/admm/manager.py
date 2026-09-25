@@ -649,7 +649,9 @@ class ADMM(nn.Module):
             time_steps (Optional[List[int]], optional): List of timesteps for SNN simulation. Defaults to None.
             warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.
         """
-        cache_path = Path("./cache/nmnist/temp_admm_spiking-feedforward_1000_150_64")
+        cache_path = Path(
+            "./my_project/cache/nmnist/temp_admm_spiking-feedforward_1000_150_64"
+        )
 
         files = sorted(cache_path.glob("batch_*.pt"))
 
@@ -677,7 +679,9 @@ class ADMM(nn.Module):
 
             print(f"Pass {repeat}: {time.perf_counter() - start:.3f}s")
 
-        cache_path = Path("./cache/nmnist/temp_admm_spiking-feedforward_1000_150_64")
+        cache_path = Path(
+            "./my_project/cache/nmnist/temp_admm_spiking-feedforward_1000_150_64"
+        )
 
         total = 0
 
