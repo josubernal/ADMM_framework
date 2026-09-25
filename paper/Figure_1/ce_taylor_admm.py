@@ -71,7 +71,7 @@ admm_model = get_model(
 import torch
 from torch.utils.data import DataLoader
 
-dataset = train_loader
+dataset = train_loader.dataset
 
 # 1. Raw memmap access
 t0 = time.perf_counter()
