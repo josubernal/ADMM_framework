@@ -361,12 +361,43 @@ class ADMM_Metrics:
     def save_metrics(
         self,
         dataloader,
+        exclude=None,
     ) -> None:
         """Compute and append epoch-averaged metrics.
 
-        The DataLoader provides inputs and labels, while the ADMM state handler
-        provides the persistent auxiliary state for each batch.
+        Args:
+            dataloader: DataLoader providing inputs and labels.
+            exclude (list[str], optional): Metrics to skip. Valid names are:
+                "loss",
+                "accuracy",
+                "f1",
+                "lagrangian",
+                "primal_residual",
+                "preactivation_constraint_sum",
+                "activation_constraint_sum",
+                "firing_rate".
         """
+
+        if exclude is None:
+            exclude = set()
+        else:
+            exclude = set(exclude)
+
+        # Check for typos early
+        valid_metrics = {
+            "loss",
+            "accuracy",
+            "f1",
+            "lagrangian",
+            "primal_residual",
+            "preactivation_constraint_sum",
+            "activation_constraint_sum",
+            "firing_rate",
+        }
+
+        invalid = exclude - valid_metrics
+        if invalid:
+            raise ValueError(f"Unknown metrics in exclude: {invalid}")
 
         epoch_loss = 0.0
         epoch_acc = 0.0
@@ -389,98 +420,128 @@ class ADMM_Metrics:
             num_batches += 1
 
             # ---------------------------------------------------------
-            # 1. Loss
+            # Loss
             # ---------------------------------------------------------
-            epoch_loss += self.loss(
-                b_labels,
-                b_state,
+            if "loss" not in exclude:
+                epoch_loss += self.loss(
+                    b_labels,
+                    b_state,
+                )
+
+            # ---------------------------------------------------------
+            # Performance
+            # Accuracy, F1 and firing rate all come from this forward
+            # ---------------------------------------------------------
+            need_performance = not ({"accuracy", "f1", "firing_rate"} <= exclude)
+
+            if need_performance:
+                acc, f1, fr = self.evaluate_performance(
+                    b_inputs,
+                    b_labels,
+                )
+
+                if "accuracy" not in exclude:
+                    epoch_acc += acc
+
+                if "f1" not in exclude:
+                    epoch_f1 += f1
+
+                if (
+                    "firing_rate" not in exclude
+                    and self.model.is_spiking
+                    and isinstance(fr, list)
+                ):
+                    for i, value in enumerate(fr):
+                        epoch_fr[i] += value
+
+            # ---------------------------------------------------------
+            # ADMM constraints
+            #
+            # All of these can share the SAME forward computation.
+            # ---------------------------------------------------------
+            need_constraints = not (
+                {
+                    "lagrangian",
+                    "primal_residual",
+                    "preactivation_constraint_sum",
+                    "activation_constraint_sum",
+                }
+                <= exclude
             )
 
-            # ---------------------------------------------------------
-            # 2. Performance
-            # ---------------------------------------------------------
-            acc, f1, fr = self.evaluate_performance(
-                b_inputs,
-                b_labels,
-            )
+            if need_constraints:
+                _, residuals, activation_residuals = self._compute_constraints(
+                    b_inputs,
+                    b_state,
+                )
 
-            epoch_acc += acc
-            epoch_f1 += f1
+                # Lagrangian
+                if "lagrangian" not in exclude:
+                    epoch_lagr += self.lagrangian(
+                        b_labels,
+                        b_state,
+                        residuals,
+                        activation_residuals,
+                    )
 
-            if self.model.is_spiking and isinstance(fr, list):
-                for i, value in enumerate(fr):
-                    epoch_fr[i] += value
+                # Primal residual
+                if "primal_residual" not in exclude:
+                    epoch_primal += self.primal_residual_norm(
+                        residuals,
+                    )
 
-            # ---------------------------------------------------------
-            # 3. Compute all ADMM constraints ONCE
-            # ---------------------------------------------------------
-            _, residuals, activation_residuals = self._compute_constraints(
-                b_inputs,
-                b_state,
-            )
+                # Preactivation constraints
+                if "preactivation_constraint_sum" not in exclude:
+                    pre = self.preactivation_constraint_sum(
+                        residuals,
+                    )
 
-            # ---------------------------------------------------------
-            # 4. Lagrangian
-            # ---------------------------------------------------------
-            epoch_lagr += self.lagrangian(
-                b_labels,
-                b_state,
-                residuals,
-                activation_residuals,
-            )
+                    for i, value in enumerate(pre):
+                        epoch_pre[i] += value
 
-            # ---------------------------------------------------------
-            # 5. Primal residual
-            # ---------------------------------------------------------
-            epoch_primal += self.primal_residual_norm(
-                residuals,
-            )
-
-            # ---------------------------------------------------------
-            # 6. Preactivation constraints
-            # ---------------------------------------------------------
-            pre = self.preactivation_constraint_sum(
-                residuals,
-            )
-
-            for i, value in enumerate(pre):
-                epoch_pre[i] += value
-
-            # ---------------------------------------------------------
-            # 7. Activation constraints
-            # ---------------------------------------------------------
-            for i, residual in enumerate(activation_residuals):
-                epoch_act[i] += torch.sqrt(residual.square().mean()).item()
+                # Activation constraints
+                if "activation_constraint_sum" not in exclude:
+                    for i, residual in enumerate(activation_residuals):
+                        epoch_act[i] += torch.sqrt(residual.square().mean()).item()
 
         if num_batches == 0:
             print("Warning: DataLoader contains no batches. Metrics not saved.")
             return
 
         # -------------------------------------------------------------
-        # Epoch averages
+        # Save results
         # -------------------------------------------------------------
-        self.metrics["loss"].append(epoch_loss / num_batches)
 
-        self.metrics["accuracy"].append(epoch_acc / num_batches)
+        if "loss" not in exclude:
+            self.metrics["loss"].append(epoch_loss / num_batches)
 
-        self.metrics["f1"].append(epoch_f1 / num_batches)
+        if "accuracy" not in exclude:
+            self.metrics["accuracy"].append(epoch_acc / num_batches)
 
-        self.metrics["lagrangian"].append(epoch_lagr / num_batches)
+        if "f1" not in exclude:
+            self.metrics["f1"].append(epoch_f1 / num_batches)
 
-        self.metrics["primal_residual"].append(epoch_primal / num_batches)
+        if "lagrangian" not in exclude:
+            self.metrics["lagrangian"].append(epoch_lagr / num_batches)
 
-        self.metrics["preactivation_constraint_sum"].append(
-            [x / num_batches for x in epoch_pre]
-        )
+        if "primal_residual" not in exclude:
+            self.metrics["primal_residual"].append(epoch_primal / num_batches)
 
-        self.metrics["activation_constraint_sum"].append(
-            [x / num_batches for x in epoch_act]
-        )
+        if "preactivation_constraint_sum" not in exclude:
+            self.metrics["preactivation_constraint_sum"].append(
+                [x / num_batches for x in epoch_pre]
+            )
 
-        if self.model.is_spiking:
-            self.metrics["firing_rate"].append([x / num_batches for x in epoch_fr])
-        else:
-            self.metrics["firing_rate"].append(float("nan"))
+        if "activation_constraint_sum" not in exclude:
+            self.metrics["activation_constraint_sum"].append(
+                [x / num_batches for x in epoch_act]
+            )
+
+        if "firing_rate" not in exclude:
+            if self.model.is_spiking:
+                self.metrics["firing_rate"].append([x / num_batches for x in epoch_fr])
+            else:
+                self.metrics["firing_rate"].append(float("nan"))
 
     @torch.no_grad()
     def save_distributed_metrics(
