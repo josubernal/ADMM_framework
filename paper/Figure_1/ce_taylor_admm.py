@@ -93,7 +93,6 @@ for epoch in range(epochs + 1):
             )
             elapsed_time = time.time() - start_time
             admm_times.append(elapsed_time)
-            print(f"Time:{elapsed_time}")
             print(
                 f"Epoch [{epoch:3d}/{epochs}] | {m}"
             )  # Close the model to ensure all resources are released

@@ -5,7 +5,6 @@ The manager handles both static and spiking networks, automatically adjusting th
 """
 
 import random
-import time
 import warnings
 from typing import List, Optional, Tuple, Union
 
@@ -650,7 +649,6 @@ class ADMM(nn.Module):
         """
         # PHASE 1: COMPUTE COVARIANCES
         self.cov_handler.reset_accumulators()
-        start = time.time()
         for batch_id, inputs, labels, batch_state in self._iterate_batches(dataloader):
             for layer_idx in layer_indices:
                 layer = self.layers[layer_idx]
@@ -669,7 +667,6 @@ class ADMM(nn.Module):
                     bias_sum=bias_sum,
                     bias_count=bias_count,
                 )
-        print(f"PHASE 1:{time.time() - start}")
 
         # PHASE 2: GLOBAL WEIGHT & BIAS UPDATE
         for layer_idx in layer_indices:
@@ -682,7 +679,6 @@ class ADMM(nn.Module):
             )
             self.cov_handler.set_pinv(layer_idx=layer_idx, pinv=new_pinv)
 
-        start = time.time()
         # PHASE 3: LOCAL STATE UPDATES (a, z, lambda)
         for batch_id, inputs, labels, batch_state in self._iterate_batches(dataloader):
             for layer_idx in layer_indices:
@@ -704,7 +700,6 @@ class ADMM(nn.Module):
                     layer.update_lambda(state, a_prev)
 
             self.state_handler.save_batch(batch_state)
-        print(f"PHASE 3:{time.time() - start}")
 
     def _fit_multi_block(
         self,
