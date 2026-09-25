@@ -299,7 +299,8 @@ class CachedSpikingDataset(Dataset):
             if data_memmap is None:
                 data_shape = (
                     num_samples,
-                    *data.shape[1:],
+                    data.shape[0],  # T
+                    data.shape[2],  # features
                 )
 
                 data_memmap = np.memmap(
@@ -331,7 +332,7 @@ class CachedSpikingDataset(Dataset):
             # -----------------------------------------------------
             # Write directly into the memory-mapped arrays.
             # -----------------------------------------------------
-            data_memmap[start:end] = data.numpy()
+            data_memmap[start:end] = data.transpose(0, 1).numpy()
             targets_memmap[start:end] = targets.numpy()
 
             batch_id += 1
@@ -383,5 +384,6 @@ class CachedSpikingDataset(Dataset):
         # Convert the NumPy memmap views to PyTorch tensors.
         data = torch.from_numpy(data)
         targets = torch.from_numpy(targets)
+        data = data.transpose(0, 1).contiguous()
 
         return data, targets
