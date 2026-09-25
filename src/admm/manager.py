@@ -7,7 +7,6 @@ The manager handles both static and spiking networks, automatically adjusting th
 import random
 import time
 import warnings
-from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 import torch
@@ -649,47 +648,6 @@ class ADMM(nn.Module):
             time_steps (Optional[List[int]], optional): List of timesteps for SNN simulation. Defaults to None.
             warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.
         """
-        cache_path = Path(
-            "./my_project/cache/nmnist/temp_admm_spiking-feedforward_1000_150_64"
-        )
-
-        files = sorted(cache_path.glob("batch_*.pt"))
-
-        start = time.perf_counter()
-
-        for path in files:
-            data, targets = torch.load(
-                path,
-                weights_only=True,
-            )
-
-        elapsed = time.perf_counter() - start
-
-        print(f"Direct torch.load: {elapsed:.3f}s")
-        print(f"Average per batch: {elapsed / len(files):.3f}s")
-
-        for repeat in range(2):
-            start = time.perf_counter()
-
-            for path in files:
-                data, targets = torch.load(
-                    path,
-                    weights_only=True,
-                )
-
-            print(f"Pass {repeat}: {time.perf_counter() - start:.3f}s")
-
-        cache_path = Path(
-            "./my_project/cache/nmnist/temp_admm_spiking-feedforward_1000_150_64"
-        )
-
-        total = 0
-
-        for path in cache_path.glob("batch_*.pt"):
-            total += path.stat().st_size
-
-        print(f"Total cache size: {total / 1024**3:.2f} GB")
-        print(f"Number of batches: {len(list(cache_path.glob('batch_*.pt')))}")
         # PHASE 1: COMPUTE COVARIANCES
         self.cov_handler.reset_accumulators()
         start = time.time()

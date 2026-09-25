@@ -1,8 +1,10 @@
+import json
 import os
 import shutil
 from functools import partial
 from pathlib import Path
 
+import numpy as np
 import tonic
 import tonic.transforms as tr
 import torch
@@ -233,12 +235,16 @@ class CachedSpikingDataset(Dataset):
 
         self.cache_path.mkdir(parents=True, exist_ok=True)
 
+        self.data_path = self.cache_path / "data.dat"
+        self.targets_path = self.cache_path / "targets.dat"
+        self.metadata_path = self.cache_path / "metadata.json"
+        self.marker = self.cache_path / "complete"
+
         self._prepare_cache()
+        self._open_cache()
 
     def _prepare_cache(self):
-        marker = self.cache_path / "complete"
-
-        if marker.exists():
+        if self.marker.exists():
             print(f"Using cached dataset: {self.cache_path}")
             return
 
@@ -247,14 +253,19 @@ class CachedSpikingDataset(Dataset):
         generator = torch.Generator()
         generator.manual_seed(self.seed)
 
+        num_samples = len(self.dataset)
+
+        data_memmap = None
+        targets_memmap = None
+
         batch_id = 0
 
-        for start in range(0, len(self.dataset), self.batch_size):
-            end = min(start + self.batch_size, len(self.dataset))
+        for start in range(0, num_samples, self.batch_size):
+            end = min(start + self.batch_size, num_samples)
 
             print(
                 f"Batch: {batch_id + 1} "
-                f"of {(len(self.dataset) + self.batch_size - 1) // self.batch_size}"
+                f"of {(num_samples + self.batch_size - 1) // self.batch_size}"
             )
 
             # Get the individual samples belonging to this batch
@@ -266,11 +277,13 @@ class CachedSpikingDataset(Dataset):
                 data,
                 self.model_name,
             )
+
             if data.size(1) > self.n_timesteps:
                 data = data[:, : self.n_timesteps, ...]
 
             data = data.transpose(0, 1).contiguous()
 
+            # Add deterministic noise
             noise = torch.randn(
                 data.shape,
                 generator=generator,
@@ -279,30 +292,96 @@ class CachedSpikingDataset(Dataset):
 
             data = data + self.noise_std * noise
 
-            torch.save(
-                (data, targets),
-                self.cache_path / f"batch_{batch_id}.pt",
-            )
+            # -----------------------------------------------------
+            # Create the memory-mapped files after seeing the
+            # first processed batch.
+            # -----------------------------------------------------
+            if data_memmap is None:
+                data_shape = (
+                    num_samples,
+                    *data.shape[1:],
+                )
+
+                data_memmap = np.memmap(
+                    self.data_path,
+                    dtype=np.float32,
+                    mode="w+",
+                    shape=data_shape,
+                )
+
+                targets_memmap = np.memmap(
+                    self.targets_path,
+                    dtype=np.int64,
+                    mode="w+",
+                    shape=(num_samples,),
+                )
+
+                metadata = {
+                    "num_samples": num_samples,
+                    "batch_size": self.batch_size,
+                    "data_shape": list(data_shape),
+                    "targets_shape": [num_samples],
+                    "dtype": "float32",
+                    "targets_dtype": "int64",
+                }
+
+                with open(self.metadata_path, "w") as f:
+                    json.dump(metadata, f, indent=2)
+
+            # -----------------------------------------------------
+            # Write directly into the memory-mapped arrays.
+            # -----------------------------------------------------
+            data_memmap[start:end] = data.numpy()
+            targets_memmap[start:end] = targets.numpy()
 
             batch_id += 1
 
-        torch.save(
-            batch_id,
-            self.cache_path / "num_batches.pt",
+        # Make sure all data is physically flushed to disk.
+        data_memmap.flush()
+        targets_memmap.flush()
+
+        del data_memmap
+        del targets_memmap
+
+        # Only mark the cache complete after everything was written.
+        self.marker.touch()
+
+        print(f"Finished creating memory-mapped cache with {batch_id} batches.")
+
+    def _open_cache(self):
+        with open(self.metadata_path, "r") as f:
+            metadata = json.load(f)
+
+        self.num_samples = metadata["num_samples"]
+        self.batch_size = metadata["batch_size"]
+        self.data_shape = tuple(metadata["data_shape"])
+
+        self.data_memmap = np.memmap(
+            self.data_path,
+            dtype=np.float32,
+            mode="r",
+            shape=self.data_shape,
         )
 
-        marker.touch()
-
-        print(f"Finished creating cache with {batch_id} batches.")
+        self.targets_memmap = np.memmap(
+            self.targets_path,
+            dtype=np.int64,
+            mode="r",
+            shape=(self.num_samples,),
+        )
 
     def __len__(self):
-        return torch.load(
-            self.cache_path / "num_batches.pt",
-            weights_only=True,
-        )
+        return (self.num_samples + self.batch_size - 1) // self.batch_size
 
     def __getitem__(self, idx):
-        return torch.load(
-            self.cache_path / f"batch_{idx}.pt",
-            weights_only=True,
-        )
+        start = idx * self.batch_size
+        end = min(start + self.batch_size, self.num_samples)
+
+        data = self.data_memmap[start:end]
+        targets = self.targets_memmap[start:end]
+
+        # Convert the NumPy memmap views to PyTorch tensors.
+        data = torch.from_numpy(data)
+        targets = torch.from_numpy(targets)
+
+        return data, targets
