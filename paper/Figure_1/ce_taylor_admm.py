@@ -12,8 +12,6 @@ from src.admm import (
 
 from ..utils.dataset import (
     get_dataset_spiking_admm,
-    get_dataset_spiking_only_pad,
-    get_dataset_spiking_wo_noise,
 )
 from ..utils.models import get_model
 
