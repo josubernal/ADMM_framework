@@ -1,15 +1,13 @@
 import os
 from functools import partial
+from pathlib import Path
 
 import tonic
 import tonic.transforms as tr
 import torch
 from tonic import DiskCachedDataset
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets, transforms
-from pathlib import Path
-from torch.utils.data import Dataset
-
 
 
 def collate_static(batch, model_name):
@@ -30,7 +28,7 @@ def collate_spiking(batch, model_name, n_timesteps):
 
     data = data.transpose(0, 1).contiguous()
 
-    data =  0.01 * torch.randn_like(data)
+    data = 0.01 * torch.randn_like(data)
 
     return data, targets
 
@@ -159,6 +157,7 @@ def get_dataset_spiking_gd(
 
     return train_loader
 
+
 def get_dataset_spiking_admm(
     model_name,
     batch_size,
@@ -184,14 +183,14 @@ def get_dataset_spiking_admm(
     )
 
     # Existing Tonic cache.
-    # cached_trainset = DiskCachedDataset(
-    #     trainset,
-    #     cache_path="./cache/nmnist/train",
-    # )
+    cached_trainset = DiskCachedDataset(
+        trainset,
+        cache_path="./cache/nmnist/train",
+    )
 
     # padding + formatting + truncation + transpose + fixed noise
     processed_trainset = CachedSpikingDataset(
-        dataset=trainset,
+        dataset=cached_trainset,
         cache_path=f"./cache/nmnist/temp_admm_{model_name}_{batch_size}_{n_timesteps}_{seed}",
         batch_size=batch_size,
         n_timesteps=n_timesteps,
@@ -210,7 +209,6 @@ def get_dataset_spiking_admm(
     )
 
     return train_loader
-
 
 
 class CachedSpikingDataset(Dataset):
@@ -251,7 +249,6 @@ class CachedSpikingDataset(Dataset):
         batch_id = 0
 
         for start in range(0, len(self.dataset), self.batch_size):
-
             end = min(start + self.batch_size, len(self.dataset))
 
             print(
@@ -260,28 +257,19 @@ class CachedSpikingDataset(Dataset):
             )
 
             # Get the individual samples belonging to this batch
-            batch = [
-                self.dataset[idx]
-                for idx in range(start, end)
-            ]
+            batch = [self.dataset[idx] for idx in range(start, end)]
 
-            # EXACTLY the same padding as before
             data, targets = tonic.collation.PadTensors()(batch)
 
-            # EXACTLY the same formatting as before
             data = format_images(
                 data,
                 self.model_name,
             )
-
-            # EXACTLY the same truncation as before
             if data.size(1) > self.n_timesteps:
-                data = data[:, :self.n_timesteps, ...]
+                data = data[:, : self.n_timesteps, ...]
 
-            # EXACTLY the same transpose as before
             data = data.transpose(0, 1).contiguous()
 
-            # Generate noise ONCE
             noise = torch.randn(
                 data.shape,
                 generator=generator,
@@ -290,7 +278,6 @@ class CachedSpikingDataset(Dataset):
 
             data = data + self.noise_std * noise
 
-            # Save the complete processed batch
             torch.save(
                 (data, targets),
                 self.cache_path / f"batch_{batch_id}.pt",
@@ -298,7 +285,6 @@ class CachedSpikingDataset(Dataset):
 
             batch_id += 1
 
-        # Store number of batches
         torch.save(
             batch_id,
             self.cache_path / "num_batches.pt",
@@ -306,9 +292,7 @@ class CachedSpikingDataset(Dataset):
 
         marker.touch()
 
-        print(
-            f"Finished creating cache with {batch_id} batches."
-        )
+        print(f"Finished creating cache with {batch_id} batches.")
 
     def __len__(self):
         return torch.load(
