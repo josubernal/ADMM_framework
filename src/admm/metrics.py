@@ -50,8 +50,7 @@ class ADMM_Metrics:
 
     def __str__(self) -> str:
         """Returns a formatted string of the most recent metrics."""
-        if not self.metrics["loss"]:
-            return "Metrics not yet initialized."
+        parts = []
 
         def format_metric(val):
             if isinstance(val, list):
@@ -64,18 +63,25 @@ class ADMM_Metrics:
                 )
             return f"{val:10.2f}"
 
-        loss = self.metrics["loss"][-1]
-        lagr = format_metric(self.metrics["lagrangian"][-1])
-        lamb = format_metric(self.metrics["primal_residual"][-1])
-        pre = format_metric(self.metrics["preactivation_constraint_sum"][-1])
-        act = format_metric(self.metrics["activation_constraint_sum"][-1])
-        acc = format_metric(self.metrics["accuracy"][-1])
+        names = [
+            ("loss", "Loss"),
+            ("accuracy", "Acc"),
+            ("f1", "F1"),
+            ("firing_rate", "FR"),
+            ("lagrangian", "Lagr"),
+            ("primal_residual", "Primal"),
+            ("preactivation_constraint_sum", "Pre"),
+            ("activation_constraint_sum", "Act"),
+        ]
 
-        # Safely format firing rate
-        raw_fr = self.metrics["firing_rate"][-1]
-        fr_str = format_metric(raw_fr) if raw_fr is not None else "N/A"
+        for key, name in names:
+            if self.metrics[key]:
+                parts.append(f"{name}: {format_metric(self.metrics[key][-1])}")
 
-        return f"Loss: {loss:.4f} | Acc:{acc} | FR: {fr_str} | Lagr: {lagr} | Lamb: {lamb} | Pre: {pre} | Act: {act}"
+        if not parts:
+            return "Metrics not yet initialized."
+
+        return " | ".join(parts)
 
     def vectorized_forward(
         self, layer: nn.Module, a_prev: torch.Tensor, state: ADMM_LayerState

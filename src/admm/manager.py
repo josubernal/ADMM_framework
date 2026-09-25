@@ -648,7 +648,32 @@ class ADMM(nn.Module):
             time_steps (Optional[List[int]], optional): List of timesteps for SNN simulation. Defaults to None.
             warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.
         """
+        start = time.perf_counter()
 
+        for inputs, labels in dataloader:
+            pass
+
+        print("DataLoader:", time.perf_counter() - start)
+
+        start = time.perf_counter()
+
+        for batch_id, (inputs, labels) in enumerate(dataloader):
+            inputs = inputs.to(self.device, non_blocking=True)
+            labels = labels.to(self.device, non_blocking=True)
+
+            state = self.state_handler.load_batch(
+                batch_id=batch_id,
+                inputs=inputs,
+            )
+
+        print("DataLoader + load:", time.perf_counter() - start)
+
+        start = time.perf_counter()
+
+        for batch_id, inputs, labels, state in self._iterate_batches(dataloader):
+            pass
+
+        print("Full iterator:", time.perf_counter() - start)
         # PHASE 1: COMPUTE COVARIANCES
         self.cov_handler.reset_accumulators()
         start = time.time()
