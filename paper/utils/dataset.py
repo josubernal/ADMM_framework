@@ -250,7 +250,7 @@ class CachedSpikingDataset(Dataset):
             self.dataset,
             batch_size=self.batch_size,
             shuffle=False,
-            num_workers=2,
+            num_workers=1,
             collate_fn=tonic.collation.PadTensors(),
             pin_memory=False,
             persistent_workers=True,
