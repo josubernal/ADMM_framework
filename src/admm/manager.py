@@ -5,7 +5,6 @@ The manager handles both static and spiking networks, automatically adjusting th
 """
 
 import random
-import time
 import warnings
 from typing import List, Optional, Tuple, Union
 
@@ -470,26 +469,19 @@ class ADMM(nn.Module):
             forward = layer.spatial_forward(a_prev)
 
             if self.config.update_z_first:
-                start_z = time.perf_counter()
                 layer.h.update_z_decoupled(
                     state=state,
                     forward=forward,
                     time_steps=time_steps,
                     config=layer.config,
                 )
-                print(f"z comp: {time.perf_counter() - start_z:.2f}s")
-                if self.device.type == "cuda":
-                    torch.cuda.synchronize()
-                start_a = time.perf_counter()
+
                 layer.update_a(
                     state=state,
                     next_layer=next_layer,
                     next_state=next_state,
                     a_prev=a_prev,
                 )
-                print(f"a comp: {time.perf_counter() - start_a:.2f}s")
-                if self.device.type == "cuda":
-                    torch.cuda.synchronize()
             else:
                 layer.update_a(
                     state=state,
@@ -658,7 +650,6 @@ class ADMM(nn.Module):
 
         # PHASE 1: COMPUTE COVARIANCES
         self.cov_handler.reset_accumulators()
-        start = time.perf_counter()
         for batch_id, inputs, labels, batch_state in self._iterate_batches(dataloader):
             for layer_idx in layer_indices:
                 layer = self.layers[layer_idx]
@@ -666,14 +657,10 @@ class ADMM(nn.Module):
                 a_prev = self._get_a_prev(
                     layer_idx=layer_idx, inputs=inputs, batch_state=batch_state
                 )
-                start_cov = time.perf_counter()
+
                 numerator, denominator, bias_sum, bias_count = (
                     layer.compute_batch_covariances(state=state, a_prev=a_prev)
                 )
-                print(f"Cov comp: {time.perf_counter() - start_cov:.2f}s")
-                if self.device.type == "cuda":
-                    torch.cuda.synchronize()
-                start_acc = time.perf_counter()
                 self.cov_handler.accumulate(
                     layer_idx=layer_idx,
                     numerator=numerator,
@@ -681,25 +668,11 @@ class ADMM(nn.Module):
                     bias_sum=bias_sum,
                     bias_count=bias_count,
                 )
-                print(f"Acc comp: {time.perf_counter() - start_acc:.2f}s")
-                if self.device.type == "cuda":
-                    torch.cuda.synchronize()
-        if self.device.type == "cuda":
-            torch.cuda.synchronize()
-
-        print(f"PHASE 1: {time.perf_counter() - start:.2f}s")
 
         # PHASE 2: GLOBAL WEIGHT & BIAS UPDATE
         for layer_idx in layer_indices:
             layer = self.layers[layer_idx]
             covariances = self.cov_handler.get_covariances(layer_idx)
-            print(
-                f"Layer {layer_idx}: "
-                f"solver={self.config.solver}, "
-                f"numerator={covariances.numerator.shape}, "
-                f"denominator={covariances.denominator.shape}, "
-                f"device={covariances.denominator.device}"
-            )
             new_pinv = self._optimize_weights_and_biases(
                 layer=layer,
                 covariances=covariances,
@@ -708,7 +681,6 @@ class ADMM(nn.Module):
             self.cov_handler.set_pinv(layer_idx=layer_idx, pinv=new_pinv)
 
         # PHASE 3: LOCAL STATE UPDATES (a, z, lambda)
-        start = time.perf_counter()
         for batch_id, inputs, labels, batch_state in self._iterate_batches(dataloader):
             for layer_idx in layer_indices:
                 layer = self.layers[layer_idx]
@@ -729,10 +701,6 @@ class ADMM(nn.Module):
                     layer.update_lambda(state, a_prev)
 
             self.state_handler.save_batch(batch_state)
-        if self.device.type == "cuda":
-            torch.cuda.synchronize()
-
-        print(f"PHASE 3: {time.perf_counter() - start:.2f}s")
 
     def _fit_multi_block(
         self,

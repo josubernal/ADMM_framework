@@ -1,4 +1,5 @@
 import os
+import shutil
 from functools import partial
 from pathlib import Path
 
@@ -183,14 +184,14 @@ def get_dataset_spiking_admm(
     )
 
     # Existing Tonic cache.
-    cached_trainset = DiskCachedDataset(
-        trainset,
-        cache_path="./cache/nmnist/train",
-    )
+    # cached_trainset = DiskCachedDataset(
+    #     trainset,
+    #     cache_path="./cache/nmnist/train",
+    # )
 
     # padding + formatting + truncation + transpose + fixed noise
     processed_trainset = CachedSpikingDataset(
-        dataset=cached_trainset,
+        dataset=trainset,
         cache_path=f"./cache/nmnist/temp_admm_{model_name}_{batch_size}_{n_timesteps}_{seed}",
         batch_size=batch_size,
         n_timesteps=n_timesteps,
@@ -207,7 +208,7 @@ def get_dataset_spiking_admm(
         pin_memory=False,
         persistent_workers=False,
     )
-
+    shutil.rmtree("./data")
     return train_loader
 
 
