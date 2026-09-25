@@ -203,7 +203,7 @@ def get_dataset_spiking_admm(
         processed_trainset,
         batch_size=None,
         shuffle=False,
-        num_workers=1,
+        num_workers=2,
         pin_memory=False,
         persistent_workers=False,
     )
