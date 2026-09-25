@@ -103,6 +103,39 @@ class ADMM_Metrics:
         return temporal_forward
 
     @torch.no_grad()
+    def _compute_constraints(
+        self,
+        inputs,
+        batch_state,
+    ):
+        predicted_zs = []
+        residuals = []
+        activation_residuals = []
+
+        for layer_idx, layer in enumerate(self.model.layers):
+            layer_state = batch_state.layer_states[layer_idx]
+
+            a_prev = (
+                inputs if layer_idx == 0 else batch_state.layer_states[layer_idx - 1].a
+            )
+
+            predicted_z = self.vectorized_forward(
+                layer=layer,
+                state=layer_state,
+                a_prev=a_prev,
+            )
+
+            residual = layer_state.z - predicted_z
+
+            predicted_zs.append(predicted_z)
+            residuals.append(residual)
+
+            if layer_idx < self.model.L - 1:
+                activation_residuals.append(layer_state.a - layer.h(layer_state.z))
+
+        return predicted_zs, residuals, activation_residuals
+
+    @torch.no_grad()
     def loss(self, labels: torch.Tensor, batch_state: ADMM_BatchState) -> float:
         """Computes the scalar [loss][src.admm.loss_functions.ADMM_Loss] of the final output.
 
@@ -121,126 +154,70 @@ class ADMM_Metrics:
 
     @torch.no_grad()
     def lagrangian(
-        self, inputs: torch.Tensor, labels: torch.Tensor, batch_state: ADMM_BatchState
-    ) -> float:
-        r"""Calculates the ADMM augmented Lagrangian energy to track convergence.
-
-        This incorporates the objective [loss][src.admm.loss_functions.ADMM_Loss], the spatial affine penalties,
-        the activation penalties, and the dual variable (Lagrange) multipliers.
-
-        Args:
-            inputs (torch.Tensor): The input data tensor.
-            labels (torch.Tensor): The ground truth labels.
-            batch_state (ADMM_BatchState): The [global state][src.admm.dataclasses.ADMM_BatchState] object containing all layer states for the batch.
-
-        Returns:
-            float: The calculated Lagrangian cost.
-        """
-        cost = 0.0
-
+        self,
+        labels,
+        batch_state,
+        residuals,
+        activation_residuals,
+    ):
         final_layer_state = batch_state.layer_states[-1]
+
         final_out = (
             final_layer_state.z[-1] if self.model.is_spiking else final_layer_state.z
         )
 
-        loss_val = self.model.loss_f(final_out, labels)
-        cost += loss_val.item() if isinstance(loss_val, torch.Tensor) else loss_val
+        cost = self.model.loss_f(final_out, labels)
 
         for layer_idx, layer in enumerate(self.model.layers):
-            layer_state = batch_state.layer_states[layer_idx]
-            a_prev = (
-                inputs if layer_idx == 0 else batch_state.layer_states[layer_idx - 1].a
-            )
+            residual = residuals[layer_idx]
 
-            predicted_z = self.vectorized_forward(
-                layer=layer, state=layer_state, a_prev=a_prev
-            )
+            # ||z - F(a)||^2
+            cost = cost + (layer.config.rho / 2.0) * residual.square().sum()
 
-            residual = layer_state.z - predicted_z
-            cost += (layer.config.rho / 2.0) * torch.norm(residual).item() ** 2
-
+            # ||a - h(z)||^2
             if layer_idx < self.model.L - 1:
-                cost += (layer.config.beta / 2.0) * torch.norm(
-                    layer_state.a - layer.h(layer_state.z)
-                ).item() ** 2
+                activation_residual = activation_residuals[layer_idx]
+                cost = (
+                    cost
+                    + (layer.config.beta / 2.0) * activation_residual.square().sum()
+                )
 
+            # Lagrange multiplier term
             if (
                 getattr(layer.config, "use_lagrange", False)
-                and layer_state.lambda_lagrange is not None
+                and batch_state.layer_states[layer_idx].lambda_lagrange is not None
             ):
-                if self.model.is_spiking:
-                    cost += torch.sum(layer_state.lambda_lagrange * residual[-1]).item()
-                else:
-                    cost += torch.sum(layer_state.lambda_lagrange * residual).item()
+                lambda_lagrange = batch_state.layer_states[layer_idx].lambda_lagrange
 
-        return cost
+                if self.model.is_spiking:
+                    cost = cost + (lambda_lagrange * residual[-1]).sum()
+                else:
+                    cost = cost + (lambda_lagrange * residual).sum()
+
+        return cost.item()
 
     @torch.no_grad()
     def primal_residual_norm(
-        self, inputs: torch.Tensor, batch_state: ADMM_BatchState
+        self,
+        residuals,
     ) -> float:
-        r"""Calculates the normalized norm of the primal residual for the final layer.
+        """Normalized primal residual of the final layer."""
 
-        Formula evaluated:
+        residual = residuals[-1]
 
-        $$ ||z_L -F_L(a_{L-1})|| / \sqrt{N} $$
+        if self.model.is_spiking:
+            residual = residual[-1]
 
-        Args:
-            inputs (torch.Tensor): The input data tensor.
-            batch_state (ADMM_BatchState): The [global state][src.admm.dataclasses.ADMM_BatchState] object containing all layer states for the batch.
-
-        Returns:
-            float: The normalized residual.
-        """
-        last_layer = self.model.layers[-1]
-        last_state = batch_state.layer_states[-1]
-        a_prev_L = batch_state.layer_states[-2].a if self.model.L > 1 else inputs
-
-        last_out = self.vectorized_forward(
-            layer=last_layer, state=last_state, a_prev=a_prev_L
-        )
-
-        residual = last_state.z - last_out
-        r = residual[-1] if self.model.is_spiking else residual
-        norm_factor = r.numel() ** 0.5
-
-        return (torch.norm(r) / norm_factor).item()
+        return torch.sqrt(residual.square().mean()).item()
 
     @torch.no_grad()
     def preactivation_constraint_sum(
-        self, inputs: torch.Tensor, batch_state: ADMM_BatchState
+        self,
+        residuals,
     ) -> list[float]:
-        r"""Calculates the normalized L2 norm of the pre-activation constraints.
+        """Normalized preactivation constraint for every layer."""
 
-        Formula evaluated per layer:
-
-        $$ ||z_l - F_l(a_{l-1})|| / \sqrt{N} $$
-
-        Args:
-            inputs (torch.Tensor): The input data tensor.
-            batch_state (ADMM_BatchState): The [global state][src.admm.dataclasses.ADMM_BatchState] object containing all layer states for the batch.
-
-        Returns:
-            list of float: The residual norms per layer.
-        """
-        constraints_residuals = []
-
-        for layer_idx, layer in enumerate(self.model.layers):
-            layer_state = batch_state.layer_states[layer_idx]
-            a_prev = (
-                inputs if layer_idx == 0 else batch_state.layer_states[layer_idx - 1].a
-            )
-
-            predicted_z = self.vectorized_forward(
-                layer=layer, state=layer_state, a_prev=a_prev
-            )
-
-            residual = layer_state.z - predicted_z
-            norm_factor = residual.numel() ** 0.5
-            val = (torch.norm(residual) / norm_factor).item()
-            constraints_residuals.append(val)
-
-        return constraints_residuals
+        return [torch.sqrt(residual.square().mean()).item() for residual in residuals]
 
     @torch.no_grad()
     def activation_constraint_sum(self, batch_state: ADMM_BatchState) -> list[float]:
@@ -411,11 +388,17 @@ class ADMM_Metrics:
         ) in self.model._iterate_batches(dataloader):
             num_batches += 1
 
+            # ---------------------------------------------------------
+            # 1. Loss
+            # ---------------------------------------------------------
             epoch_loss += self.loss(
                 b_labels,
                 b_state,
             )
 
+            # ---------------------------------------------------------
+            # 2. Performance
+            # ---------------------------------------------------------
             acc, f1, fr = self.evaluate_performance(
                 b_inputs,
                 b_labels,
@@ -428,36 +411,54 @@ class ADMM_Metrics:
                 for i, value in enumerate(fr):
                     epoch_fr[i] += value
 
-            epoch_lagr += self.lagrangian(
+            # ---------------------------------------------------------
+            # 3. Compute all ADMM constraints ONCE
+            # ---------------------------------------------------------
+            _, residuals, activation_residuals = self._compute_constraints(
                 b_inputs,
+                b_state,
+            )
+
+            # ---------------------------------------------------------
+            # 4. Lagrangian
+            # ---------------------------------------------------------
+            epoch_lagr += self.lagrangian(
                 b_labels,
                 b_state,
+                residuals,
+                activation_residuals,
             )
 
+            # ---------------------------------------------------------
+            # 5. Primal residual
+            # ---------------------------------------------------------
             epoch_primal += self.primal_residual_norm(
-                b_inputs,
-                b_state,
+                residuals,
             )
 
+            # ---------------------------------------------------------
+            # 6. Preactivation constraints
+            # ---------------------------------------------------------
             pre = self.preactivation_constraint_sum(
-                b_inputs,
-                b_state,
+                residuals,
             )
 
             for i, value in enumerate(pre):
                 epoch_pre[i] += value
 
-            act = self.activation_constraint_sum(
-                b_state,
-            )
-
-            for i, value in enumerate(act):
-                epoch_act[i] += value
+            # ---------------------------------------------------------
+            # 7. Activation constraints
+            # ---------------------------------------------------------
+            for i, residual in enumerate(activation_residuals):
+                epoch_act[i] += torch.sqrt(residual.square().mean()).item()
 
         if num_batches == 0:
             print("Warning: DataLoader contains no batches. Metrics not saved.")
             return
 
+        # -------------------------------------------------------------
+        # Epoch averages
+        # -------------------------------------------------------------
         self.metrics["loss"].append(epoch_loss / num_batches)
 
         self.metrics["accuracy"].append(epoch_acc / num_batches)
