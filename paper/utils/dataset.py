@@ -7,17 +7,9 @@ import torch
 from tonic import DiskCachedDataset
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
+from pathlib import Path
+from torch.utils.data import Dataset
 
-
-def add_noise_in_chunks(data, std=0.01, chunk_size=10):
-    for start in range(0, data.size(0), chunk_size):
-        end = min(start + chunk_size, data.size(0))
-
-        noise = torch.empty_like(data[start:end])
-        noise.normal_(0.0, std)
-        data[start:end].add_(noise)
-
-    return data
 
 
 def collate_static(batch, model_name):
@@ -38,7 +30,7 @@ def collate_spiking(batch, model_name, n_timesteps):
 
     data = data.transpose(0, 1).contiguous()
 
-    data = add_noise_in_chunks(data)
+    data =  0.01 * torch.randn_like(data)
 
     return data, targets
 
@@ -167,7 +159,6 @@ def get_dataset_spiking_gd(
 
     return train_loader
 
-
 def get_dataset_spiking_admm(
     model_name,
     batch_size,
@@ -192,137 +183,141 @@ def get_dataset_spiking_admm(
         train=True,
     )
 
-    cached_trainset = DiskCachedDataset(
-        trainset,
-        cache_path="./cache/nmnist/train",
+    # Existing Tonic cache.
+    # cached_trainset = DiskCachedDataset(
+    #     trainset,
+    #     cache_path="./cache/nmnist/train",
+    # )
+
+    # padding + formatting + truncation + transpose + fixed noise
+    processed_trainset = CachedSpikingDataset(
+        dataset=trainset,
+        cache_path=f"./cache/nmnist/temp_admm_{model_name}_{batch_size}_{n_timesteps}_{seed}",
+        batch_size=batch_size,
+        n_timesteps=n_timesteps,
+        model_name=model_name,
+        noise_std=0.01,
+        seed=seed,
     )
 
     train_loader = DataLoader(
-        cached_trainset,
-        batch_size=batch_size,
-        collate_fn=partial(
-            collate_spiking,
-            model_name=model_name,
-            n_timesteps=n_timesteps,
-        ),
+        processed_trainset,
+        batch_size=None,
         shuffle=False,
-        drop_last=False,
         num_workers=1,
         pin_memory=False,
         persistent_workers=False,
-        prefetch_factor=1,
-        generator=torch.Generator().manual_seed(seed),
     )
 
     return train_loader
 
 
-def get_dataset_spiking_only_pad(
-    model_name,
-    batch_size,
-    seed=64,
-    n_timesteps=150,
-):
-    sensor_size = tonic.datasets.NMNIST.sensor_size
 
-    frame_transform = tr.Compose(
-        [
-            tr.Denoise(filter_time=10000),
-            tr.ToFrame(
-                sensor_size=sensor_size,
-                time_window=1000,
-            ),
-        ]
-    )
+class CachedSpikingDataset(Dataset):
+    def __init__(
+        self,
+        dataset,
+        cache_path,
+        batch_size,
+        n_timesteps,
+        model_name,
+        noise_std=0.01,
+        seed=64,
+    ):
+        self.dataset = dataset
+        self.cache_path = Path(cache_path)
+        self.batch_size = batch_size
+        self.n_timesteps = n_timesteps
+        self.model_name = model_name
+        self.noise_std = noise_std
+        self.seed = seed
 
-    trainset = tonic.datasets.NMNIST(
-        save_to="./data",
-        transform=frame_transform,
-        train=True,
-    )
+        self.cache_path.mkdir(parents=True, exist_ok=True)
 
-    cached_trainset = DiskCachedDataset(
-        trainset,
-        cache_path="./cache/nmnist/train",
-    )
+        self._prepare_cache()
 
-    train_loader = DataLoader(
-        cached_trainset,
-        batch_size=batch_size,
-        collate_fn=partial(collate_only_pad),
-        shuffle=False,
-        drop_last=False,
-        num_workers=1,
-        pin_memory=False,
-        persistent_workers=False,
-        prefetch_factor=1,
-        generator=torch.Generator().manual_seed(seed),
-    )
+    def _prepare_cache(self):
+        marker = self.cache_path / "complete"
 
-    return train_loader
+        if marker.exists():
+            print(f"Using cached dataset: {self.cache_path}")
+            return
 
+        print("Preprocessing data...")
 
-def get_dataset_spiking_wo_noise(
-    model_name,
-    batch_size,
-    seed=64,
-    n_timesteps=150,
-):
-    sensor_size = tonic.datasets.NMNIST.sensor_size
+        generator = torch.Generator()
+        generator.manual_seed(self.seed)
 
-    frame_transform = tr.Compose(
-        [
-            tr.Denoise(filter_time=10000),
-            tr.ToFrame(
-                sensor_size=sensor_size,
-                time_window=1000,
-            ),
-        ]
-    )
+        batch_id = 0
 
-    trainset = tonic.datasets.NMNIST(
-        save_to="./data",
-        transform=frame_transform,
-        train=True,
-    )
+        for start in range(0, len(self.dataset), self.batch_size):
 
-    cached_trainset = DiskCachedDataset(
-        trainset,
-        cache_path="./cache/nmnist/train",
-    )
+            end = min(start + self.batch_size, len(self.dataset))
 
-    train_loader = DataLoader(
-        cached_trainset,
-        batch_size=batch_size,
-        collate_fn=partial(
-            collate_wo_noise,
-            model_name=model_name,
-            n_timesteps=n_timesteps,
-        ),
-        shuffle=False,
-        drop_last=False,
-        num_workers=1,
-        pin_memory=False,
-        persistent_workers=False,
-        prefetch_factor=1,
-        generator=torch.Generator().manual_seed(seed),
-    )
+            print(
+                f"Batch: {batch_id + 1} "
+                f"of {(len(self.dataset) + self.batch_size - 1) // self.batch_size}"
+            )
 
-    return train_loader
+            # Get the individual samples belonging to this batch
+            batch = [
+                self.dataset[idx]
+                for idx in range(start, end)
+            ]
 
+            # EXACTLY the same padding as before
+            data, targets = tonic.collation.PadTensors()(batch)
 
-def collate_only_pad(batch):
-    return tonic.collation.PadTensors()(batch)
+            # EXACTLY the same formatting as before
+            data = format_images(
+                data,
+                self.model_name,
+            )
 
+            # EXACTLY the same truncation as before
+            if data.size(1) > self.n_timesteps:
+                data = data[:, :self.n_timesteps, ...]
 
-def collate_wo_noise(batch, model_name, n_timesteps):
-    data, targets = tonic.collation.PadTensors()(batch)
+            # EXACTLY the same transpose as before
+            data = data.transpose(0, 1).contiguous()
 
-    data = format_images(data, model_name)
+            # Generate noise ONCE
+            noise = torch.randn(
+                data.shape,
+                generator=generator,
+                dtype=data.dtype,
+            )
 
-    if data.size(1) > n_timesteps:
-        data = data[:, :n_timesteps, ...]
+            data = data + self.noise_std * noise
 
-    data = data.transpose(0, 1).contiguous()
+            # Save the complete processed batch
+            torch.save(
+                (data, targets),
+                self.cache_path / f"batch_{batch_id}.pt",
+            )
 
-    return data, targets
+            batch_id += 1
+
+        # Store number of batches
+        torch.save(
+            batch_id,
+            self.cache_path / "num_batches.pt",
+        )
+
+        marker.touch()
+
+        print(
+            f"Finished creating cache with {batch_id} batches."
+        )
+
+    def __len__(self):
+        return torch.load(
+            self.cache_path / "num_batches.pt",
+            weights_only=True,
+        )
+
+    def __getitem__(self, idx):
+        return torch.load(
+            self.cache_path / f"batch_{idx}.pt",
+            weights_only=True,
+        )
