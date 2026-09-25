@@ -183,14 +183,14 @@ def get_dataset_spiking_admm(
     )
 
     # Existing Tonic cache.
-    # cached_trainset = DiskCachedDataset(
-    #     trainset,
-    #     cache_path="./cache/nmnist/train",
-    # )
+    cached_trainset = DiskCachedDataset(
+        trainset,
+        cache_path="./cache/nmnist/train",
+    )
 
     # padding + formatting + truncation + transpose + fixed noise
     processed_trainset = CachedSpikingDataset(
-        dataset=trainset,
+        dataset=cached_trainset,
         cache_path=f"./cache/nmnist/temp_admm_{model_name}_{batch_size}_{n_timesteps}_{seed}",
         batch_size=batch_size,
         n_timesteps=n_timesteps,
@@ -203,7 +203,7 @@ def get_dataset_spiking_admm(
         processed_trainset,
         batch_size=None,
         shuffle=False,
-        num_workers=2,
+        num_workers=1,
         pin_memory=False,
         persistent_workers=False,
     )
@@ -246,21 +246,20 @@ class CachedSpikingDataset(Dataset):
         generator = torch.Generator()
         generator.manual_seed(self.seed)
 
-        raw_loader = DataLoader(
-            self.dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=1,
-            collate_fn=tonic.collation.PadTensors(),
-            pin_memory=False,
-            persistent_workers=True,
-        )
+        batch_id = 0
 
-        for batch_id, (data, targets) in enumerate(raw_loader):
+        for start in range(0, len(self.dataset), self.batch_size):
+            end = min(start + self.batch_size, len(self.dataset))
+
             print(
                 f"Batch: {batch_id + 1} "
                 f"of {(len(self.dataset) + self.batch_size - 1) // self.batch_size}"
             )
+
+            # Get the individual samples belonging to this batch
+            batch = [self.dataset[idx] for idx in range(start, end)]
+
+            data, targets = tonic.collation.PadTensors()(batch)
 
             data = format_images(
                 data,
