@@ -68,6 +68,47 @@ admm_model = get_model(
     block_method="two-block",
 )
 
+import torch
+from torch.utils.data import DataLoader
+
+dataset = train_loader
+
+# 1. Raw memmap access
+t0 = time.perf_counter()
+
+for i in range(len(dataset)):
+    data = dataset.data_memmap[
+        i * dataset.batch_size : min((i + 1) * dataset.batch_size, dataset.num_samples)
+    ]
+
+print(f"Raw memmap: {time.perf_counter() - t0:.2f}s")
+
+
+# 2. Memmap -> torch + transpose
+t0 = time.perf_counter()
+
+for i in range(len(dataset)):
+    data = dataset.data_memmap[
+        i * dataset.batch_size : min((i + 1) * dataset.batch_size, dataset.num_samples)
+    ]
+    data = torch.from_numpy(data)
+    data = data.transpose(0, 1)
+
+print(f"Memmap + torch + transpose: {time.perf_counter() - t0:.2f}s")
+
+
+# 3. Actual DataLoader
+t0 = time.perf_counter()
+
+for data, targets in DataLoader(
+    dataset,
+    batch_size=None,
+    shuffle=False,
+    num_workers=0,
+):
+    pass
+
+print(f"DataLoader num_workers=0: {time.perf_counter() - t0:.2f}s")
 #########################################
 # ADMM TRAINING LOOP
 

@@ -206,7 +206,7 @@ def get_dataset_spiking_admm(
         processed_trainset,
         batch_size=None,
         shuffle=False,
-        num_workers=1,
+        num_workers=0,
         pin_memory=False,
         persistent_workers=False,
     )
@@ -384,6 +384,6 @@ class CachedSpikingDataset(Dataset):
         # Convert the NumPy memmap views to PyTorch tensors.
         data = torch.from_numpy(data)
         targets = torch.from_numpy(targets)
-        data = data.transpose(0, 1).contiguous()
+        data = data.transpose(0, 1)
 
         return data, targets
