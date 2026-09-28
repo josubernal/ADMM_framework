@@ -191,6 +191,7 @@ def preprocess_admm_spiking(
                     clevel=1,
                     shuffle=Blosc.BITSHUFFLE,
                 ),
+                zarr_format=2,
             )
 
             # ---------------------------------------------------------
