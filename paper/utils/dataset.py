@@ -216,8 +216,8 @@ class CachedSpikingDataset(Dataset):
             exist_ok=True,
         )
 
-        self.data_path = self.cache_path / "data.zarr"
-        self.targets_path = self.cache_path / "targets.npy"
+        self.data_path = self.cache_path / "data.dat"
+        self.targets_path = self.cache_path / "targets.dat"
         self.metadata_path = self.cache_path / "metadata.json"
         self.marker = self.cache_path / "complete"
 
@@ -233,8 +233,6 @@ class CachedSpikingDataset(Dataset):
         self._open_cache()
 
     def _open_cache(self):
-        import zarr
-
         with open(self.metadata_path, "r") as f:
             metadata = json.load(f)
 
@@ -242,17 +240,34 @@ class CachedSpikingDataset(Dataset):
         self.batch_size = metadata["batch_size"]
         self.data_shape = tuple(metadata["data_shape"])
 
-        # Open Zarr array in read-only mode
-        self.data_zarr = zarr.open(
+        # Packed data shape:
+        # [N, T, 867]
+        self.data_memmap = np.memmap(
             self.data_path,
+            dtype=np.uint8,
             mode="r",
+            shape=self.data_shape,
         )
 
-        # Targets are stored as a normal .npy file
-        self.targets = np.load(
+        self.targets_memmap = np.memmap(
             self.targets_path,
-            mmap_mode="r",
+            dtype=np.int64,
+            mode="r",
+            shape=(self.num_samples,),
         )
+
+        # Original feature dimension before 3-bit packing
+        self.original_feature_dim = metadata.get(
+            "original_feature_dim",
+            self.data_shape[-1] * 8 // 3,
+        )
+
+        # Deterministic noise
+        self.generator = torch.Generator()
+        self.generator.manual_seed(self.seed)
+
+        # Reused for every batch
+        self.noise_buffer = None
 
     def __len__(self):
         return (self.num_samples + self.batch_size - 1) // self.batch_size
@@ -265,13 +280,20 @@ class CachedSpikingDataset(Dataset):
         )
 
         # -------------------------------------------------------------
-        # Load CLEAN data from Zarr
-        # Shape: [B, T, F]
+        # Load packed data
+        # Shape: [B, T, 867]
         # -------------------------------------------------------------
 
-        data = self.data_zarr[start:end]
+        packed = self.data_memmap[start:end]
 
-        targets = self.targets[start:end]
+        # -------------------------------------------------------------
+        # Unpack 3-bit values
+        # Shape: [B, T, 2312]
+        # -------------------------------------------------------------
+
+        data = unpack_3bit(packed)
+
+        targets = self.targets_memmap[start:end]
 
         # -------------------------------------------------------------
         # Convert to PyTorch
@@ -280,11 +302,14 @@ class CachedSpikingDataset(Dataset):
         data = torch.from_numpy(data)
         targets = torch.from_numpy(targets)
 
-        # Convert clean integer data to float
+        # -------------------------------------------------------------
+        # Convert clean uint8 data to float32
+        # -------------------------------------------------------------
+
         data = data.float()
 
         # -------------------------------------------------------------
-        # Add deterministic Gaussian noise
+        # Add Gaussian noise
         # -------------------------------------------------------------
 
         if self.noise_std > 0:
@@ -298,7 +323,6 @@ class CachedSpikingDataset(Dataset):
             )
 
             self.noise_buffer.mul_(self.noise_std)
-
             data.add_(self.noise_buffer)
 
         # -------------------------------------------------------------
@@ -308,3 +332,55 @@ class CachedSpikingDataset(Dataset):
         data = data.transpose(0, 1)
 
         return data, targets
+
+
+def unpack_3bit(packed: np.ndarray) -> np.ndarray:
+    """
+    Unpack 3-bit values packed by pack_3bit().
+
+    Input:
+        (..., 3 * N) uint8
+
+    Output:
+        (..., 8 * N) uint8
+    """
+    if packed.dtype != np.uint8:
+        raise TypeError(f"Expected uint8, got {packed.dtype}")
+
+    packed_size = packed.shape[-1]
+
+    if packed_size % 3 != 0:
+        raise ValueError(
+            f"Packed last dimension must be divisible by 3, got {packed_size}"
+        )
+
+    num_groups = packed_size // 3
+
+    x = packed.reshape(-1, num_groups, 3)
+
+    b0 = x[..., 0]
+    b1 = x[..., 1]
+    b2 = x[..., 2]
+
+    unpacked = np.empty(
+        (x.shape[0], num_groups, 8),
+        dtype=np.uint8,
+    )
+
+    unpacked[..., 0] = b0 & 0b00000111
+    unpacked[..., 1] = (b0 >> 3) & 0b00000111
+
+    unpacked[..., 2] = ((b0 >> 6) & 0b00000011) | ((b1 & 0b00000001) << 2)
+
+    unpacked[..., 3] = (b1 >> 1) & 0b00000111
+    unpacked[..., 4] = (b1 >> 4) & 0b00000111
+
+    unpacked[..., 5] = ((b1 >> 7) & 0b00000001) | ((b2 & 0b00000111) << 1)
+
+    unpacked[..., 6] = (b2 >> 2) & 0b00000111
+    unpacked[..., 7] = (b2 >> 5) & 0b00000111
+
+    return unpacked.reshape(
+        *packed.shape[:-1],
+        num_groups * 8,
+    )
