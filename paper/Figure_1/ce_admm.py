@@ -79,12 +79,22 @@ start_time = time.time()
 
 for epoch in range(epochs + 1):
     admm_model.fit(train_loader, warming=epoch < warming_iters)
-    if epoch % 1 == 0:
+    if epoch % 5 == 0:
         with torch.no_grad():
-            m.save_metrics()
+            m.save_metrics(
+                train_loader,
+                exclude=[
+                    "lagrangian",
+                    "primal_residual",
+                    "preactivation_constraint_sum",
+                    "activation_constraint_sum",
+                ],
+            )
             elapsed_time = time.time() - start_time
             admm_times.append(elapsed_time)
-            print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
+            print(
+                f"Epoch [{epoch:3d}/{epochs}] | {m}"
+            )  # Close the model to ensure all resources are released
 
 ############################
 # SAVING RESULTS AND PLOTTING
@@ -105,3 +115,5 @@ with open(metrics_filename, "w") as f:
 # Free up memory before the next model
 if torch.cuda.is_available():
     torch.cuda.empty_cache()
+
+admm_model.close()
