@@ -216,8 +216,8 @@ class CachedSpikingDataset(Dataset):
             exist_ok=True,
         )
 
-        self.data_path = self.cache_path / "data.dat"
-        self.targets_path = self.cache_path / "targets.dat"
+        self.data_path = self.cache_path / "data.zarr"
+        self.targets_path = self.cache_path / "targets.npy"
         self.metadata_path = self.cache_path / "metadata.json"
         self.marker = self.cache_path / "complete"
 
@@ -233,6 +233,8 @@ class CachedSpikingDataset(Dataset):
         self._open_cache()
 
     def _open_cache(self):
+        import zarr
+
         with open(self.metadata_path, "r") as f:
             metadata = json.load(f)
 
@@ -240,18 +242,16 @@ class CachedSpikingDataset(Dataset):
         self.batch_size = metadata["batch_size"]
         self.data_shape = tuple(metadata["data_shape"])
 
-        self.data_memmap = np.memmap(
+        # Open Zarr array in read-only mode
+        self.data_zarr = zarr.open(
             self.data_path,
-            dtype=np.float32,
             mode="r",
-            shape=self.data_shape,
         )
 
-        self.targets_memmap = np.memmap(
+        # Targets are stored as a normal .npy file
+        self.targets = np.load(
             self.targets_path,
-            dtype=np.int64,
-            mode="r",
-            shape=(self.num_samples,),
+            mmap_mode="r",
         )
 
     def __len__(self):
@@ -259,14 +259,52 @@ class CachedSpikingDataset(Dataset):
 
     def __getitem__(self, idx):
         start = idx * self.batch_size
-        end = min(start + self.batch_size, self.num_samples)
+        end = min(
+            start + self.batch_size,
+            self.num_samples,
+        )
 
-        data = self.data_memmap[start:end]
-        targets = self.targets_memmap[start:end]
+        # -------------------------------------------------------------
+        # Load CLEAN data from Zarr
+        # Shape: [B, T, F]
+        # -------------------------------------------------------------
 
-        # Convert the NumPy memmap views to PyTorch tensors.
+        data = self.data_zarr[start:end]
+
+        targets = self.targets[start:end]
+
+        # -------------------------------------------------------------
+        # Convert to PyTorch
+        # -------------------------------------------------------------
+
         data = torch.from_numpy(data)
         targets = torch.from_numpy(targets)
+
+        # Convert clean integer data to float
+        data = data.float()
+
+        # -------------------------------------------------------------
+        # Add deterministic Gaussian noise
+        # -------------------------------------------------------------
+
+        if self.noise_std > 0:
+            if self.noise_buffer is None or self.noise_buffer.shape != data.shape:
+                self.noise_buffer = torch.empty_like(data)
+
+            torch.randn(
+                data.shape,
+                generator=self.generator,
+                out=self.noise_buffer,
+            )
+
+            self.noise_buffer.mul_(self.noise_std)
+
+            data.add_(self.noise_buffer)
+
+        # -------------------------------------------------------------
+        # [B, T, F] -> [T, B, F]
+        # -------------------------------------------------------------
+
         data = data.transpose(0, 1)
 
         return data, targets
