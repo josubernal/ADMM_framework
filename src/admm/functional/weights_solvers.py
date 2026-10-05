@@ -70,9 +70,70 @@ def solve_weights(
     return result, pinv
 
 
+def _pinv_from_eigh(A: torch.Tensor, rtol: float = 1e-10) -> torch.Tensor:
+    """Pseudo-inverse of a symmetric PSD matrix via eigendecomposition."""
+    evals, evecs = torch.linalg.eigh(A)
+    cutoff = rtol * evals.abs().max().clamp(min=1e-30)
+    inv = torch.where(evals > cutoff, 1.0 / evals, torch.zeros_like(evals))
+    return (evecs * inv) @ evecs.mT
+
+
+def robust_pinv(A: torch.Tensor) -> torch.Tensor:
+    """Pseudo-inverse with a chain of increasingly conservative fallbacks."""
+    orig_dtype, orig_device = A.dtype, A.device
+
+    # 0. Non-finite input can never work: sanitize
+    if not torch.isfinite(A).all():
+        A = torch.nan_to_num(A, nan=0.0, posinf=0.0, neginf=0.0)
+
+    # 1. Fast path: symmetric pinv (uses eigh, not gesvd)
+    try:
+        return torch.linalg.pinv(A, hermitian=True)
+    except torch._C._LinAlgError:
+        pass
+
+    # 2. float64 on the same device, symmetrized, with growing jitter
+    A64 = A.double()
+    A64 = (A64 + A64.mT) / 2
+    scale = A64.abs().max().clamp(min=1.0)
+    eye = torch.eye(A64.shape[0], dtype=A64.dtype, device=A64.device)
+    for eps in (0.0, 1e-8, 1e-6, 1e-4):
+        try:
+            return _pinv_from_eigh(A64 + eps * scale * eye).to(orig_dtype)
+        except torch._C._LinAlgError:
+            continue
+
+    # 3. CPU float64 (LAPACK is far more robust than cusolver)
+    A_cpu = A64.cpu()
+    for eps in (0.0, 1e-6, 1e-4):
+        try:
+            P = _pinv_from_eigh(A_cpu + eps * scale.cpu() * eye.cpu())
+            return P.to(device=orig_device, dtype=orig_dtype)
+        except torch._C._LinAlgError:
+            continue
+
+    # 4. Last resort: plain SVD-based pinv on CPU
+    return torch.linalg.pinv(A_cpu).to(device=orig_device, dtype=orig_dtype)
+
+
+# def standard_solver(A, B, cached_pinv, is_cached_cholesky):
+#     if cached_pinv is None or is_cached_cholesky:
+#         pinv = torch.linalg.pinv(A)
+#     else:
+#         pinv = cached_pinv
+
+#     return B @ pinv, pinv
+
+
 def standard_solver(A, B, cached_pinv, is_cached_cholesky):
     if cached_pinv is None or is_cached_cholesky:
-        pinv = torch.linalg.pinv(A)
+        try:
+            pinv = robust_pinv(A)
+        except torch._C._LinAlgError:
+            if cached_pinv is not None and not is_cached_cholesky:
+                pinv = cached_pinv  # reuse the stale inverse
+            else:
+                raise
     else:
         pinv = cached_pinv
 
@@ -90,7 +151,7 @@ def cholesky_solver(A, B, cached_pinv, is_cached_cholesky):
             W_new_T = torch.cholesky_solve(B.mT, L)
             return W_new_T.mT, L
         except torch._C._LinAlgError:
-            pinv = torch.linalg.pinv(A)
+            pinv = robust_pinv(A)
             return B @ pinv, pinv
     else:
         L = cached_pinv

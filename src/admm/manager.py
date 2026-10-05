@@ -4,6 +4,7 @@ ADMM breaks the network down into layer-wise sub-problems and updates in a loop.
 The manager handles both static and spiking networks, automatically adjusting the optimization loop based on the network type and selected training method.
 """
 
+import os
 import random
 import warnings
 from typing import List, Optional, Tuple, Union
@@ -11,7 +12,6 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.distributed as dist
 import torch.nn as nn
-from torch.utils.data import DataLoader
 
 from .covariance_handler import ADMM_CovarianceHandler
 from .dataclasses import (
@@ -62,14 +62,18 @@ class ADMM(nn.Module):
         self.T = T
         self.is_spiking = self.T is not None
         self.initialized = False
+        self._cached_batch = None
         self.config = config if config is not None else ADMM_Config()
+        self._covariances_ready = False
 
         # Separates z and a from layers.
         # Having states isolated in an object allows multibatch handling and loss and activation function modularity.
         self.state_handler = ADMM_StateHandler(
             layers=self.layers,
             init_strategy=self.config.init,
+            cache_dir=os.environ.get("ADMM_CACHE_DIR", "./admm_cache"),
             device=self.device,
+            ram_budget_gb=float(os.environ.get("ADMM_RAM_GB", 0)),
         )
 
         # Separates covariances from layers.
@@ -151,146 +155,171 @@ class ADMM(nn.Module):
         """
         return inputs if layer_idx == 0 else batch_state.layer_states[layer_idx - 1].a
 
-    def _iterate_batches(self, dataloader: DataLoader):
-        """Yield DataLoader batches while prefetching existing ADMM states."""
+    def _accumulate_batch_covariances(
+        self,
+        layer_indices: List[int],
+        inputs: torch.Tensor,
+        batch_state: ADMM_BatchState,
+    ) -> None:
+        """Accumulate covariances of one batch for every layer, using its current states."""
+        for layer_idx in layer_indices:
+            layer = self.layers[layer_idx]
+            state = batch_state.layer_states[layer_idx]
+            a_prev = self._get_a_prev(
+                layer_idx=layer_idx, inputs=inputs, batch_state=batch_state
+            )
+            numerator, denominator, bias_sum, bias_count = (
+                layer.compute_batch_covariances(state=state, a_prev=a_prev)
+            )
+            self.cov_handler.accumulate(
+                layer_idx=layer_idx,
+                numerator=numerator,
+                denominator=denominator,
+                bias_sum=bias_sum,
+                bias_count=bias_count,
+            )
 
-        loader_iter = iter(dataloader)
+    def _iterate_batches(self, dataloader):
+        """Yield batches while reusing the previously loaded batch when possible.
+
+        The last batch yielded by this iterator is cached and reused as the first
+        batch of the next iteration. Disk-backed state loading uses asynchronous
+        prefetching for initialized batches.
+        """
+
+        # IMPORTANT: create enumerate() ONCE so the batch_id counter persists
+        # across successive calls to get_next_uncached_batch().
+        loader_iter = enumerate(dataloader)
+
+        cached_batch = self._cached_batch
+        cached_batch_id = cached_batch[0] if cached_batch is not None else None
+
+        def to_device(inputs, labels):
+            if inputs.device != self.device:
+                inputs = inputs.to(self.device)
+            if labels.device != self.device:
+                labels = labels.to(self.device)
+            return inputs, labels
 
         # =========================================================
         # SINGLE-BATCH / RAM MODE
         # =========================================================
         if self.state_handler.in_memory:
-            for batch_id, (inputs, labels) in enumerate(loader_iter):
-                inputs = inputs.to(
-                    self.device,
-                    non_blocking=True,
-                )
-                labels = labels.to(
-                    self.device,
-                    non_blocking=True,
-                )
+            if cached_batch is not None:
+                yield cached_batch
+
+            for batch_id, (inputs, labels) in loader_iter:
+                # Already yielded from the cache.
+                if batch_id == cached_batch_id:
+                    continue
+
+                inputs, labels = to_device(inputs, labels)
 
                 batch_state = self.state_handler.load_batch(
                     batch_id=batch_id,
                     inputs=inputs,
                 )
 
-                yield (
-                    batch_id,
-                    inputs,
-                    labels,
-                    batch_state,
-                )
+                self._cached_batch = (batch_id, inputs, labels, batch_state)
+
+                yield self._cached_batch
 
             return
 
         # =========================================================
         # DISK-BACKED MODE
         # =========================================================
-
         prefetcher = AsyncStatePrefetcher(
             state_handler=self.state_handler,
             max_in_flight=2,
             num_workers=1,
         )
 
+        def get_next_uncached_batch():
+            for batch_id, batch in loader_iter:
+                if batch_id == cached_batch_id:
+                    continue
+                return batch_id, batch
+            return None
+
         try:
-            # Load the first DataLoader batch.
+            # Reuse cached batch first.
+            if cached_batch is not None:
+                yield cached_batch
 
-            first_batch = next(loader_iter, None)
-
-            if first_batch is None:
+            # Get first uncached batch.
+            current = get_next_uncached_batch()
+            if current is None:
                 return
 
-            inputs, labels = first_batch
-            batch_id = 0
-            # Move current inputs/labels to the device.
-            inputs = inputs.to(
-                self.device,
-                non_blocking=True,
-            )
-            labels = labels.to(
-                self.device,
-                non_blocking=True,
-            )
+            batch_id, (inputs, labels) = current
+            inputs, labels = to_device(inputs, labels)
 
-            # -----------------------------------------------------
-            # We can only prefetch states that already exist.
-            #
-            # If this is the first epoch, batch 0 does not exist,
-            # so it is initialized synchronously.
-            # -----------------------------------------------------
+            # Prepare current batch.
             current_prefetched = False
             current_state = None
-
             if self.state_handler.is_batch_initialized(batch_id):
-                prefetcher.schedule(batch_id)
-                current_prefetched = True
-
+                if batch_id in self.state_handler._ram:
+                    current_state = self.state_handler._load_batch_from_ram(batch_id)
+                else:
+                    prefetcher.schedule(batch_id)
+                    current_prefetched = True
             else:
                 current_state = self.state_handler.load_batch(
                     batch_id=batch_id,
                     inputs=inputs,
                 )
 
-            # -----------------------------------------------------
-            # Main loop.
-            # -----------------------------------------------------
+            # Main iteration.
             while True:
-                # Get the NEXT DataLoader batch.
-                next_batch = next(loader_iter, None)
-                next_id = batch_id + 1
+                # Look ahead: get next non-cached batch.
+                next_batch = get_next_uncached_batch()
+
+                next_id = None
+                next_inputs = None
+                next_labels = None
+                next_state = None
+                next_prefetched = False
 
                 if next_batch is not None:
-                    if self.state_handler.is_batch_initialized(next_id):
-                        prefetcher.schedule(next_id)
+                    next_id, (next_inputs, next_labels) = next_batch
+                    next_inputs, next_labels = to_device(next_inputs, next_labels)
 
-                # -------------------------------------------------
-                # Obtain the CURRENT batch state.
-                #
-                # If it was prefetched, Future.result() waits only
-                # if the disk read hasn't finished yet.
-                # -------------------------------------------------
+                    if self.state_handler.is_batch_initialized(next_id):
+                        if next_id in self.state_handler._ram:
+                            next_state = self.state_handler._load_batch_from_ram(
+                                next_id
+                            )
+                        else:
+                            prefetcher.schedule(next_id)
+                            next_prefetched = True
+                    else:
+                        # Not initialized yet: build it now, before yielding the
+                        # current batch, so the next iteration already has it.
+                        next_state = self.state_handler.load_batch(
+                            batch_id=next_id,
+                            inputs=next_inputs,
+                        )
+
+                # Resolve the current state if it was prefetched.
                 if current_prefetched:
                     current_state = prefetcher.get(batch_id)
                     current_prefetched = False
 
-                # Give the current batch to the ADMM algorithm.
-                yield (
-                    batch_id,
-                    inputs,
-                    labels,
-                    current_state,
-                )
+                # Cache and yield the current batch.
+                self._cached_batch = (batch_id, inputs, labels, current_state)
+                yield self._cached_batch
 
-                # No next batch → we are finished.
+                # No more batches.
                 if next_batch is None:
                     break
 
-                # Move to the next batch.
-                inputs, labels = next_batch
+                # Move next -> current.
                 batch_id = next_id
-
-                # Move current inputs/labels to the device.
-                inputs = inputs.to(
-                    self.device,
-                    non_blocking=True,
-                )
-                labels = labels.to(
-                    self.device,
-                    non_blocking=True,
-                )
-
-                # The state for this batch may already be loading.
-                # If it wasn't initialized yet, initialize it now.
-                if self.state_handler.is_batch_initialized(batch_id):
-                    current_prefetched = True
-
-                else:
-                    current_state = self.state_handler.load_batch(
-                        batch_id=batch_id,
-                        inputs=inputs,
-                    )
+                inputs = next_inputs
+                labels = next_labels
+                current_state = next_state
+                current_prefetched = next_prefetched
 
         finally:
             prefetcher.shutdown()
@@ -467,7 +496,6 @@ class ADMM(nn.Module):
         ):
             # Activation functions are not capable of computing layer dynamics. We must pass this as an argument.
             forward = layer.spatial_forward(a_prev)
-
             if self.config.update_z_first:
                 layer.h.update_z_decoupled(
                     state=state,
@@ -475,7 +503,6 @@ class ADMM(nn.Module):
                     time_steps=time_steps,
                     config=layer.config,
                 )
-
                 layer.update_a(
                     state=state,
                     next_layer=next_layer,
@@ -562,7 +589,7 @@ class ADMM(nn.Module):
         layer_indices: List[int],
         time_steps: Optional[List[int]],
         warming: bool,
-        dataloader: DataLoader,
+        dataloader,
     ) -> None:
         """Executes the two-phase ADMM algorithm:
 
@@ -627,7 +654,6 @@ class ADMM(nn.Module):
                 )
                 if not warming:
                     layer.update_lambda(state, a_prev)
-
             self.state_handler.save_batch(batch_state)
 
     def _fit_two_block(
@@ -635,7 +661,7 @@ class ADMM(nn.Module):
         layer_indices: List[int],
         time_steps: Optional[List[int]],
         warming: bool,
-        dataloader: DataLoader,
+        dataloader,
     ) -> None:
         """Executes the two-phase ADMM algorithm:
 
@@ -648,26 +674,13 @@ class ADMM(nn.Module):
             warming (bool, optional): If True, bypasses the Lagrange multiplier update to stabilize initial matrices. Defaults to False.
         """
         # PHASE 1: COMPUTE COVARIANCES
-        self.cov_handler.reset_accumulators()
-        for batch_id, inputs, labels, batch_state in self._iterate_batches(dataloader):
-            for layer_idx in layer_indices:
-                layer = self.layers[layer_idx]
-                state = batch_state.layer_states[layer_idx]
-                a_prev = self._get_a_prev(
-                    layer_idx=layer_idx, inputs=inputs, batch_state=batch_state
-                )
-
-                numerator, denominator, bias_sum, bias_count = (
-                    layer.compute_batch_covariances(state=state, a_prev=a_prev)
-                )
-                self.cov_handler.accumulate(
-                    layer_idx=layer_idx,
-                    numerator=numerator,
-                    denominator=denominator,
-                    bias_sum=bias_sum,
-                    bias_count=bias_count,
-                )
-
+        if not self._covariances_ready:
+            self.cov_handler.reset_accumulators()
+            for batch_id, inputs, labels, batch_state in self._iterate_batches(
+                dataloader
+            ):
+                self._accumulate_batch_covariances(layer_indices, inputs, batch_state)
+        self._covariances_ready = False
         # PHASE 2: GLOBAL WEIGHT & BIAS UPDATE
         for layer_idx in layer_indices:
             layer = self.layers[layer_idx]
@@ -678,9 +691,11 @@ class ADMM(nn.Module):
                 cache_pinv=(layer_idx == 0) and self.config.cache_pinv,
             )
             self.cov_handler.set_pinv(layer_idx=layer_idx, pinv=new_pinv)
-
+        self.cov_handler.reset_accumulators()
         # PHASE 3: LOCAL STATE UPDATES (a, z, lambda)
-        for batch_id, inputs, labels, batch_state in self._iterate_batches(dataloader):
+        for batch_id, inputs, labels, batch_state in self._iterate_batches(
+            dataloader,
+        ):
             for layer_idx in layer_indices:
                 layer = self.layers[layer_idx]
                 state = batch_state.layer_states[layer_idx]
@@ -698,15 +713,16 @@ class ADMM(nn.Module):
                 )
                 if not warming:
                     layer.update_lambda(state, a_prev)
-
+            self._accumulate_batch_covariances(layer_indices, inputs, batch_state)
             self.state_handler.save_batch(batch_state)
+        self._covariances_ready = True
 
     def _fit_multi_block(
         self,
         layer_indices: List[int],
         time_steps: Optional[List[int]],
         warming: bool,
-        dataloader: DataLoader,
+        dataloader,
     ) -> None:
         """ "Executes the multi-phase ADMM algorithm: Updates weights then states sequentially per layer.
 
@@ -727,7 +743,6 @@ class ADMM(nn.Module):
                 a_prev = self._get_a_prev(
                     layer_idx=layer_idx, inputs=inputs, batch_state=batch_state
                 )
-
                 numerator, denominator, bias_sum, bias_count = (
                     layer.compute_batch_covariances(state=state, a_prev=a_prev)
                 )
@@ -843,7 +858,7 @@ class ADMM(nn.Module):
         return final_out
 
     @torch.no_grad()
-    def fit(self, dataloader: DataLoader, warming: bool = False) -> None:
+    def fit(self, dataloader, warming: bool = False) -> None:
         """Orchestrates the global fitting loop for the ADMM optimization process.
 
         Args:
@@ -863,8 +878,10 @@ class ADMM(nn.Module):
             if self.config.block_method == "two-block":
                 self._fit_two_block(layer_indices, time_steps, warming, dataloader)
             elif self.config.block_method == "multi-block":
+                self._covariances_ready = False
                 self._fit_multi_block(layer_indices, time_steps, warming, dataloader)
             elif self.config.block_method == "distributed":
+                self._covariances_ready = False
                 self._fit_distributed(layer_indices, time_steps, warming, dataloader)
             else:
                 raise ValueError(f"Unknown update mode: {self.config.block_method}")

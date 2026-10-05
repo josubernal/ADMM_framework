@@ -10,9 +10,7 @@ from src.admm import (
     ADMM_Metrics,
 )
 
-from ..utils.dataset import (
-    get_dataset_spiking_admm,
-)
+from ..utils.dataset import get_dataset
 from ..utils.models import get_model
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -50,11 +48,12 @@ torch.backends.cudnn.benchmark = False
 #########################################
 # DATA
 
-train_loader = get_dataset_spiking_admm(
+train_loader = get_dataset(
     model_name="spiking-feedforward",
     batch_size=batch_size_spiking,
     n_timesteps=n_timesteps,
     seed=seed,
+    device=device,
 )
 
 admm_model = get_model(
@@ -68,7 +67,6 @@ admm_model = get_model(
     block_method="two-block",
 )
 
-
 #########################################
 # ADMM TRAINING LOOP
 
@@ -77,10 +75,9 @@ m = ADMM_Metrics(admm_model)
 admm_times = []
 start_time = time.time()
 
-print("Starting training...")
+print("Starting training...", flush=True)
 for epoch in range(epochs + 1):
     admm_model.fit(train_loader, warming=epoch < warming_iters)
-    print(f"Epoch time:{time.time() - start_time}")
     if epoch % 5 == 0:
         with torch.no_grad():
             m.save_metrics(
@@ -95,7 +92,7 @@ for epoch in range(epochs + 1):
             elapsed_time = time.time() - start_time
             admm_times.append(elapsed_time)
             print(
-                f"Epoch [{epoch:3d}/{epochs}] | {m}"
+                f"Epoch [{epoch:3d}/{epochs}] | {m}", flush=True
             )  # Close the model to ensure all resources are released
 
 ############################

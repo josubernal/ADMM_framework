@@ -7,7 +7,7 @@ import torch
 
 from src.admm import ADMM_CrossEntropy_Taylor, ADMM_Metrics
 
-from ..utils.dataset import get_dataset_spiking_admm
+from ..utils.dataset import get_dataset
 from ..utils.models import get_model
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -55,18 +55,16 @@ torch.cuda.manual_seed_all(seed)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-print(f"\n{'=' * 50}")
-print("EVALUATING MODEL")
-print(f"{'=' * 50}")
-
 #########################################
 # DATA
 
-train_loader = get_dataset_spiking_admm(
+
+train_loader = get_dataset(
     model_name="spiking-conv",
     batch_size=batch_size_spiking,
     n_timesteps=n_timesteps,
     seed=seed,
+    device=device,
 )
 
 admm_model = get_model(
@@ -88,14 +86,23 @@ m = ADMM_Metrics(admm_model)
 admm_times = []
 start_time = time.time()
 
+print("Starting training...", flush=True)
 for epoch in range(epochs + 1):
     admm_model.fit(train_loader, warming=epoch < warming_iters)
-    if epoch % 1 == 0:
+    if epoch % 5 == 0:
         with torch.no_grad():
-            m.save_metrics()
+            m.save_metrics(
+                train_loader,
+                exclude=[
+                    "lagrangian",
+                    "primal_residual",
+                    "preactivation_constraint_sum",
+                    "activation_constraint_sum",
+                ],
+            )
             elapsed_time = time.time() - start_time
             admm_times.append(elapsed_time)
-            print(f"Epoch [{epoch:3d}/{epochs}] | {m}")
+            print(f"Epoch [{epoch:3d}/{epochs}] | {m}", flush=True)
 
 ############################
 # SAVING RESULTS AND PLOTTING
@@ -116,3 +123,5 @@ with open(metrics_filename, "w") as f:
 # Free up memory before the next model
 if torch.cuda.is_available():
     torch.cuda.empty_cache()
+
+admm_model.close()

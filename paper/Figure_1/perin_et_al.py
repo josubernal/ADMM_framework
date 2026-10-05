@@ -1,17 +1,12 @@
 import configparser
-import itertools
 import json
 import os
 import random
+import time
 from typing import List
 
-import matplotlib.pyplot as plt
 import tonic
-import tonic.transforms as transforms
 import torch
-from safetensors.torch import load_file, save_file
-from tonic import DiskCachedDataset
-from torch.utils.data import DataLoader
 
 
 class ADMM_SNN:
@@ -106,6 +101,8 @@ class ADMM_SNN:
         self.size = 0
 
         self.epoch = 0
+        self._store = {}
+        self.state_device = os.environ.get("STATE_DEVICE", "cpu")  # "cuda" if it fits
 
     def reset_metrics(self):
         """
@@ -477,79 +474,35 @@ class ADMM_SNN:
         )
 
     def load_batch(self, num_batch):
-
-        batch_path = os.path.join("batches", f"batch_{num_batch}")
-
-        if os.path.exists(batch_path):
-            a_tensors = load_file(os.path.join(batch_path, "a_tensors.safetensors"))
-            self.a = [a_tensors[str(i)].to(self.device) for i in range(len(a_tensors))]
-
-            z_tensors = load_file(os.path.join(batch_path, "z_tensors.safetensors"))
-            self.z = [z_tensors[str(i)].to(self.device) for i in range(len(z_tensors))]
-
-            lambda_tensor = load_file(
-                os.path.join(batch_path, "lambda_lagrange.safetensors")
-            )
-            self.lambda_lagrange = lambda_tensor["lambda_tensor"].to(self.device)
+        if num_batch in self._store:
+            a, z, lam = self._store[num_batch]
+            self.a = [t.to(self.device) for t in a]
+            self.z = [t.to(self.device) for t in z]
+            self.lambda_lagrange = lam.to(self.device)
 
     def initialize_variables(self, num_batches):
-
-        batch_path = os.path.join("batches")
-
-        os.makedirs(batch_path, exist_ok=True)
-
-        # === Initialize z_l (Pre-activation potentials) ===
-        z_variables = []
-        for i, hidden_dim in enumerate(hidden_dims + [n_outputs]):
-            z_variables.append(
-                torch.rand((n_timesteps, n_samples * num_batches, hidden_dim)).to(
-                    self.device
-                )
-            )
-
-        # === Initialize a_l (Activations/Spikes) ===
-        a_variables = []
-        for i, hidden_dim in enumerate(hidden_dims):
-            a_variables.append(
-                torch.rand((n_timesteps, n_samples * num_batches, hidden_dim)).to(
-                    self.device
-                )
-            )
-
-        # === Initialize lagrange multipliers (only for the output layer constraint) ===
-        lambda_lagrange = torch.zeros((n_samples * num_batches, n_outputs)).to(
-            self.device
-        )
-
+        # Same distributions as before (z, a ~ U[0,1), lambda = 0), but created one
+        # batch at a time so the GPU never holds the states of ALL batches.
         for num_batch in range(num_batches):
             self.z = [
-                z_l[:, n_samples * (num_batch) : n_samples * (num_batch + 1), :]
-                for z_l in z_variables
+                torch.rand((n_timesteps, n_samples, h), device=self.device)
+                for h in hidden_dims + [n_outputs]
             ]
             self.a = [
-                a_l[:, n_samples * (num_batch) : n_samples * (num_batch + 1), :]
-                for a_l in a_variables
+                torch.rand((n_timesteps, n_samples, h), device=self.device)
+                for h in hidden_dims
             ]
-            self.lambda_lagrange = lambda_lagrange[
-                n_samples * (num_batch) : n_samples * (num_batch + 1), :
-            ]
-
+            self.lambda_lagrange = torch.zeros(
+                (n_samples, n_outputs), device=self.device
+            )
             self.save_batch(num_batch)
 
-        del z_variables, a_variables, lambda_lagrange
-
     def save_batch(self, num_batch):
-
-        batch_path = os.path.join("batches", f"batch_{num_batch}")
-        os.makedirs(batch_path, exist_ok=True)
-
-        a_tensors = {str(i): self.a[i].cpu() for i in range(len(self.a))}
-        save_file(a_tensors, os.path.join(batch_path, "a_tensors.safetensors"))
-        z_tensors = {str(i): self.z[i].cpu() for i in range(len(self.z))}
-        save_file(z_tensors, os.path.join(batch_path, "z_tensors.safetensors"))
-        lambda_tensor = {"lambda_tensor": self.lambda_lagrange.cpu()}
-        save_file(
-            lambda_tensor, os.path.join(batch_path, "lambda_lagrange.safetensors")
+        sd = self.state_device
+        self._store[num_batch] = (
+            [t.to(sd, copy=True) for t in self.a],
+            [t.to(sd, copy=True) for t in self.z],
+            self.lambda_lagrange.to(sd, copy=True),
         )
 
     def fit(self, inputs, targets, num_batches, warming=False):
@@ -574,7 +527,7 @@ class ADMM_SNN:
 
             for l in random_layers:
                 # Update self.W[l] using the function _weight_update
-                output_spikes = inputs[n] if l == 0 else self.a[l - 1]
+                output_spikes = inputs[n].to(self.device) if l == 0 else self.a[l - 1]
 
                 u_lnext = self.z[l + 1].clone()
                 u_lnext[1:] -= self.deltas * u_lnext[:-1]
@@ -600,7 +553,7 @@ class ADMM_SNN:
             self.load_batch(n)
 
             for l in random_layers:
-                output_spikes = inputs[n] if l == 0 else self.a[l - 1]
+                output_spikes = inputs[n].to(self.device) if l == 0 else self.a[l - 1]
 
                 u_lnext = self.z[l + 1].clone()
                 u_lnext[1:] -= self.deltas * u_lnext[:-1]
@@ -743,103 +696,26 @@ class ADMM_SNN:
 
             #     self.round_factor = self.round_factor * 1.1 if self.round_factor < 0.5 else 0.5
 
-            if (self.epoch) % 10 == 0:
-                self.size += inputs[n].size(1)
+            if (self.epoch) % 5 == 0:
+                self.size += inputs[n].to(self.device).size(1)
 
-                self.lagr += self.lagrangian_cost(inputs[n], targets[n]).item()
-
-                # Calculate loss
                 self.loss += self.compute_loss(targets[n]).item()
 
-                self.preactivation_constraints = [
-                    self.preactivation_constraints[l]
-                    + self.preactivation_constraint_sum(inputs[n])[l]
-                    for l in range(len(self.z))
-                ]
-                self.activation_constraints = [
-                    self.activation_constraints[l] + self.activation_constraint_sum()[l]
-                    for l in range(len(self.a))
-                ]
-
                 # Run forward model to get predictions
-                pot, firing_rate = self.forward_model(inputs[n])
+                pot, firing_rate = self.forward_model(inputs[n].to(self.device))
                 _, predicted = pot.max(1)
                 labels = torch.argmax(targets[n], dim=0)
                 self.accuracy += (predicted == labels).sum().item()
 
             self.save_batch(n)
 
-        if (self.epoch) % 10 == 0:
+        if (self.epoch) % 5 == 0:
             self.accuracy /= self.size
-            self.preactivation_constraints = [
-                preactivation_residuals ** (1 / 2)
-                / (self.z[l].size(0) * self.size * self.z[l].size(2)) ** (1 / 2)
-                for l, preactivation_residuals in enumerate(
-                    self.preactivation_constraints
-                )
-            ]
-            self.activation_constraints = [
-                activation_residuals ** (1 / 2)
-                / (self.a[l].size(0) * self.size * self.a[l].size(2)) ** (1 / 2)
-                for l, activation_residuals in enumerate(self.activation_constraints)
-            ]
-
-            self.round_residuals()
-
-            self.lagr /= self.size
             self.loss /= self.size
 
         self.epoch += 1
 
         return
-
-    def lagrangian_cost(self, inputs, labels):
-        """
-        Computes the Augmented Lagrangian cost function (Equation 1).
-
-        Args:
-            inputs (torch.Tensor): Input data batch.
-            labels (torch.Tensor): Target labels (one-hot encoded).
-
-        Returns:
-            torch.Tensor: Scalar value of the Lagrangian cost.
-        """
-        cost = 0
-        for l in range(self.L - 1):
-            output_spikes = inputs if l == 0 else self.a[l - 1]
-            for t in range(1, self.T):
-                term1 = (
-                    self.W[l] @ output_spikes[t].T
-                    - self.z[l][t].T
-                    + self.deltas * self.z[l][t - 1].T
-                )
-                cost += self.rho / 2 * torch.norm(term1) ** 2
-                term2 = self.a[l][t] - self._heaviside(self.z[l][t])
-                cost += self.rho / 2 * torch.norm(term2) ** 2
-
-            term1_t0 = self.W[l] @ output_spikes[0].T - self.z[l][0].T
-            cost += self.rho / 2 * torch.norm(term1_t0) ** 2
-            term2_t0 = self.a[l][0] - self._heaviside(self.z[l][0])
-            cost += self.rho / 2 * torch.norm(term2_t0) ** 2
-
-        for t in range(1, self.T):
-            term1_L = (
-                self.W[self.L - 1] @ self.a[self.L - 2][t].T
-                - self.z[self.L - 1][t].T
-                + self.deltas * self.z[self.L - 1][t - 1].T
-            )
-            cost += self.rho / 2 * torch.norm(term1_L) ** 2
-
-        for i in range(self.lambda_lagrange.size(0)):
-            cost += self.lambda_lagrange[i] @ (
-                self.z[self.L - 1][self.T - 1][i]
-                - self.deltas * self.z[self.L - 1][self.T - 2][i]
-                - self.W[self.L - 1] @ self.a[self.L - 2][self.T - 1][i]
-            )
-
-        cost += torch.norm(self.z[self.L - 1][self.T - 1].T - labels) ** 2
-
-        return cost
 
     def forward_model(self, inputs):
         """
@@ -880,50 +756,12 @@ class ADMM_SNN:
         firing_rate = []
 
         for i in range(self.L - 1):
-            print(
-                self._heaviside(potential[i]).sum()
-                / (self.z[i].shape[0] * self.z[i].shape[1] * self.z[i].shape[2])
-            )
             firing_rate.append(
                 self._heaviside(potential[i]).sum().item()
                 / (self.z[i].shape[0] * self.z[i].shape[1] * self.z[i].shape[2])
             )
 
         return potential[-1][-1], firing_rate
-
-    def round_residuals(self):
-        """
-        Rounds the pre-activation potentials (z) and Lagrange multipliers
-        to reduce numerical noise in the residual calculations.
-        """
-
-        self.preactivation_constraints = [
-            round(preactivation_residuals, 6)
-            for preactivation_residuals in self.preactivation_constraints
-        ]
-        self.activation_constraints = [
-            round(activation_residuals, 6)
-            for activation_residuals in self.activation_constraints
-        ]
-
-    def primal_residual_norm(self):
-        """
-        Calculates the normalized L1 sum of the primal residual.
-
-        The primal residual measures the violation of the constraint involving
-        the output layer's final state (z_{L,T}). Used for monitoring convergence.
-
-        Returns:
-            torch.Tensor: Scalar value of the normalized primal residual sum.
-        """
-
-        r = (
-            self.z[self.L - 1][self.T - 1]
-            - self.deltas * self.z[self.L - 1][self.T - 2]
-            - torch.mm(self.W[self.L - 1], self.a[self.L - 2][self.T - 1].T).T
-        )
-
-        return torch.norm(r) / (r.size(0) * r.size(1)) ** (1 / 2)
 
     def compute_loss(self, labels):
         """
@@ -938,96 +776,21 @@ class ADMM_SNN:
         """
         return torch.norm(self.z[self.L - 1][self.T - 1].T - labels) ** 2
 
-    def preactivation_constraint_sum(self, input_data_batch):
-        """
-        Calculates the sum of normalized L1 sums for the pre-activation constraints.
-
-        Measures the violation of the equation:
-        z_{l,t} - delta*z_{l,t-1} - W_l @ a_{l-1,t} + theta*a_{l,t-1} = 0
-        (Adjusted for t=0 and output layer where the equation differs).
-
-        Args:
-            input_data_batch (torch.Tensor): The input data batch used in the fit step.
-
-        Returns:
-            List[torch.Tensor]: A list containing the normalized L1 sum of the
-                                residual for each layer's pre-activation constraint.
-        """
-
-        constraints_residuals = []
-        output_spikes = [input_data_batch] + self.a
-        output_spikes_t_minus1 = self.a + [torch.zeros_like(self.z[-1])]
-        for preactivation, activation_l_minus1, activation_t_minus1, w in zip(
-            self.z, output_spikes, output_spikes_t_minus1, self.W
-        ):
-            zero_activation_tensor = torch.zeros(
-                1, activation_t_minus1.shape[1], activation_t_minus1.shape[2]
-            ).to(self.device)
-            shifted_activation = torch.cat(
-                (zero_activation_tensor, activation_t_minus1[:-1, :, :]), dim=0
-            )
-            zero_preactivation_tensor = torch.zeros(
-                1, preactivation.shape[1], preactivation.shape[2]
-            ).to(self.device)
-            shifted_preactivation = torch.cat(
-                (zero_preactivation_tensor, preactivation[:-1, :, :]), dim=0
-            )
-
-            # use signed residual (no absolute value)
-            soft_constraint_residual = (
-                preactivation
-                - self.deltas * shifted_preactivation
-                - (w @ activation_l_minus1.unsqueeze(-1)).squeeze(-1)
-                + self.thetas * shifted_activation
-            )
-            soft_constraint_residual = (
-                torch.sum(soft_constraint_residual**2).cpu().item()
-            )
-            constraints_residuals.append(
-                round(soft_constraint_residual, 6)
-            )  # / (soft_constraint_residual.shape[0] * soft_constraint_residual.shape[1] * soft_constraint_residual.shape[2]) ** (1 / 2)
-
-        return constraints_residuals
-
-    def activation_constraint_sum(self):
-        """
-        Calculates the sum of normalized L1 sums for the activation constraints.
-
-        Measures the violation of the equation: a_{l,t} - h(z_{l,t}) = 0
-        for hidden layers l = 0 to L-2.
-
-        Returns:
-            List[torch.Tensor]: A list containing the normalized L1 sum of the
-                                residual for each hidden layer's activation constraint.
-        """
-        constraints_residuals = []
-        for preactivation, activation in zip(self.z[:-1], self.a):
-            # use signed residual between hevaiside(preactivation) and activation
-            soft_constraint_residual = self._heaviside(preactivation) - activation
-            soft_constraint_residual = (
-                torch.sum(soft_constraint_residual**2).cpu().item()
-            )
-            constraints_residuals.append(
-                round(soft_constraint_residual, 6)
-            )  # / (soft_constraint_residual.shape[0] * soft_constraint_residual.shape[1] * soft_constraint_residual.shape[2]) ** (1 / 2)
-
-        return constraints_residuals
-
 
 if __name__ == "__main__":
-    seed = 8281003564
+    # Device configuration
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    config = configparser.ConfigParser()
+    config.read("paper/config/config.ini")
+
+    seed = config.getint("config", "seed")
     random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-
-    # Device configuration
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    config = configparser.ConfigParser()
-    config.read("paper/config/config.ini")
     # Define the ADMM SNN model parameters (use command line args if provided, otherwise use config)
     batch_size = config.getint("config", "batch_size_spiking")
     n_samples = batch_size  # Update both variables
@@ -1046,51 +809,13 @@ if __name__ == "__main__":
 
     beta = config.getfloat("config", "spff_beta")
 
-    num_batches = config.getint("config", "num_batches")
+    num_batches = 60000 // batch_size  # Assuming the dataset has 60,000 samples
 
     # Define transformations
     sensor_size = tonic.datasets.NMNIST.sensor_size
     input_dim = sensor_size[0] * sensor_size[1]  # there are 2 channels
     # Combine channels
     input_dim *= 2
-
-    # Define transformations applied to the dataset
-    frame_transform = transforms.Compose(
-        [
-            transforms.Denoise(filter_time=10000),
-            transforms.ToFrame(sensor_size=sensor_size, time_window=1000),
-        ]
-    )
-
-    # Load datasets
-    batch_size = config.getint("config", "batch_size_spiking")
-
-    trainset = tonic.datasets.NMNIST(
-        save_to="./data", transform=frame_transform, train=True
-    )
-    testset = tonic.datasets.NMNIST(
-        save_to="./data", transform=frame_transform, train=False
-    )
-
-    # Cache datasets
-    cached_trainset = DiskCachedDataset(trainset, cache_path="./cache/nmnist/train")
-    cached_testset = DiskCachedDataset(testset, cache_path="./cache/nmnist/test")
-
-    # DataLoaders
-    trainloader = DataLoader(
-        cached_trainset,
-        batch_size=batch_size,
-        collate_fn=tonic.collation.PadTensors(),
-        shuffle=True,
-        drop_last=True,
-        generator=torch.Generator().manual_seed(seed),
-    )
-    testloader = DataLoader(
-        cached_testset,
-        batch_size=batch_size,
-        collate_fn=tonic.collation.PadTensors(),
-        drop_last=True,
-    )
 
     model = ADMM_SNN(
         n_samples,
@@ -1105,67 +830,44 @@ if __name__ == "__main__":
         beta,
     )
 
-    sample_data, sample_target = next(iter(trainloader))
-    print("Sample data shape:", sample_data.shape)
-    print("Sample target shape:", sample_target.shape)
-
     # Training parameters
     num_epochs = config.getint("config", "epochs")
 
     n_warming_iters = config.getint("config", "warming_iters")
 
-    data_iterator = iter(trainloader)
-    data, targets = next(data_iterator)
-    data = data[:, :n_timesteps, ...]
+    # Same loader as the new pipeline: same shuffle, truncation and seeded noise.
+    # All batches (full dataset), kept in CPU RAM as [T, B, F]; each batch is
+    # moved to the GPU only when it is used (see fit()).
+    from paper.utils.dataset import get_dataset
 
-    for batch in itertools.islice(data_iterator, num_batches - 1):
-        # ===================== Main ADMM training loop =====================
-        # Get a batch of data and preprocess it
-        batch_data, batch_targets = batch[0][:, :n_timesteps, ...], batch[1]
-        # Concatenate batches in a single tensor
-        data, targets = (
-            torch.cat((data, batch_data), dim=0),
-            torch.cat((targets, batch_targets), dim=0),
-        )
-
-    data = data.to(device)
-    targets = targets.to(device)
-
-    # Extract and combine channels (optional alternative)
-    # data = torch.clip(data, 0, 1)
-    # data = data[:, :, 0, :, :] - data[:, :, 1, :, :]
-    # Reshape data for processing
-    data = data.view(data.size(0), data.size(1), -1)
-    # Convert targets to one-hot encoding
-    targets = torch.nn.functional.one_hot(targets.to(torch.long), num_classes=10).T
-    # Truncate data if needed
-    if data.size(1) > n_timesteps:
-        data = data[:, :n_timesteps, :]
-    # Permute dimensions to have time as first dimension
-    data = data.permute(1, 0, 2)
-    data += 0.01 * torch.randn_like(data)
-
+    batches = get_dataset(
+        "spiking-feedforward",
+        batch_size,
+        seed=seed,
+        n_timesteps=n_timesteps,
+    )
+    assert len(batches) == num_batches, (
+        f"get_dataset returned {len(batches)} batches but num_batches={num_batches} "
+        "in the config; set num_batches to match (60000 / batch_size)"
+    )
     data_list = [
-        (
-            data[:, batch_size * i : batch_size * (i + 1), :],
-            targets[:, batch_size * i : batch_size * (i + 1)],
-        )
-        for i in range(num_batches)
+        (x, torch.nn.functional.one_hot(y.long(), num_classes=10).T.to(device))
+        for x, y in batches
     ]
 
     model.initialize_variables(num_batches)
 
     metrics = {}
 
-    metrics_path = "/paper/results/admm_spiking_perin_et_al/results.json"
+    metrics_path = "paper/results/admm_spiking_perin_et_al"
     os.makedirs(metrics_path, exist_ok=True)
 
     # Initialize lists to track metrics
-    lagrangians, lambdas = [], []
-    soft_constraints = {"a": [], "z": []}
+
     losses = []
     accuracy_list = []
-    firing_rate_list = []
+    times = []
+    start_time = time.time()
 
     for epoch in range(num_epochs + 1):
         # Perform ADMM optimization using the `fit` method
@@ -1177,67 +879,25 @@ if __name__ == "__main__":
 
         model.fit(*zip(*data_list), len(data_list), warming=epoch < n_warming_iters)
 
-        if (epoch) % 10 == 0:
-            training_log = (
-                f"Lagrangian: {model.lagr:.4f},\n"
-                f"lambda sum: {model.lambda_lagrange.norm().item() / (model.lambda_lagrange.size(0) * model.lambda_lagrange.size(1))}, "
-                f"loss: {model.loss:.4f}, "
-                f"residual norm: {model.primal_residual_norm().item():.4f}\n"
-            )
+        if (epoch) % 5 == 0:
+            training_log = f"loss: {model.loss:.4f}, "
 
             print(
                 ("----------------------------\n")
                 + (f"Epoch [{epoch}/{num_epochs}] Train accuracy: {model.accuracy} \n")
                 + training_log
-                + ("----------------------------")
+                + ("----------------------------"),
+                flush=True,
             )
 
             # Calculate constraint violations
-            soft_constraints["a"].append(
-                [constraint_sum for constraint_sum in model.activation_constraints]
-            )
-            soft_constraints["z"].append(
-                [constraint_sum for constraint_sum in model.preactivation_constraints]
-            )
-            lagrangians.append(model.lagr)
-            lambdas.append(model.primal_residual_norm())
             losses.append(model.loss)
             accuracy_list.append(model.accuracy)
-            firing_rate_list.append(model.firing_rate)
+            times.append(time.time() - start_time)
 
-    metrics["lagrangians"] = lagrangians
-    metrics["lambdas"] = lambdas
-    metrics["soft_constraints"] = soft_constraints
     metrics["losses"] = losses
     metrics["accuracy_list"] = accuracy_list
-    metrics["firing_rate"] = firing_rate_list
+    metrics["time"] = times
 
-    with open(os.path.join(metrics_path, "metrics.json"), "w") as f:
+    with open(os.path.join(metrics_path, "results.json"), "w") as f:
         json.dump(metrics, f, indent=4)
-
-    # Create plots to visualize training metrics
-    fig, ax = plt.subplots(3, 3, figsize=(30, 5))
-    ax[0, 0].semilogy(lagrangians)
-    ax[0, 0].set_title("Lagrangian")
-    ax[0, 1].semilogy(lambdas)
-    ax[0, 1].set_title("primal residual norm")
-    ax[0, 2].semilogy(soft_constraints["a"])
-    ax[0, 2].set_title("$\|a - h(z, \\theta)\|_2$")
-    ax[1, 0].semilogy(soft_constraints["z"])
-    ax[1, 0].set_title(
-        "$\|z_1 - \delta*z_{shifted} - W_1a_0 + \theta*a_{1,shifted}\|_2$"
-    )
-    ax[1, 1].semilogy(losses)
-    ax[1, 1].set_title("Loss")
-    ax[1, 2].plot(accuracy_list)
-    ax[1, 2].set_title("Train accuracy")
-
-    # Run final evaluation on training data
-    pot, firing_rate = model.forward_model(data)
-    _, predicted = pot.max(1)
-    labels = torch.argmax(targets, dim=0)
-    print("----------------------------")
-    print("Train accuracy:", (predicted == labels).sum().item() / labels.size(0))
-    print("----------------------------")
-    plt.tight_layout()
-    plt.show()

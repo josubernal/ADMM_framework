@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from ..utils.dataset import get_dataset_spiking_gd
+from ..utils.dataset import get_dataset
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 config = configparser.ConfigParser()
@@ -129,11 +129,18 @@ print(f"{'=' * 50}")
 
 #########################################
 # DATA
-
-train_loader = get_dataset_spiking_gd(
-    batch_size=minibatch_size_spiking,
-    seed=seed,
+train_loader = get_dataset(
+    "spiking-conv",
+    minibatch_size_spiking,
+    seed=seed,  # minibatch_size_spiking in the mini-batch script
+    n_timesteps=n_timesteps,
+    noise_std=0.0,
+    drop_last=False,
 )
+total_samples = sum(
+    y.size(0) for _, y in train_loader
+)  # instead of len(train_loader.dataset)
+
 
 model = GDSpConvNet().to(device)
 
@@ -154,7 +161,6 @@ start_time = time.time()
 
 # Determine which dimension holds the batch size
 batch_dim = 1
-total_samples = len(train_loader.dataset)
 for epoch in range(epochs):
     epoch_loss = 0.0
     epoch_correct = 0
@@ -220,10 +226,6 @@ for epoch in range(epochs):
 # GRADIENT DESCENT TRAINING LOOP (Full-Batch SGD)
 del model, optimizer
 torch.cuda.empty_cache()
-train_loader = get_dataset_spiking_gd(
-    batch_size=minibatch_size_spiking,
-    seed=seed,
-)
 
 model_sgd = GDSpConvNet().to(device)
 
