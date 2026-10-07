@@ -896,7 +896,7 @@ if __name__ == "__main__":
             times.append(time.time() - start_time)
 
     metrics["losses"] = losses
-    metrics["accuracy_list"] = accuracy_list
+    metrics["accuracy"] = accuracy_list
     metrics["time"] = times
 
     with open(os.path.join(metrics_path, "results.json"), "w") as f:

@@ -76,19 +76,21 @@ def test_all_methods_equivalence(method, case):
     )
 
     # Init and Inject
-    manager.state_handler.initialize_all_batches(dataloader=dataloader)
-    manager.initialized = True
-    _, _, batch_state = manager.state_handler.load_batch(0)
+    if not manager.initialized:
+        manager.state_handler.initialize(dataloader=dataloader)
+        manager.initialized = True
+
+    batch_state = manager.state_handler.load_batch(0, X)
     batch_state.layer_states[0].z.copy_(torch.tensor(case["z0_val"]))
     batch_state.layer_states[0].a.copy_(torch.tensor(case["a0_val"]))
     batch_state.layer_states[1].z.copy_(torch.tensor(case["z1_val"]))
-    manager.state_handler.save_batch(batch_state, inputs=X, labels=Y)
+    manager.state_handler.save_batch(batch_state)
 
     # Execute
     manager.fit(dataloader, warming=False)
 
     # Assert
-    _, _, final_batch = manager.state_handler.load_batch(0)
+    final_batch = manager.state_handler.load_batch(0, X)
     torch.testing.assert_close(
         layer0.W.data,
         torch.tensor(case["exp_W0"], dtype=torch.float64),

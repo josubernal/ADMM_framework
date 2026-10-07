@@ -89,19 +89,20 @@ def test_conv2d_to_feedforward_admm_fit(
         device=device,
     )
 
-    # 4. Initialize Handlers
-    manager.state_handler.initialize_all_batches(dataloader=dataloader)
+    if not manager.initialized:
+        manager.state_handler.initialize(dataloader=dataloader)
+        manager.initialized = True
+
     manager.initialized = True
 
     # 5. Inject Hand-Calculated Initial States
-    batch_ids = manager.state_handler.get_batch_ids()
-    _, _, batch_state = manager.state_handler.load_batch(batch_ids[0])
+    batch_state = manager.state_handler.load_batch(0, X)
 
     batch_state.layer_states[0].z.copy_(torch.tensor(z0_val, dtype=torch.float64))
     batch_state.layer_states[0].a.copy_(torch.tensor(a0_val, dtype=torch.float64))
     batch_state.layer_states[1].z.copy_(torch.tensor(z1_val, dtype=torch.float64))
 
-    manager.state_handler.save_batch(batch_state, inputs=X, labels=Y)
+    manager.state_handler.save_batch(batch_state)
 
     # ==========================================
     # Execute the Real ADMM Fit Loop
@@ -111,7 +112,7 @@ def test_conv2d_to_feedforward_admm_fit(
     # ==========================================
     # Retrieve & Assert
     # ==========================================
-    _, _, updated_batch = manager.state_handler.load_batch(batch_ids[0])
+    updated_batch = manager.state_handler.load_batch(0, X)
     updated_state0 = updated_batch.layer_states[0]
     updated_state1 = updated_batch.layer_states[1]
 

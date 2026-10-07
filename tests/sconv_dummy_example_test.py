@@ -124,20 +124,22 @@ def test_sconv_methods_equivalence_math(method, case):
     )
 
     # Init and Inject Manual Hand-Calculated Tensors
-    manager.state_handler.initialize_all_batches(dataloader=dataloader)
+    if not manager.initialized:
+        manager.state_handler.initialize(dataloader=dataloader)
+        manager.initialized = True
     manager.initialized = True
-    _, _, batch_state = manager.state_handler.load_batch(0)
+    batch_state = manager.state_handler.load_batch(0, X)
 
     batch_state.layer_states[0].z.copy_(torch.tensor(case["z0_val"]))
     batch_state.layer_states[0].a.copy_(torch.tensor(case["a0_val"]))
     batch_state.layer_states[1].z.copy_(torch.tensor(case["z1_val"]))
-    manager.state_handler.save_batch(batch_state, inputs=X, labels=Y)
+    manager.state_handler.save_batch(batch_state)
 
     # Execute Iteration
     manager.fit(dataloader, warming=False)
 
     # Retrieval and Exact Match Assertions
-    _, _, final_batch = manager.state_handler.load_batch(0)
+    final_batch = manager.state_handler.load_batch(0, X)
 
     torch.testing.assert_close(
         layer0.W.data,

@@ -162,12 +162,11 @@ for epoch in range(epochs):
     all_preds = []
     all_labels = []
     epoch_frs = []
+    compute_metrics = (epoch + 1) % 5 == 0
 
     # Iterate through batches to accumulate gradients
     for batch_images, batch_labels in train_loader:
-        batch_images = (
-            batch_images.transpose(0, 1).contiguous().to(device, non_blocking=True)
-        )
+        batch_images = batch_images.contiguous().to(device, non_blocking=True)
         batch_labels = batch_labels.to(device, non_blocking=True)
 
         outputs, frs = model(batch_images, return_spikes=True)
@@ -179,50 +178,52 @@ for epoch in range(epochs):
         batch_size_current = batch_images.size(batch_dim)
         scaled_loss = loss * (batch_size_current / total_samples)
         scaled_loss.backward()
+        if compute_metrics:
+            # Accumulate metrics
+            epoch_loss += loss.item() * batch_size_current
+            _, predictions = torch.max(outputs, 1)
+            epoch_correct += (predictions == batch_labels).sum().item()
 
-        # Accumulate metrics
-        epoch_loss += loss.item() * batch_size_current
-        _, predictions = torch.max(outputs, 1)
-        epoch_correct += (predictions == batch_labels).sum().item()
-
-        all_preds.extend(predictions.cpu().tolist())
-        all_labels.extend(batch_labels.cpu().tolist())
+            all_preds.extend(predictions.cpu().tolist())
+            all_labels.extend(batch_labels.cpu().tolist())
 
     # Perform the single parameter update for the full dataset read
     optimizer.step()
+    if compute_metrics:
+        # Calculate epoch-level metrics
+        avg_loss = epoch_loss / total_samples
+        accuracy = (epoch_correct / total_samples) * 100
 
-    # Calculate epoch-level metrics
-    avg_loss = epoch_loss / total_samples
-    accuracy = (epoch_correct / total_samples) * 100
+        # F1 Score Calculation
+        preds_tensor = torch.tensor(all_preds)
+        labels_tensor = torch.tensor(all_labels)
+        classes = torch.unique(torch.cat((labels_tensor, preds_tensor)))
+        f1_sum = 0.0
 
-    # F1 Score Calculation
-    preds_tensor = torch.tensor(all_preds)
-    labels_tensor = torch.tensor(all_labels)
-    classes = torch.unique(torch.cat((labels_tensor, preds_tensor)))
-    f1_sum = 0.0
+        for c in classes:
+            tp = ((preds_tensor == c) & (labels_tensor == c)).sum().float()
+            fp = ((preds_tensor == c) & (labels_tensor != c)).sum().float()
+            fn = ((preds_tensor != c) & (labels_tensor == c)).sum().float()
+            f1_sum += (2 * tp) / (2 * tp + fp + fn + 1e-8)
 
-    for c in classes:
-        tp = ((preds_tensor == c) & (labels_tensor == c)).sum().float()
-        fp = ((preds_tensor == c) & (labels_tensor != c)).sum().float()
-        fn = ((preds_tensor != c) & (labels_tensor == c)).sum().float()
-        f1_sum += (2 * tp) / (2 * tp + fp + fn + 1e-8)
+        f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
 
-    f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
+        avg_fr = (
+            float("nan")
+            if math.isnan(epoch_frs[0])
+            else sum(epoch_frs) / len(epoch_frs)
+        )
 
-    avg_fr = (
-        float("nan") if math.isnan(epoch_frs[0]) else sum(epoch_frs) / len(epoch_frs)
-    )
+        # Append metrics
+        adam_accs.append(accuracy)
+        adam_losses.append(avg_loss)
+        adam_frs.append([avg_fr])
+        adam_f1s.append(f1)
 
-    # Append metrics
-    adam_accs.append(accuracy)
-    adam_losses.append(avg_loss)
-    adam_frs.append([avg_fr])
-    adam_f1s.append(f1)
+        elapsed_time = time.time() - start_time
+        adam_times.append(elapsed_time)
 
-    elapsed_time = time.time() - start_time
-    adam_times.append(elapsed_time)
-
-    print(f"Step {epoch + 1} | Loss: {avg_loss:.4f} | Acc: {accuracy:.4f}")
+        print(f"Step {epoch + 1} | Loss: {avg_loss:.4f} | Acc: {accuracy:.4f}")
 
 #########################################
 # GRADIENT DESCENT TRAINING LOOP (Full-Batch SGD)
@@ -252,12 +253,11 @@ for epoch in range(epochs):
     all_preds = []
     all_labels = []
     epoch_frs = []
+    compute_metrics = (epoch + 1) % 5 == 0
 
     # Iterate through batches to accumulate gradients
     for batch_images, batch_labels in train_loader:
-        batch_images = (
-            batch_images.transpose(0, 1).contiguous().to(device, non_blocking=True)
-        )
+        batch_images = batch_images.contiguous().to(device, non_blocking=True)
         batch_labels = batch_labels.to(device, non_blocking=True)
 
         outputs, frs = model_sgd(batch_images, return_spikes=True)
@@ -269,45 +269,47 @@ for epoch in range(epochs):
         batch_size_current = batch_images.size(batch_dim)
         scaled_loss = loss * (batch_size_current / total_samples)
         scaled_loss.backward()
+        if compute_metrics:
+            # Accumulate metrics
+            epoch_loss += loss.item() * batch_size_current
+            _, predictions = torch.max(outputs, 1)
+            epoch_correct += (predictions == batch_labels).sum().item()
 
-        # Accumulate metrics
-        epoch_loss += loss.item() * batch_size_current
-        _, predictions = torch.max(outputs, 1)
-        epoch_correct += (predictions == batch_labels).sum().item()
-
-        all_preds.extend(predictions.cpu().tolist())
-        all_labels.extend(batch_labels.cpu().tolist())
+            all_preds.extend(predictions.cpu().tolist())
+            all_labels.extend(batch_labels.cpu().tolist())
 
     # Perform the single parameter update
     optimizer_sgd.step()
+    if compute_metrics:
+        # Calculate epoch-level metrics
+        avg_loss = epoch_loss / total_samples
+        accuracy = (epoch_correct / total_samples) * 100
 
-    # Calculate epoch-level metrics
-    avg_loss = epoch_loss / total_samples
-    accuracy = (epoch_correct / total_samples) * 100
+        preds_tensor = torch.tensor(all_preds)
+        labels_tensor = torch.tensor(all_labels)
+        classes = torch.unique(torch.cat((labels_tensor, preds_tensor)))
+        f1_sum = 0.0
+        for c in classes:
+            tp = ((preds_tensor == c) & (labels_tensor == c)).sum().float()
+            fp = ((preds_tensor == c) & (labels_tensor != c)).sum().float()
+            fn = ((preds_tensor != c) & (labels_tensor == c)).sum().float()
+            f1_sum += (2 * tp) / (2 * tp + fp + fn + 1e-8)
 
-    preds_tensor = torch.tensor(all_preds)
-    labels_tensor = torch.tensor(all_labels)
-    classes = torch.unique(torch.cat((labels_tensor, preds_tensor)))
-    f1_sum = 0.0
-    for c in classes:
-        tp = ((preds_tensor == c) & (labels_tensor == c)).sum().float()
-        fp = ((preds_tensor == c) & (labels_tensor != c)).sum().float()
-        fn = ((preds_tensor != c) & (labels_tensor == c)).sum().float()
-        f1_sum += (2 * tp) / (2 * tp + fp + fn + 1e-8)
+        f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
 
-    f1 = (f1_sum / len(classes)).item() if len(classes) > 0 else 0.0
+        avg_fr = (
+            float("nan")
+            if math.isnan(epoch_frs[0])
+            else sum(epoch_frs) / len(epoch_frs)
+        )
 
-    avg_fr = (
-        float("nan") if math.isnan(epoch_frs[0]) else sum(epoch_frs) / len(epoch_frs)
-    )
+        sgd_accs.append(accuracy)
+        sgd_losses.append(avg_loss)
+        sgd_frs.append([avg_fr])
+        sgd_f1s.append(f1)
+        sgd_times.append(time.time() - start_time)
 
-    sgd_accs.append(accuracy)
-    sgd_losses.append(avg_loss)
-    sgd_frs.append([avg_fr])
-    sgd_f1s.append(f1)
-    sgd_times.append(time.time() - start_time)
-
-    print(f"Step {epoch + 1} | Loss: {avg_loss:.4f} | Acc: {accuracy:.4f}")
+        print(f"Step {epoch + 1} | Loss: {avg_loss:.4f} | Acc: {accuracy:.4f}")
 
 #########################################
 # SAVING RESULTS AND PLOTTING

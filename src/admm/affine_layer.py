@@ -199,13 +199,7 @@ class ADMM_AffineLayer(ADMM_Layer):
                 - The count of elements reduced for the bias calculation.
         """
         v = self.get_v(state)
-        P = self._compute_P(a_prev)
-        # Flatten spatial/temporal dimensions into independent observations
-        # Moves the channel dimension to the end, then collapses Batch x Time x H x W into rows. (2D matrix)
-        Y = v.movedim(self.channel_dim, -1).reshape(-1, self.W.shape[0])
-
-        numerator = Y.t() @ P
-        denominator = P.t() @ P
+        numerator, denominator = self._covariances_with_oom_fallback(v, a_prev)
 
         bias_sum = None
         bias_count = 0
@@ -221,6 +215,64 @@ class ADMM_AffineLayer(ADMM_Layer):
             bias_count = num_elements
 
         return numerator, denominator, bias_sum, bias_count
+
+    def _covariances_with_oom_fallback(
+        self, v: torch.Tensor, a_prev: torch.Tensor, chunk_dim: int = 0
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""Computes ($Y^T P$, $P^T P$), halving the chunk size on every OOM."""
+        n = a_prev.shape[chunk_dim]
+        chunk_size = n  # first attempt: the whole thing, identical to the old path
+
+        while True:
+            oom = False
+            try:
+                return self._covariances_chunked(v, a_prev, chunk_size, chunk_dim)
+            except torch.cuda.OutOfMemoryError:  # subclass of RuntimeError
+                oom = True
+
+            # Handled outside the `except` block so the traceback (and the
+            # tensors it references) is released before we free the cache.
+            if oom:
+                if chunk_size == 1:
+                    raise RuntimeError(
+                        "OOM even with a chunk size of 1; the per-sample patch "
+                        "matrix P (or P^T P) does not fit in memory."
+                    )
+                chunk_size = max(1, chunk_size // 2)
+                torch.cuda.empty_cache()
+
+    def _covariances_chunked(
+        self,
+        v: torch.Tensor,
+        a_prev: torch.Tensor,
+        chunk_size: int,
+        chunk_dim: int = 0,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        out_channels = self.W.shape[0]
+        n = a_prev.shape[chunk_dim]
+
+        numerator = None
+        denominator = None
+
+        for start in range(0, n, chunk_size):
+            length = min(chunk_size, n - start)
+            a_chunk = a_prev.narrow(chunk_dim, start, length)
+            v_chunk = v.narrow(chunk_dim, start, length)
+
+            P = self._compute_P(a_chunk)
+            Y = v_chunk.movedim(self.channel_dim, -1).reshape(-1, out_channels)
+
+            num_c = Y.t() @ P
+            den_c = P.t() @ P
+            del P, Y  # free the big patch matrix before the next chunk
+
+            if numerator is None:
+                numerator, denominator = num_c, den_c
+            else:
+                numerator += num_c
+                denominator += den_c
+
+        return numerator, denominator
 
     def update_weights(
         self, covariances: ADMM_LayerCovariance, cache_pinv: bool = False

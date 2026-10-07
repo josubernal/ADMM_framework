@@ -129,6 +129,7 @@ def plot_method_epoch(
     ax,
     accuracy,
     method,
+    architecture,
 ):
 
     if len(accuracy) == 0:
@@ -138,6 +139,11 @@ def plot_method_epoch(
         1,
         len(accuracy) + 1,
     )
+    if method == "ADMM" and architecture in [
+        "Spiking Feedforward",
+        "Spiking Convolutional",
+    ]:
+        epochs = [i * 5 for i in range(1, len(accuracy) + 1)]
 
     ax.plot(
         epochs,
@@ -204,6 +210,7 @@ def plot_architecture(
             ax_epoch,
             accuracy,
             method,
+            architecture,
         )
 
         plot_method_time(
@@ -275,14 +282,14 @@ def main():
         },
         "Spiking Feedforward": {
             "ADMM": {
-                "folder": "admm_spiking_feedforward",
+                "folder": "admm_spiking_feedforward_cross_entropy_taylor",
                 "accuracy": "accuracy",
                 "time": "admm_time",
             },
             "Full_Adam": {
                 "folder": "full_batch_spiking_feedforward",
-                "accuracy": "gd_accuracy",
-                "time": "gd_time",
+                "accuracy": "adam_accuracy",
+                "time": "adam_time",
             },
             "Mini_Adam": {
                 "folder": "mini_batch_spiking_feedforward",

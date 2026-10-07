@@ -25,7 +25,7 @@ def plot_accuracy(paths):
 
     # Define simple greyscale styles instead of many line types
     methods = [
-        ("Perin et al.", paths["perin"], "gray", "-"),
+        ("Perin et al.", paths["perin"], "dimgray", "dotted"),
         ("SSE", paths["sse"], "darkgray", "-"),
         ("CE", paths["ce"], "black", "-"),
         ("Hinge", paths["hinge"], "darkgray", "--"),
@@ -52,6 +52,8 @@ def plot_accuracy(paths):
         if not accuracy:
             print(f"Warning: No 'accuracy' data found, skipping '{label}': {path}")
             continue
+        if label == "Perin et al.":
+            accuracy = [acc * 100 for acc in accuracy]
         epochs = [i * 5 for i in range(1, len(accuracy) + 1)]
         (line,) = ax.plot(
             epochs,
@@ -105,7 +107,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--perin",
         type=str,
-        default="paper/results/admm_spiking_feedforward_perin/results.json",
+        default="paper/results/admm_spiking_perin_et_al/results.json",
     )
     parser.add_argument(
         "--sse",

@@ -61,8 +61,7 @@ def test_autograd_and_memory_leak():
 
     # 3. Check for Computational Graph Leaks (Autograd)
     graph_leaks = 0
-    batch_id = model.state_handler.get_batch_ids()[0]
-    _, _, batch_state = model.state_handler.load_batch(batch_id)
+    batch_state = model.state_handler.load_batch(0, inputs)
 
     for i, layer in enumerate(model.layers):
         if layer.W.requires_grad or layer.W.grad_fn is not None:
